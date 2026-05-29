@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Teoría - Academia Virtual Addison</title>
+<link rel="stylesheet" href="css/teoria.css">
+</head>
+<body>
+<!-- BARRA SUPERIOR -->
+<header class="topbar">
+  <button class="brand-btn" id="btnHome" title="Volver a la plataforma">
+    <div class="logo">A</div>
+    <div class="brand-text"><strong>ADDISON</strong><span>academia virtual</span></div>
+  </button>
+  <button class="check-btn" id="btnCheck">
+    <span class="dot">✓</span>
+    <span id="checkLabel">Teoría completada</span>
+  </button>
+</header>
+
+<main class="main">
+  <!-- NOMBRE DEL CURSO ENCIMA DEL VIDEO -->
+  <div class="course-name" id="courseName">Curso</div>
+
+  <!-- VIDEO YOUTUBE -->
+  <div class="video-wrap">
+    <div id="videoOverlay" class="video-overlay">
+      <span class="play-pill">▶ Reproducir</span>
+    </div>
+    <iframe id="ytFrame" src="" title="YouTube video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+  </div>
+
+  <!-- TEMA Y SUBTEMA DEBAJO DEL VIDEO -->
+  <div class="title-block">
+    <h1 id="titleMain">Tema - Subtema</h1>
+    <div class="breadcrumb" id="breadcrumb">Curso • Tema</div>
+  </div>
+
+  <!-- CONTENIDO DINÁMICO -->
+  <div class="page-wrap">
+    <iframe id="contentFrame" class="content-frame" src="about:blank"></iframe>
+  </div>
+</main>
+
+<footer class="app-footer">
+  <a href="https://wa.me/51900081858" target="_blank" rel="noopener">prepárate con los mejores - 9000 81 858</a>
+</footer>
+
+<script src="js/teoria.js"></script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+{
+  "courseId": "algebra",
+  "topicId": "t10",
+  "subId": "s1",
+  "courseName": "Álgebra",
+  "examTopic": "Matrices y determinantes",
+  "subName": "Matrices",
+  "timePerQuestionSeconds": 60,
+  "questions": [
+    {
+      "q": "Pregunta 1 de Matrices",
+      "options": [
+        "Opción A",
+        "Opción B",
+        "Opción C",
+        "Opción D"
+      ],
+      "correct": 0,
+      "exp": "Explicación de ejemplo 1."
+    },
+    {
+      "q": "Pregunta 2 de Matrices",
+      "options": [
+        "Opción A",
+        "Opción B",
+        "Opción C",
+        "Opción D"
+      ],
+      "correct": 1,
+      "exp": "Explicación de ejemplo 2."
+    },
+    {
+      "q": "Pregunta 3 de Matrices",
+      "options": [
+        "Opción A",
+        "Opción B",
+        "Opción C",
+        "Opción D"
+      ],
+      "correct": 2,
+      "exp": "Explicación de ejemplo 3."
+    }
+  ]
+}

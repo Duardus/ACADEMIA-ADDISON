@@ -1,0 +1,44 @@
+{
+  "aritmetica": {
+    "t11": {
+      "s1": {
+        "youtube": "",
+        "page": "paginas/aritmetica_t11_s1.html"
+      },
+      "s2": {
+        "youtube": "https://youtube.com/live/CQoeE4LAViU",
+        "page": "paginas/aritmetica_t11_s2.html"
+      }
+    }
+  },
+  "algebra": {
+    "t1": {
+      "s1": {
+        "youtube": "https://www.youtube.com/embed/VIDEO_ID_AQUI",
+        "page": "paginas/algebra_t1_s1.html"
+      }
+    },
+    "t16": {
+      "s1": {
+        "youtube": "https://youtube.com/live/2LIxhCcwJYo",
+        "page": "paginas/algebra_t16_s1.html"
+      }
+    },
+    "t10": {
+      "s1": {
+        "youtube": "https://youtube.com/live/ed1KyYcQsko",
+        "page": "paginas/algebra_t10_s1.html"
+      }
+    }
+  },
+  "competencia_comunicativa": {},
+  "fisica": {},
+  "quimica": {},
+  "geometria_trigonometria": {},
+  "biologia": {},
+  "historia": {},
+  "geografia": {},
+  "civica": {},
+  "economia": {},
+  "filosofia_logica": {}
+}
