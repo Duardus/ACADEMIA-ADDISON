@@ -1,4 +1,4 @@
-// ACADEMIA ADDISON - PLATFORM.JS CON LISTA BLANCA
+// ACADEMIA ADDISON - PLATFORM.JS CORREGIDO PARA PAGES + WORKERS
 const ALLOW_GROUP_CHANGE = true;
 
 // === DOCENTES ===
@@ -31,9 +31,11 @@ googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 let DATA;
 async function loadData(){
-  const res = await fetch('/data/courses.json');
-  if(!res.ok) throw new Error('No se pudo cargar courses.json');
+  // CORRECCIÓN: ruta relativa sin / inicial para Cloudflare Pages
+  const res = await fetch('data/courses.json', { cache: 'no-store' });
+  if(!res.ok) throw new Error('No se pudo cargar courses.json: '+res.status);
   DATA = await res.json();
+  console.log('[PLATFORM] courses.json cargado', DATA.courses.length, 'cursos');
 }
 
 function groupLabel(key){const g=DATA.groups[key];return g?`${key} - ${g.name}`:key;}
@@ -58,6 +60,9 @@ const btnSaveAccount=document.getElementById('btnSaveAccount');const btnLogout=d
 const modalIframe=document.getElementById('modalIframe');const iframeTitle=document.getElementById('iframeTitle');const iframeContent=document.getElementById('iframeContent');const btnCloseIframe=document.getElementById('btnCloseIframe');
 const liveBarEl=document.getElementById('liveBar');
 const liveCardContainer=document.getElementById('liveCardContainer');
+
+// Debug de elementos live
+console.log('[PLATFORM] liveBarEl:',!!liveBarEl, 'liveCardContainer:',!!liveCardContainer);
 
 function populateGroupSelect(selectEl,selectedKey){selectEl.innerHTML='';Object.keys(DATA.groups).forEach(key=>{const opt=document.createElement('option');opt.value=key;opt.textContent=groupLabel(key);if(key===selectedKey)opt.selected=true;selectEl.appendChild(opt);});}
 
@@ -85,6 +90,7 @@ auth.onAuthStateChanged(async user=>{
     }
     state.user=profile;
     state.isTeacher = isTeacher;
+    console.log('[PLATFORM] Usuario:', email, 'isTeacher:', isTeacher);
     enterApp();
     if(isNewUser){ const nombre = state.user.name.split(' ')[0]; alert(`¡Bienvenido ${nombre}! Ya puedes empezar a estudiar en Academia Addison.`); }
   }else{ state.user=null; appEl.classList.add('hidden'); welcomeEl.classList.remove('hidden'); }
@@ -124,61 +130,63 @@ function topicProgress(course,topic){
     return 0;
   }
 }
-function courseProgress(course){if(!course.topics.length)return 0;const sum=course.topics.reduce((a,t)=>a+topicProgress(course,t),0);return Math.round(sum/course.topics.length);}
+
+function courseProgress(course){
+  if(!course.topics || course.topics.length===0) return 0;
+  let sum=0; course.topics.forEach(t=> sum+=topicProgress(course,t)); return Math.round(sum/course.topics.length);
+}
 
 function renderCourses(){
+  if(!courseListEl) return;
   courseListEl.innerHTML='';
-  sidebarGroupEl.textContent=groupLabel(state.user.group);
   const courses=getCoursesForGroup(state.user.group);
-  let overallPct=0;
-  if(courses.length){ const sum=courses.reduce((a,c)=>a+courseProgress(c),0); overallPct=Math.round(sum/courses.length); }
-  if(sidebarOverallEl){
-    const radius=18,circ=2*Math.PI*radius,offset=circ*(1-overallPct/100);
-    sidebarOverallEl.innerHTML=`<div class="course-progress"><svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="${radius}" stroke="var(--bg-soft)" stroke-width="4" fill="none"/><circle cx="22" cy="22" r="${radius}" stroke="var(--brand)" stroke-width="4" fill="none" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round"/></svg><div class="pct">${overallPct}%</div></div>`;
-  }
-  courses.forEach(c=>{
-    const div=document.createElement('div');
-    div.className='course-item'+(c.id===state.activeCourseId?' active':'');
-    const topicsCount=c.topics?c.topics.length:0;
-    const pct=courseProgress(c);
-    const radius=15,circ=2*Math.PI*radius;
-    const offset=circ*(1-pct/100);
-    const isLive = state.liveSessions && state.liveSessions[c.id]?.active;
-    div.innerHTML=`<div class="course-info"><strong>${c.name}</strong><small>${topicsCount} temas</small></div><div class="course-progress"><svg width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="${radius}" stroke="var(--bg-soft)" stroke-width="3.5" fill="none"/><circle cx="18" cy="18" r="${radius}" stroke="var(--brand)" stroke-width="3.5" fill="none" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round"/></svg><div class="pct">${pct}%</div></div>${isLive? '<span class="course-live-badge" title="Clase en vivo activa"></span>' : ''}`;
-    div.onclick=()=>{ state.activeCourseId=c.id; renderCourses(); renderTopics(); renderLiveBar(); renderLiveCard(); if(isMobile()){ sidebarEl.classList.remove('open'); sidebarBackdrop.classList.remove('show') } };
-    courseListEl.appendChild(div);
+  sidebarGroupEl.textContent = groupLabel(state.user.group);
+  const overall = courses.length? Math.round(courses.reduce((a,c)=>a+courseProgress(c),0)/courses.length):0;
+  sidebarOverallEl.innerHTML = `<svg viewBox="0 0 36 36"><path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--bg-soft)" stroke-width="3"/><path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--brand)" stroke-width="3" stroke-dasharray="${overall},100"/></svg><div class="pct">${overall}%</div>`;
+  courses.forEach(course=>{
+    const pct=courseProgress(course);
+    const isActive=course.id===state.activeCourseId;
+    const isLive =!!state.liveSessions?.[course.id]?.active;
+    const item=document.createElement('div');
+    item.className='course-item'+(isActive?' active':'');
+    item.innerHTML=`<div class="course-info"><strong>${course.name}</strong><small>${course.desc||''}</small></div><div class="course-progress"><svg viewBox="0 0 36 36"><path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--bg-soft)" stroke-width="3"/><path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--brand)" stroke-width="3" stroke-dasharray="${pct},100"/></svg><div class="pct">${pct}%</div></div>${isLive?'<div class="course-live-badge" title="En vivo"></div>':''}`;
+    item.onclick=()=>{state.activeCourseId=course.id;renderCourses();renderTopics();};
+    courseListEl.appendChild(item);
   });
 }
 
 function renderTopics(){
+  if(!topicsGridEl) return;
   topicsGridEl.innerHTML='';
   const course=DATA.courses.find(c=>c.id===state.activeCourseId);
-  if(!course)return;
+  if(!course) return;
+  if(liveCardContainer) topicsGridEl.appendChild(liveCardContainer);
+
   course.topics.forEach(topic=>{
     const pct=topicProgress(course,topic);
-    const hasSubs=topic.subtopics&&topic.subtopics.length>0;
     const card=document.createElement('div');
     card.className='topic-card';
-    card.innerHTML=`<div class="topic-head"><strong>${topic.name}</strong><span class="badge">${pct}%</span></div><div class="progress"><span style="width:${pct}%"></span></div>`;
-    if(hasSubs){
-      topic.subtopics.forEach(s=>{
-        const th=!!getProgress(course.id,topic.id,s.id,'theory');
-        const ex=getProgress(course.id,topic.id,s.id,'exam');
-        const exText=typeof ex==='number'?ex+'%':(ex?'✓':'✕');
-        const sub=document.createElement('div');
-        sub.className='subtopic';
-        sub.innerHTML=`<strong>${s.name}</strong><div class="sub-meta">Teoría: ${th?'✓':'✕'} • Examen: ${exText}</div><div class="sub-actions"><button>Teoría</button><button class="primary">Examen</button></div>`;
-        sub.querySelector('button').onclick=()=>openContent('Teoría',s.theoryUrl,course.id,topic.id,s.id,'theory');
-        sub.querySelector('.primary').onclick=()=>openContent('Examen',s.examUrl,course.id,topic.id,s.id,'exam');
-        card.appendChild(sub);
+    const head=document.createElement('div');
+    head.className='topic-head';
+    head.innerHTML=`<strong>${topic.name}</strong><span class="badge">${pct}%</span>`;
+    const prog=document.createElement('div');
+    prog.className='progress'; prog.innerHTML=`<span style="width:${pct}%"></span>`;
+    card.appendChild(head); card.appendChild(prog);
+    if(topic.subtopics && topic.subtopics.length>0){
+      topic.subtopics.forEach(sub=>{
+        const subEl=document.createElement('div');
+        subEl.className='subtopic';
+        const ex=getProgress(course.id,topic.id,sub.id,'exam');
+        const exTxt= typeof ex==='number'? `${ex}%` : ex? 'Completado':'Pendiente';
+        subEl.innerHTML=`<strong>${sub.name}</strong><div class="sub-meta">Examen: ${exTxt}</div><div class="sub-actions"><button>Teoría</button><button class="primary">Examen</button></div>`;
+        const [btnT,btnE]=subEl.querySelectorAll('button');
+        btnT.onclick=()=>openContent('Teoría',sub.theoryUrl,course.id,topic.id,sub.id,'theory');
+        btnE.onclick=()=>openContent('Examen',sub.examUrl,course.id,topic.id,sub.id,'exam');
+        card.appendChild(subEl);
       });
     }else{
-      const th=!!getProgress(course.id,topic.id,'','theory');
-      const ex=getProgress(course.id,topic.id,'','exam');
-      const exText=typeof ex==='number'?ex+'%':(ex?'✓':'✕');
       const meta=document.createElement('div');
-      meta.className='sub-meta';
-      meta.textContent=`Teoría: ${th?'✓':'✕'} • Examen: ${exText}`;
+      meta.className='sub-meta'; meta.textContent='Tema sin subtemas';
       const actions=document.createElement('div');
       actions.className='sub-actions';
       actions.innerHTML=`<button>Teoría</button><button class="primary">Examen</button>`;
@@ -219,11 +227,15 @@ btnLogout.onclick=()=>{auth.signOut();};
 // ==================== SISTEMA DE CLASES EN VIVO ====================
 function initLive(){
   if(!state.user) return;
+  console.log('[LIVE] Iniciando listener de live_sessions');
   db.collection('live_sessions').where('active','==',true).onSnapshot(snapshot=>{
     const activeSessions = {};
     snapshot.forEach(doc=>{ activeSessions[doc.id]=doc.data(); });
     state.liveSessions = activeSessions;
+    console.log('[LIVE] Sesiones activas:', Object.keys(activeSessions));
     renderLiveBar(); renderLiveCard(); renderCourses();
+  }, err=>{
+    console.error('[LIVE] Error listener:', err);
   });
 }
 function renderLiveBar(){
