@@ -1,194 +1,126 @@
-// LIVE ROOM - Academia Addison con LiveKit real
-import { Room, RoomEvent, Track } from 'https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.esm.js';
+// live/js/live-room.js - TODO EN UNO (LiveKit + Controles + Pizarra)
+// (Este es el cerebro de tu sala en vivo)
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBbp3kZtxiluZTI7xC_UDcUUyYF9Jb0yBQ",
-  authDomain: "academia-adison.firebaseapp.com",
-  projectId: "academia-adison",
-  storageBucket: "academia-adison.firebasestorage.app",
-  messagingSenderId: "92334581820",
-  appId: "1:92334581820:web:5e456f7c475119db95fb39"
-};
+import { Room, RoomEvent, Track } from 'https://cdn.jsdelivr.net/npm/livekit-client@2.5.7/+esm';
+
+// --- Firebase (tu login) ---
+const firebaseConfig = { apiKey:"AIzaSyBbp3kZtxiluZTI7xC_UDcUUyYF9Jb0yBQ", authDomain:"academia-adison.firebaseapp.com", projectId:"academia-adison", storageBucket:"academia-adison.firebasestorage.app", messagingSenderId:"92334581820", appId:"1:92334581820:web:5e456f7c475119db95fb39" };
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
-const db = firebase.firestore();
 
 const TEACHER_EMAILS = ['eduardofloreshu@gmail.com','profesor@addison.edu.pe'];
-const TOKEN_URL = 'https://academia.addisoncusco.workers.dev/token';
+const TOKEN_URL = '/api/livekit-token'; // (ruta correcta a tu Worker)
 
 const params = new URLSearchParams(location.search);
 const courseId = params.get('course') || 'clases-vivo';
 
 const liveCourseName = document.getElementById('liveCourseName');
 const liveStatus = document.getElementById('liveStatus');
-const btnExit = document.getElementById('btnExit');
-const btnEndLive = document.getElementById('btnEndLive');
 const videoGrid = document.getElementById('videoGrid');
 const localVideo = document.getElementById('localVideo');
 
-let isTeacher = false;
 let room = null;
-let localParticipant = null;
+let isTeacher = false;
 
+// --- Entrada ---
 auth.onAuthStateChanged(async user=>{
   if(!user){ location.href='../index.html'; return; }
-  const email = user.email.toLowerCase();
-  isTeacher = TEACHER_EMAILS.includes(email);
+  isTeacher = TEACHER_EMAILS.includes(user.email.toLowerCase());
   liveCourseName.textContent = `Curso: ${courseId}`;
-  liveStatus.textContent = isTeacher? 'Conectando como profesor...' : 'Conectando como alumno...';
+  liveStatus.textContent = 'Conectando...';
 
-  if(isTeacher){
-    btnEndLive.style.display = 'block';
-    btnEndLive.onclick = async ()=>{
-      if(confirm('¿Finalizar clase para todos?')){
-        await db.collection('live_sessions').doc(courseId).update({ active:false, endedAt: firebase.firestore.FieldValue.serverTimestamp() }).catch(()=>{});
-        if(room) await room.disconnect();
-        location.href = '../index.html';
-      }
-    };
-  }
-
-  initWhiteboard();
-  initControls();
-  await connectLiveKit(user);
+  initWhiteboard(); // (iniciamos pizarra primero)
+  setupControls(); // (botones)
+  await connectLiveKit(user); // (video)
 });
 
-btnExit.onclick = async ()=>{
-  if(room) await room.disconnect();
-  location.href = '../index.html';
-};
-
+// --- Conexión LiveKit ---
 async function connectLiveKit(user){
   try{
-    const identity = user.email || user.uid;
+    const identity = user.email;
     const name = user.displayName || identity.split('@')[0];
     const res = await fetch(`${TOKEN_URL}?room=${encodeURIComponent(courseId)}&identity=${encodeURIComponent(identity)}&name=${encodeURIComponent(name)}`);
     const { token, url } = await res.json();
 
-    room = new Room({ adaptiveStream: true, dynacast: true });
+    room = new Room({ adaptiveStream:true, dynacast:true });
 
-    room.on(RoomEvent.TrackSubscribed, (track, publication, participant)=>{
-      if(track.kind === Track.Kind.Video || track.kind === Track.Kind.Audio){
-        const el = track.attach();
-        el.autoplay = true;
-        el.playsInline = true;
-        const tile = document.createElement('div');
-        tile.className = 'video-tile';
-        tile.appendChild(el);
-        const label = document.createElement('div');
-        label.className = 'tile-label';
-        label.textContent = participant.identity;
-        tile.appendChild(label);
-        videoGrid.appendChild(tile);
-      }
+    room.on(RoomEvent.TrackSubscribed, (track, pub, participant)=>{
+      const el = track.attach(); el.autoplay=true; el.playsInline=true;
+      const tile = document.createElement('div'); tile.className='video-tile'; tile.id=`tile-${pub.trackSid}`;
+      tile.appendChild(el);
+      const label = document.createElement('div'); label.className='tile-label'; label.textContent = participant.identity;
+      tile.appendChild(label);
+      videoGrid.appendChild(tile);
     });
-
-    room.on(RoomEvent.TrackUnsubscribed, (track)=>{
-      track.detach().forEach(el=> el.parentElement?.remove());
-    });
-
-    room.on(RoomEvent.Disconnected, ()=>{
-      liveStatus.textContent = 'Desconectado';
-    });
+    room.on(RoomEvent.TrackUnsubscribed, (track, pub)=>{ document.getElementById(`tile-${pub.trackSid}`)?.remove(); });
 
     await room.connect(url, token);
-    localParticipant = room.localParticipant;
-    liveStatus.textContent = isTeacher? 'En vivo como profesor' : 'En vivo';
-
-    await localParticipant.setCameraEnabled(true);
-    await localParticipant.setMicrophoneEnabled(true);
-
-    const camPub = [...localParticipant.videoTrackPublications.values()][0];
-    if(camPub && camPub.track){
-      camPub.track.attach(localVideo);
-    }
+    liveStatus.textContent = isTeacher? 'En vivo (Profesor)' : 'En vivo';
   }catch(err){
     console.error(err);
     liveStatus.textContent = 'Error al conectar';
-    alert('No se pudo conectar a la clase en vivo. Verifica que el túnel Cloudflare esté activo.');
+    alert('No se pudo conectar a LiveKit. Revisa tu túnel Cloudflare.');
   }
 }
 
-function initControls(){
+// --- Controles ---
+function setupControls(){
+  document.getElementById('btnExit').onclick = async ()=>{ await room?.disconnect(); location.href='../index.html'; };
+  document.getElementById('btnEndLive')?.addEventListener('click', async ()=>{ if(confirm('¿Finalizar?')){ await room?.disconnect(); location.href='../index.html'; } });
+
   const btnMic = document.getElementById('btnMic');
   const btnCam = document.getElementById('btnCam');
   const btnScreen = document.getElementById('btnScreen');
   const btnBoard = document.getElementById('btnBoard');
 
-  btnMic.onclick = async ()=>{
-    if(!localParticipant) return;
-    const enabled =!localParticipant.isMicrophoneEnabled;
-    await localParticipant.setMicrophoneEnabled(enabled);
-    btnMic.classList.toggle('active', enabled);
-  };
-  btnCam.onclick = async ()=>{
-    if(!localParticipant) return;
-    const enabled =!localParticipant.isCameraEnabled;
-    await localParticipant.setCameraEnabled(enabled);
-    btnCam.classList.toggle('active', enabled);
-  };
-  btnScreen.onclick = async ()=>{
-    if(!localParticipant) return;
-    const isSharing = localParticipant.isScreenShareEnabled;
-    await localParticipant.setScreenShareEnabled(!isSharing);
-    btnScreen.classList.toggle('active',!isSharing);
-  };
-  btnBoard.onclick = ()=>{
-    document.querySelector('.whiteboard-area').classList.toggle('hidden');
-    btnBoard.classList.toggle('active');
-  };
+  btnMic.onclick = async ()=>{ const en=!room.localParticipant.isMicrophoneEnabled; await room.localParticipant.setMicrophoneEnabled(en); btnMic.classList.toggle('active', en); };
+  btnCam.onclick = async ()=>{ const en=!room.localParticipant.isCameraEnabled; await room.localParticipant.setCameraEnabled(en); if(en){ const pub=[...room.localParticipant.videoTrackPublications.values()][0]; pub?.track?.attach(localVideo); } btnCam.classList.toggle('active', en); };
+  btnScreen.onclick = async ()=>{ await room.localParticipant.setScreenShareEnabled(!room.localParticipant.isScreenShareEnabled); btnScreen.classList.toggle('active'); };
+  btnBoard.onclick = ()=>{ document.querySelector('.whiteboard-area').classList.toggle('hidden'); btnBoard.classList.toggle('active'); };
 }
 
+// --- PIZARRA FUSIONADA (la de whiteboard.js adaptada a tu HTML) ---
 function initWhiteboard(){
   const canvas = document.getElementById('whiteboard');
   if(!canvas) return;
   const ctx = canvas.getContext('2d');
-  function resize(){
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
-    ctx.fillStyle = '#0a0a0a';
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-  }
-  resize();
-  window.addEventListener('resize', resize);
+  let drawing=false, tool='pen', color='#FFEB3B', last=null;
 
-  let drawing=false, tool='pen', color='#FFEB3B', lastX=0, lastY=0;
+  function resize(){
+    const r = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio||1;
+    canvas.width = r.width*dpr; canvas.height = r.height*dpr;
+    ctx.scale(dpr,dpr); ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.fillStyle='#0a0a0a'; ctx.fillRect(0,0,r.width,r.height);
+  }
+  resize(); window.addEventListener('resize', resize);
+
+  // Colores (usa tus botones de room.html)
+  document.querySelectorAll('.wb-colors button').forEach(b=>{
+    b.onclick = ()=>{ document.querySelector('.wb-colors button.active')?.classList.remove('active'); b.classList.add('active'); color=b.dataset.color; };
+  });
+  // Herramientas
+  document.querySelectorAll('.wb-tools button').forEach(b=>{
+    b.onclick = ()=>{
+      if(b.dataset.tool==='clear'){ const r=canvas.getBoundingClientRect(); ctx.fillStyle='#0a0a0a'; ctx.fillRect(0,0,r.width,r.height); return; }
+      document.querySelector('.wb-tools button.active')?.classList.remove('active'); b.classList.add('active'); tool=b.dataset.tool;
+    };
+  });
+
   canvas.addEventListener('pointerdown', e=>{
-    drawing=true;
-    const rect = canvas.getBoundingClientRect();
-    lastX = e.clientX - rect.left;
-    lastY = e.clientY - rect.top;
-    canvas.setPointerCapture(e.pointerId);
+    drawing=true; canvas.setPointerCapture(e.pointerId);
+    const r=canvas.getBoundingClientRect();
+    last={x:e.clientX-r.left, y:e.clientY-r.top, p:e.pressure||0.5};
   });
   canvas.addEventListener('pointermove', e=>{
     if(!drawing) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    ctx.strokeStyle = tool==='eraser'? '#0a0a0a' : color;
-    ctx.lineWidth = tool==='eraser'? 30 : 3;
-    ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(lastX,lastY); ctx.lineTo(x,y); ctx.stroke();
-    [lastX,lastY]=[x,y];
+    const r=canvas.getBoundingClientRect();
+    const x=e.clientX-r.left, y=e.clientY-r.top, p=e.pressure||0.5;
+    ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(x,y);
+    if(tool==='eraser'){ ctx.globalCompositeOperation='destination-out'; ctx.lineWidth=30; }
+    else { ctx.globalCompositeOperation='source-over'; ctx.strokeStyle=color; ctx.lineWidth=3 + p*5; } // (presión como Samsung Notes)
+    ctx.stroke();
+    last={x,y,p};
   });
-  window.addEventListener('pointerup', ()=> drawing=false);
-
-  document.querySelectorAll('.wb-colors button').forEach(b=>{
-    b.onclick=()=>{
-      document.querySelector('.wb-colors button.active')?.classList.remove('active');
-      b.classList.add('active');
-      color=b.dataset.color;
-    };
-  });
-  document.querySelectorAll('.wb-tools button').forEach(b=>{
-    b.onclick=()=>{
-      document.querySelector('.wb-tools button.active')?.classList.remove('active');
-      b.classList.add('active');
-      tool=b.dataset.tool;
-      if(tool==='clear'){
-        ctx.fillStyle='#0a0a0a';
-        ctx.fillRect(0,0,canvas.width,canvas.height);
-      }
-    };
-  });
+  ['pointerup','pointercancel','pointerleave'].forEach(ev=>canvas.addEventListener(ev, ()=>drawing=false));
 }
