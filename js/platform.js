@@ -1,0 +1,286 @@
+// ACADEMIA ADDISON - PLATFORM.JS CON LISTA BLANCA
+const ALLOW_GROUP_CHANGE = true;
+
+// === DOCENTES ===
+const TEACHER_EMAILS = [
+  'eduardo.floreshu@gmail.com',
+  'profesor@addison.edu.pe'
+];
+
+// === ALUMNOS AUTORIZADOS ===
+const ALLOWED_EMAILS = [
+  'nattv9000@gmail.com',
+  'eduardo.floreshu@gmail.com',
+];
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBbp3kZtxiluZTI7xC_UDcUUyYF9Jb0yBQ",
+  authDomain: "academia-adison.firebaseapp.com",
+  projectId: "academia-adison",
+  storageBucket: "academia-adison.firebasestorage.app",
+  messagingSenderId: "92334581820",
+  appId: "1:92334581820:web:5e456f7c475119db95fb39",
+  measurementId: "G-YR4YL6B5WY"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const googleProvider = new firebase.auth.GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+let DATA;
+async function loadData(){
+  const res = await fetch('/data/courses.json');
+  if(!res.ok) throw new Error('No se pudo cargar courses.json');
+  DATA = await res.json();
+}
+
+function groupLabel(key){const g=DATA.groups[key];return g?`${key} - ${g.name}`:key;}
+const LS_USERS='addison_users';
+const loadUsers=()=>{try{return JSON.parse(localStorage.getItem(LS_USERS)||'{}')}catch{return{}}};
+const saveUsers=u=>localStorage.setItem(LS_USERS,JSON.stringify(u));
+let state={user:null,activeCourseId:null,isTeacher:false,liveSessions:{}};
+const progKey=(c,t,s,type)=>`${c}|${t}|${s||''}|${type}`;
+const getProgress=(c,t,s,type)=>state.user?.progress?.[progKey(c,t,s,type)];
+const setProgress=(c,t,s,type,val)=>{if(!state.user)return;state.user.progress=state.user.progress||{};state.user.progress[progKey(c,t,s,type)]=val;persistUser();renderTopics();renderCourses();};
+function persistUser(){const users=loadUsers();users[state.user.email]=state.user;saveUsers(users);}
+
+const welcomeEl=document.getElementById('welcome');const appEl=document.getElementById('app');
+const inpGroup=document.getElementById('inpGroup');const btnGoogleLogin=document.getElementById('btnGoogleLogin');
+const btnToggleSidebar=document.getElementById('btnToggleSidebar');const appBody=document.getElementById('appBody');const sidebarEl=document.getElementById('sidebar');
+const sidebarBackdrop=document.getElementById('sidebarBackdrop');const courseListEl=document.getElementById('courseList');const sidebarGroupEl=document.getElementById('sidebarGroup');const sidebarOverallEl=document.getElementById('sidebarOverall');
+const topicsGridEl=document.getElementById('topicsGrid');const userNameTop=document.getElementById('userNameTop');
+const modalAccount=document.getElementById('modalAccount');const btnAccount=document.getElementById('btnAccount');
+const accName=document.getElementById('accName');const accEmail=document.getElementById('accEmail');const accGroup=document.getElementById('accGroup');
+const accGroupHint=document.getElementById('accGroupHint');
+const btnSaveAccount=document.getElementById('btnSaveAccount');const btnLogout=document.getElementById('btnLogout');const btnCloseAccount=document.getElementById('btnCloseAccount');
+const modalIframe=document.getElementById('modalIframe');const iframeTitle=document.getElementById('iframeTitle');const iframeContent=document.getElementById('iframeContent');const btnCloseIframe=document.getElementById('btnCloseIframe');
+const liveBarEl=document.getElementById('liveBar');
+const liveCardContainer=document.getElementById('liveCardContainer');
+
+function populateGroupSelect(selectEl,selectedKey){selectEl.innerHTML='';Object.keys(DATA.groups).forEach(key=>{const opt=document.createElement('option');opt.value=key;opt.textContent=groupLabel(key);if(key===selectedKey)opt.selected=true;selectEl.appendChild(opt);});}
+
+btnGoogleLogin?.addEventListener('click', async ()=>{
+  try{ await auth.signInWithPopup(googleProvider); }catch(e){ alert('Error al iniciar sesión: '+e.message); }
+});
+
+auth.onAuthStateChanged(async user=>{
+  if(user){
+    if(!DATA) await loadData();
+    const email=user.email.toLowerCase();
+    const isTeacher = TEACHER_EMAILS.includes(email);
+    const isAllowed = isTeacher || ALLOWED_EMAILS.includes(email);
+    if(!isAllowed){
+      alert('Tu cuenta no está autorizada para acceder a la plataforma. Contacta al administrador.');
+      await auth.signOut(); return;
+    }
+    const users=loadUsers();
+    let profile=users[email];
+    let isNewUser = false;
+    if(!profile){
+      const selectedGroup=inpGroup.value || Object.keys(DATA.groups)[0];
+      profile={name:user.displayName||email.split('@')[0], email, group:selectedGroup, progress:{}};
+      users[email]=profile; saveUsers(users); isNewUser = true;
+    }
+    state.user=profile;
+    state.isTeacher = isTeacher;
+    enterApp();
+    if(isNewUser){ const nombre = state.user.name.split(' ')[0]; alert(`¡Bienvenido ${nombre}! Ya puedes empezar a estudiar en Academia Addison.`); }
+  }else{ state.user=null; appEl.classList.add('hidden'); welcomeEl.classList.remove('hidden'); }
+});
+
+function enterApp(){
+  welcomeEl.classList.add('hidden'); appEl.classList.remove('hidden');
+  userNameTop.textContent=state.user.name.split(' ')[0];
+  renderCourses();
+  const courses=getCoursesForGroup(state.user.group);
+  const lastCourse=sessionStorage.getItem('addison_last_course');
+  if(lastCourse && courses.some(c=>c.id===lastCourse)){ state.activeCourseId=lastCourse; }
+  else{ const first=courses[0]; if(first){state.activeCourseId=first.id;} }
+  renderTopics(); initLive();
+}
+
+function isMobile(){return window.innerWidth<=960}
+function toggleSidebar(){if(isMobile()){const open=!sidebarEl.classList.contains('open');sidebarEl.classList.toggle('open',open);sidebarBackdrop.classList.toggle('show',open);}else{appBody.classList.toggle('collapsed');}}
+btnToggleSidebar.onclick=toggleSidebar;sidebarBackdrop.onclick=()=>{sidebarEl.classList.remove('open');sidebarBackdrop.classList.remove('show')};
+function getCoursesForGroup(g){return DATA.courses.filter(c=>c.groups.includes(g))}
+
+function topicProgress(course,topic){
+  const hasSubs = topic.subtopics && topic.subtopics.length>0;
+  if(hasSubs){
+    let sum=0, count=0;
+    topic.subtopics.forEach(s=>{
+      const ex = getProgress(course.id, topic.id, s.id, 'exam');
+      if(typeof ex === 'number'){ sum += ex; count++; }
+      else if(ex){ sum += 100; count++; }
+      else { sum += 0; count++; }
+    });
+    return count? Math.round(sum/count) : 0;
+  }else{
+    const ex = getProgress(course.id, topic.id, '', 'exam');
+    if(typeof ex === 'number') return ex;
+    if(ex) return 100;
+    return 0;
+  }
+}
+function courseProgress(course){if(!course.topics.length)return 0;const sum=course.topics.reduce((a,t)=>a+topicProgress(course,t),0);return Math.round(sum/course.topics.length);}
+
+function renderCourses(){
+  courseListEl.innerHTML='';
+  sidebarGroupEl.textContent=groupLabel(state.user.group);
+  const courses=getCoursesForGroup(state.user.group);
+  let overallPct=0;
+  if(courses.length){ const sum=courses.reduce((a,c)=>a+courseProgress(c),0); overallPct=Math.round(sum/courses.length); }
+  if(sidebarOverallEl){
+    const radius=18,circ=2*Math.PI*radius,offset=circ*(1-overallPct/100);
+    sidebarOverallEl.innerHTML=`<div class="course-progress"><svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="${radius}" stroke="var(--bg-soft)" stroke-width="4" fill="none"/><circle cx="22" cy="22" r="${radius}" stroke="var(--brand)" stroke-width="4" fill="none" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round"/></svg><div class="pct">${overallPct}%</div></div>`;
+  }
+  courses.forEach(c=>{
+    const div=document.createElement('div');
+    div.className='course-item'+(c.id===state.activeCourseId?' active':'');
+    const topicsCount=c.topics?c.topics.length:0;
+    const pct=courseProgress(c);
+    const radius=15,circ=2*Math.PI*radius;
+    const offset=circ*(1-pct/100);
+    const isLive = state.liveSessions && state.liveSessions[c.id]?.active;
+    div.innerHTML=`<div class="course-info"><strong>${c.name}</strong><small>${topicsCount} temas</small></div><div class="course-progress"><svg width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="${radius}" stroke="var(--bg-soft)" stroke-width="3.5" fill="none"/><circle cx="18" cy="18" r="${radius}" stroke="var(--brand)" stroke-width="3.5" fill="none" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round"/></svg><div class="pct">${pct}%</div></div>${isLive? '<span class="course-live-badge" title="Clase en vivo activa"></span>' : ''}`;
+    div.onclick=()=>{ state.activeCourseId=c.id; renderCourses(); renderTopics(); renderLiveBar(); renderLiveCard(); if(isMobile()){ sidebarEl.classList.remove('open'); sidebarBackdrop.classList.remove('show') } };
+    courseListEl.appendChild(div);
+  });
+}
+
+function renderTopics(){
+  topicsGridEl.innerHTML='';
+  const course=DATA.courses.find(c=>c.id===state.activeCourseId);
+  if(!course)return;
+  course.topics.forEach(topic=>{
+    const pct=topicProgress(course,topic);
+    const hasSubs=topic.subtopics&&topic.subtopics.length>0;
+    const card=document.createElement('div');
+    card.className='topic-card';
+    card.innerHTML=`<div class="topic-head"><strong>${topic.name}</strong><span class="badge">${pct}%</span></div><div class="progress"><span style="width:${pct}%"></span></div>`;
+    if(hasSubs){
+      topic.subtopics.forEach(s=>{
+        const th=!!getProgress(course.id,topic.id,s.id,'theory');
+        const ex=getProgress(course.id,topic.id,s.id,'exam');
+        const exText=typeof ex==='number'?ex+'%':(ex?'✓':'✕');
+        const sub=document.createElement('div');
+        sub.className='subtopic';
+        sub.innerHTML=`<strong>${s.name}</strong><div class="sub-meta">Teoría: ${th?'✓':'✕'} • Examen: ${exText}</div><div class="sub-actions"><button>Teoría</button><button class="primary">Examen</button></div>`;
+        sub.querySelector('button').onclick=()=>openContent('Teoría',s.theoryUrl,course.id,topic.id,s.id,'theory');
+        sub.querySelector('.primary').onclick=()=>openContent('Examen',s.examUrl,course.id,topic.id,s.id,'exam');
+        card.appendChild(sub);
+      });
+    }else{
+      const th=!!getProgress(course.id,topic.id,'','theory');
+      const ex=getProgress(course.id,topic.id,'','exam');
+      const exText=typeof ex==='number'?ex+'%':(ex?'✓':'✕');
+      const meta=document.createElement('div');
+      meta.className='sub-meta';
+      meta.textContent=`Teoría: ${th?'✓':'✕'} • Examen: ${exText}`;
+      const actions=document.createElement('div');
+      actions.className='sub-actions';
+      actions.innerHTML=`<button>Teoría</button><button class="primary">Examen</button>`;
+      actions.children[0].onclick=()=>openContent('Teoría',topic.theoryUrl,course.id,topic.id,'','theory');
+      actions.children[1].onclick=()=>openContent('Examen',topic.examUrl,course.id,topic.id,'','exam');
+      card.appendChild(meta); card.appendChild(actions);
+    }
+    topicsGridEl.appendChild(card);
+  });
+}
+
+function openContent(title,url,courseId,topicId,subId,type){
+  let targetUrl=''; let examKey=''; let theoryKey='';
+  if(type==='exam'){ targetUrl='examen/index.html'; if(url && url.trim()!==''){try{const clean=url.split('?')[0].split('#')[0];const file=clean.split('/').pop()||'';examKey=file.replace(/\.html?$/i,'');}catch(e){}} }
+  else if(type==='theory'){ targetUrl='teoria/index.html'; if(url && url.trim()!==''){try{const clean=url.split('?')[0].split('#')[0];const file=clean.split('/').pop()||'';theoryKey=file.replace(/\.html?$/i,'');}catch(e){}} }
+  else{ targetUrl=url && url.trim()!==''?url:(type==='theory'?'teoria_final.html':''); }
+  if(targetUrl){
+    const fullUrl=targetUrl.startsWith('http')?targetUrl:targetUrl;
+    const urlSinCache=fullUrl+(fullUrl.includes('?')?'&':'?')+'t='+Date.now();
+    const sep=urlSinCache.includes('?')?'&':'?';
+    let urlWithIds=urlSinCache+sep+'courseId='+encodeURIComponent(courseId)+'&topicId='+encodeURIComponent(topicId)+'&subId='+encodeURIComponent(subId||'');
+    if(type==='exam' && examKey) urlWithIds+='&examKey='+encodeURIComponent(examKey);
+    if(type==='theory' && theoryKey) urlWithIds+='&theoryKey='+encodeURIComponent(theoryKey);
+    try{const studentName=state.user?.name||'';if(studentName){urlWithIds+='&name='+encodeURIComponent(studentName);}}catch(e){}
+    try{sessionStorage.setItem('addison_last_course',courseId);}catch(e){}
+    window.location.href=urlWithIds; return;
+  }else{ const val=type==='exam'?Math.floor(Math.random()*41)+60:true; setProgress(courseId,topicId,subId,type,val); }
+}
+
+btnCloseIframe.onclick = ()=>{ modalIframe.classList.add('hidden'); if(iframeContent){ iframeContent.src='about:blank'; } };
+window.addEventListener('message', e=>{ const d=e.data||{}; if(d.type==='progress'){ setProgress(d.courseId,d.topicId,d.subId,d.contentType,d.value??true); } });
+
+btnAccount.onclick=()=>{ accName.value=state.user.name; accEmail.value=state.user.email; populateGroupSelect(accGroup,state.user.group); if(ALLOW_GROUP_CHANGE){ accGroup.disabled=false; accGroupHint.textContent='Puedes cambiar de grupo.'; }else{ accGroup.disabled=true; accGroupHint.textContent='Cambio deshabilitado.'; } modalAccount.classList.remove('hidden'); };
+btnCloseAccount.onclick=()=>modalAccount.classList.add('hidden');
+btnSaveAccount.onclick=()=>{ state.user.name=accName.value.trim()||state.user.name; if(ALLOW_GROUP_CHANGE && accGroup.value!==state.user.group){ state.user.group=accGroup.value; const first=getCoursesForGroup(state.user.group)[0]; state.activeCourseId=first?first.id:null; } persistUser(); userNameTop.textContent=state.user.name.split(' ')[0]; modalAccount.classList.add('hidden'); renderCourses(); renderTopics(); };
+btnLogout.onclick=()=>{auth.signOut();};
+
+// ==================== SISTEMA DE CLASES EN VIVO ====================
+function initLive(){
+  if(!state.user) return;
+  db.collection('live_sessions').where('active','==',true).onSnapshot(snapshot=>{
+    const activeSessions = {};
+    snapshot.forEach(doc=>{ activeSessions[doc.id]=doc.data(); });
+    state.liveSessions = activeSessions;
+    renderLiveBar(); renderLiveCard(); renderCourses();
+  });
+}
+function renderLiveBar(){
+  if(!liveBarEl) return;
+  if(!state.isTeacher){ liveBarEl.classList.add('hidden'); return; }
+  const course = DATA.courses.find(c=>c.id===state.activeCourseId);
+  if(!course){ liveBarEl.classList.add('hidden'); return; }
+  const session = state.liveSessions?.[course.id];
+  liveBarEl.classList.remove('hidden');
+  if(session && session.active){
+    liveBarEl.innerHTML = `
+      <div class="live-bar-left">
+        <div class="live-dot"></div>
+        <div>
+          <div class="live-bar-title">Clase en vivo activa</div>
+          <div class="live-bar-sub">${course.name} • ${session.participants||0} alumnos conectados</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="live-bar-btn" onclick="joinLiveClass('${course.id}')">Entrar a la sala</button>
+        <button class="live-bar-btn" style="background:#fff;color:#d32f2f" onclick="endLiveClass('${course.id}')">Finalizar</button>
+      </div>`;
+  }else{
+    liveBarEl.innerHTML = `
+      <div class="live-bar-left">
+        <div class="live-dot" style="background:rgba(255,255,255,.5);animation:none"></div>
+        <div>
+          <div class="live-bar-title">Iniciar clase en vivo</div>
+          <div class="live-bar-sub">${course.name} • Los alumnos verán la invitación al instante</div>
+        </div>
+      <button class="live-bar-btn" onclick="startLiveClass('${course.id}')">Iniciar ahora</button>`;
+  }
+}
+function renderLiveCard(){
+  if(!liveCardContainer) return;
+  if(state.isTeacher){ liveCardContainer.innerHTML=''; return; }
+  const course = DATA.courses.find(c=>c.id===state.activeCourseId);
+  if(!course){ liveCardContainer.innerHTML=''; return; }
+  const session = state.liveSessions?.[course.id];
+  if(session && session.active){
+    liveCardContainer.innerHTML = `<div class="live-card"><div class="live-card-head"><div class="live-dot"></div><div class="live-card-title">¡Clase en vivo ahora!</div></div><div class="live-card-msg">Tu profesor ${session.teacherName||''} está en línea. Únete ahora y no te pierdas la explicación en vivo. 🚀</div><button class="live-card-btn" onclick="joinLiveClass('${course.id}')">Entrar a clase en vivo</button></div>`;
+  }else{ liveCardContainer.innerHTML=''; }
+}
+async function startLiveClass(courseId){
+  try{
+    await db.collection('live_sessions').doc(courseId).set({ active:true, courseId, teacherEmail: state.user.email, teacherName: state.user.name, startedAt: firebase.firestore.FieldValue.serverTimestamp(), participants:0 },{merge:true});
+    window.location.href = `live/room.html?course=${encodeURIComponent(courseId)}`;
+  }catch(e){ alert('Error al iniciar clase: '+e.message); }
+}
+async function endLiveClass(courseId){
+  if(!confirm('¿Finalizar la clase en vivo? Los alumnos serán desconectados.')) return;
+  try{
+    await db.collection('live_sessions').doc(courseId).update({ active:false, endedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  }catch(e){ alert('Error al finalizar: '+e.message); }
+}
+function joinLiveClass(courseId){ window.location.href = `live/room.html?course=${encodeURIComponent(courseId)}`; }
+window.startLiveClass = startLiveClass; window.joinLiveClass = joinLiveClass; window.endLiveClass = endLiveClass;
+
+async function init(){ await loadData(); populateGroupSelect(inpGroup,'A'); }
+init();

@@ -1,0 +1,44 @@
+{
+  "courseId": "aritmetica",
+  "topicId": "t11",
+  "subId": "s1",
+  "courseName": "Aritmética",
+  "examTopic": "Regla de tres y porcentajes",
+  "subName": "Regla de tres",
+  "timePerQuestionSeconds": 60,
+  "questions": [
+    {
+      "q": "Si 5 obreros construyen un muro en 20 días, ¿en cuántos días lo harán 10 obreros trabajando al mismo ritmo?",
+      "options": [
+        "10 días",
+        "15 días",
+        "40 días",
+        "25 días"
+      ],
+      "correct": 0,
+      "exp": "Regla de tres inversa: más obreros, menos días. 5×20 = 10×x → x=10."
+    },
+    {
+      "q": "Un auto recorre 300 km con 25 litros de gasolina. ¿Cuántos litros necesita para recorrer 480 km?",
+      "options": [
+        "35 L",
+        "40 L",
+        "45 L",
+        "50 L"
+      ],
+      "correct": 1,
+      "exp": "Regla de tres directa: 300/25 = 480/x → x = 40."
+    },
+    {
+      "q": "Si 3 máquinas producen 120 piezas en 4 horas, ¿cuántas piezas producirán 5 máquinas en 6 horas?",
+      "options": [
+        "250 piezas",
+        "300 piezas",
+        "360 piezas",
+        "400 piezas"
+      ],
+      "correct": 1,
+      "exp": "Regla de tres compuesta: (5/3)×(6/4)×120 = 300."
+    }
+  ]
+}

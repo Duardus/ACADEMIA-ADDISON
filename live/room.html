@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Sala en vivo - Academia Addison</title>
+<link rel="stylesheet" href="css/live.css"/>
+</head>
+<body>
+<div class="live-room">
+  <div class="live-topbar">
+    <div class="live-info">
+      <span class="live-dot"></span>
+      <strong id="liveCourseName">Clase en vivo</strong>
+      <span id="liveStatus">Conectando...</span>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-end" id="btnEndLive" style="display:none">Finalizar clase</button>
+      <button class="btn-exit" id="btnExit">Salir</button>
+    </div>
+  </div>
+
+  <div class="live-body">
+    <div class="video-area">
+      <div class="video-grid" id="videoGrid">
+        <div class="video-tile teacher">
+          <video id="localVideo" autoplay muted playsinline></video>
+          <div class="tile-label">Tú</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="whiteboard-area">
+      <canvas id="whiteboard"></canvas>
+      <div class="wb-toolbar">
+        <div class="wb-colors">
+          <button data-color="#FFEB3B" class="active"></button>
+          <button data-color="#FF9800"></button>
+          <button data-color="#F44336"></button>
+          <button data-color="#E91E63"></button>
+          <button data-color="#9C27B0"></button>
+          <button data-color="#2196F3"></button>
+          <button data-color="#00BCD4"></button>
+          <button data-color="#4CAF50"></button>
+        </div>
+        <div class="wb-tools">
+          <button data-tool="pen" class="active">✏️</button>
+          <button data-tool="eraser">🧽</button>
+          <button data-tool="clear">🗑️</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="live-controls">
+    <button id="btnMic" class="ctrl-btn active">🎤</button>
+    <button id="btnCam" class="ctrl-btn active">📷</button>
+    <button id="btnScreen" class="ctrl-btn">🖥️</button>
+    <button id="btnBoard" class="ctrl-btn active">📝</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script type="module" src="js/live-room.js"></script>
+</body>
+</html>
