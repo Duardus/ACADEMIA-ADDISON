@@ -12,7 +12,6 @@ const corsHeaders = {
 export async function onRequest(context) {
   const { request, env } = context;
 
-  // (Los navegadores mandan OPTIONS antes, hay que responder)
   if (request.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -22,7 +21,7 @@ export async function onRequest(context) {
   const identity = url.searchParams.get('identity');
   const name = url.searchParams.get('name') || identity;
 
-  if (!room ||!identity) {
+  if (!room || !identity) {
     return new Response(JSON.stringify({ error: 'room y identity requeridos' }), {
       status: 400, headers: {...corsHeaders, 'Content-Type': 'application/json' }
     });
@@ -30,10 +29,10 @@ export async function onRequest(context) {
 
   const apiKey = env.LIVEKIT_API_KEY;
   const apiSecret = env.LIVEKIT_API_SECRET;
-  // (IMPORTANTE: aquí debes poner tu dominio con SSL, no la IP)
-  const livekitUrl = env.LIVEKIT_URL;
+  // CORREGIDO: ahora lee la variable que SÍ tienes en Cloudflare
+  const livekitUrl = env.NEXT_PUBLIC_LIVEKIT_URL || env.LIVEKIT_URL;
 
-  if (!apiKey ||!apiSecret ||!livekitUrl) {
+  if (!apiKey || !apiSecret || !livekitUrl) {
     return new Response(JSON.stringify({ error: 'Faltan variables en Cloudflare' }), {
       status: 500, headers: {...corsHeaders, 'Content-Type': 'application/json' }
     });
@@ -45,14 +44,14 @@ export async function onRequest(context) {
     sub: identity,
     iat: now,
     nbf: now,
-    exp: now + 3600, // 1 hora
+    exp: now + 3600,
     name,
     video: { room, roomJoin: true, canPublish: true, canSubscribe: true, canPublishData: true }
   };
 
   const token = await new SignJWT(payload)
-   .setProtectedHeader({ alg: 'HS256' })
-   .sign(new TextEncoder().encode(apiSecret));
+    .setProtectedHeader({ alg: 'HS256' })
+    .sign(new TextEncoder().encode(apiSecret));
 
   return new Response(JSON.stringify({ token, url: livekitUrl, room, identity }), {
     headers: {...corsHeaders, 'Content-Type': 'application/json' }
