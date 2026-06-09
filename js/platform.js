@@ -11,6 +11,7 @@ const TEACHER_EMAILS = [
 const ALLOWED_EMAILS = [
   'nattv9000@gmail.com',
   'eduardo.floreshu@gmail.com',
+  'addisoncusco@gmail.com',
 ];
 
 const firebaseConfig = {
