@@ -29,7 +29,6 @@ export async function onRequest(context) {
 
   const apiKey = env.LIVEKIT_API_KEY;
   const apiSecret = env.LIVEKIT_API_SECRET;
-  // CORREGIDO: ahora lee la variable que SÍ tienes en Cloudflare
   const livekitUrl = env.NEXT_PUBLIC_LIVEKIT_URL || env.LIVEKIT_URL;
 
   if (!apiKey || !apiSecret || !livekitUrl) {
@@ -49,9 +48,8 @@ export async function onRequest(context) {
     video: { room, roomJoin: true, canPublish: true, canSubscribe: true, canPublishData: true }
   };
 
-  const token = await new SignJWT(payload)
-    .setProtectedHeader({ alg: 'HS256' })
-    .sign(new TextEncoder().encode(apiSecret));
+  // 🔥 CAMBIO ESTRATÉGICO: Llamada directa a nuestra firma nativa simplificada
+  const token = await SignJWT(payload, apiSecret);
 
   return new Response(JSON.stringify({ token, url: livekitUrl, room, identity }), {
     headers: {...corsHeaders, 'Content-Type': 'application/json' }
