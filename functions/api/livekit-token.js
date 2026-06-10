@@ -1,7 +1,4 @@
-// functions/api/livekit-token.js
-// (Este archivo vive en Cloudflare y crea el pase de entrada a tu servidor LiveKit en Oracle)
-
-import { SignJWT } from '../jose.js';
+import { AccessToken } from 'https://esm.sh/livekit-server-sdk@2.6.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -37,21 +34,29 @@ export async function onRequest(context) {
     });
   }
 
-  const now = Math.floor(Date.now() / 1000);
-  const payload = {
-    iss: apiKey,
-    sub: identity,
-    iat: now,
-    nbf: now,
-    exp: now + 3600,
-    name,
-    video: { room, roomJoin: true, canPublish: true, canSubscribe: true, canPublishData: true }
-  };
+  try {
+    const at = new AccessToken(apiKey, apiSecret, {
+      identity: identity,
+      name: name,
+      ttl: '1h'
+    });
 
-  // 🔥 CAMBIO ESTRATÉGICO: Llamada directa a nuestra firma nativa simplificada
-  const token = await SignJWT(payload, apiSecret);
+    at.addGrant({
+      roomJoin: true,
+      room: room,
+      canPublish: true,
+      canSubscribe: true,
+      canPublishData: true
+    });
 
-  return new Response(JSON.stringify({ token, url: livekitUrl, room, identity }), {
-    headers: {...corsHeaders, 'Content-Type': 'application/json' }
-  });
+    const token = await at.toJwt();
+
+    return new Response(JSON.stringify({ token, url: livekitUrl, room, identity }), {
+      headers: {...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: 'Error interno generando el token oficial' }), {
+      status: 500, headers: {...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
 }
