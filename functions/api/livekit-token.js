@@ -1,4 +1,4 @@
-import { AccessToken } from 'livekit-server-sdk';
+import { AccessToken } from 'https://deno.land/x/livekit_server_sdk@v2.6.0/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
