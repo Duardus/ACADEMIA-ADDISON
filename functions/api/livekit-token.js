@@ -1,7 +1,7 @@
 // functions/api/livekit-token.js
 // (Este archivo vive en Cloudflare y crea el pase de entrada a tu servidor LiveKit en Oracle)
 
-import { SignJWT } from 'jose';
+import { SignJWT } from 'https://cdnjs.cloudflare.com/ajax/libs/jose/5.9.6/index.js';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
