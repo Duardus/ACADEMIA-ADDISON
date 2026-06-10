@@ -40,26 +40,30 @@ async function connectLiveKit(user){
     const identity = user.email;
     const name = user.displayName || identity.split('@')[0];
     const res = await fetch(`${TOKEN_URL}?room=${encodeURIComponent(courseId)}&identity=${encodeURIComponent(identity)}&name=${encodeURIComponent(name)}`);
-    const { token, url } = await res.json();
+    const { token } = await res.json(); // Descartamos la url variable del Worker
 
     room = new Room({ adaptiveStream:true, dynacast:true });
 
     room.on(RoomEvent.TrackSubscribed, (track, pub, participant)=>{
       const el = track.attach(); el.autoplay=true; el.playsInline=true;
       const tile = document.createElement('div'); tile.className='video-tile'; tile.id=`tile-${pub.trackSid}`;
-      tile.appendChild(el);
+      const wrapper = document.createElement('div'); wrapper.style.width="100%"; wrapper.style.height="100%";
+      wrapper.appendChild(el);
+      tile.appendChild(wrapper);
       const label = document.createElement('div'); label.className='tile-label'; label.textContent = participant.identity;
       tile.appendChild(label);
       videoGrid.appendChild(tile);
     });
     room.on(RoomEvent.TrackUnsubscribed, (track, pub)=>{ document.getElementById(`tile-${pub.trackSid}`)?.remove(); });
 
-    await room.connect(url, token);
+    // 🔥 CAMBIO ESTRATÉGICO: Forzamos tu dominio DuckDNS real con candado seguro
+    await room.connect('wss://academia-addison.duckdns.org', token);
+    
     liveStatus.textContent = isTeacher? 'En vivo (Profesor)' : 'En vivo';
   }catch(err){
     console.error(err);
     liveStatus.textContent = 'Error al conectar';
-    alert('No se pudo conectar a LiveKit. Revisa tu túnel Cloudflare.');
+    alert('No se pudo conectar a LiveKit. Mapeando directo a DuckDNS.');
   }
 }
 
@@ -79,7 +83,7 @@ function setupControls(){
   btnBoard.onclick = ()=>{ document.querySelector('.whiteboard-area').classList.toggle('hidden'); btnBoard.classList.toggle('active'); };
 }
 
-// --- PIZARRA FUSIONADA (la de whiteboard.js adaptada a tu HTML) ---
+// --- PIZARRA FUSIONADA ---
 function initWhiteboard(){
   const canvas = document.getElementById('whiteboard');
   if(!canvas) return;
@@ -95,11 +99,9 @@ function initWhiteboard(){
   }
   resize(); window.addEventListener('resize', resize);
 
-  // Colores (usa tus botones de room.html)
   document.querySelectorAll('.wb-colors button').forEach(b=>{
     b.onclick = ()=>{ document.querySelector('.wb-colors button.active')?.classList.remove('active'); b.classList.add('active'); color=b.dataset.color; };
   });
-  // Herramientas
   document.querySelectorAll('.wb-tools button').forEach(b=>{
     b.onclick = ()=>{
       if(b.dataset.tool==='clear'){ const r=canvas.getBoundingClientRect(); ctx.fillStyle='#0a0a0a'; ctx.fillRect(0,0,r.width,r.height); return; }
@@ -118,7 +120,7 @@ function initWhiteboard(){
     const x=e.clientX-r.left, y=e.clientY-r.top, p=e.pressure||0.5;
     ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(x,y);
     if(tool==='eraser'){ ctx.globalCompositeOperation='destination-out'; ctx.lineWidth=30; }
-    else { ctx.globalCompositeOperation='source-over'; ctx.strokeStyle=color; ctx.lineWidth=3 + p*5; } // (presión como Samsung Notes)
+    else { ctx.globalCompositeOperation='source-over'; ctx.strokeStyle=color; ctx.lineWidth=3 + p*5; }
     ctx.stroke();
     last={x,y,p};
   });
