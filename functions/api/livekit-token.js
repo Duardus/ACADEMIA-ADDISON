@@ -1,4 +1,4 @@
-import { AccessToken } from 'https://esm.sh/livekit-server-sdk@2.6.0';
+import { AccessToken } from 'livekit-server-sdk';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

@@ -1,8 +1,7 @@
 {
   "name": "academia-addison",
   "version": "1.0.0",
-  "type": "module",
   "dependencies": {
-    "jose": "^5.9.6"
+    "livekit-server-sdk": "^2.6.0"
   }
 }
