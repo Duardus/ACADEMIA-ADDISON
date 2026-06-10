@@ -57,7 +57,7 @@ async function connectLiveKit(user){
     room.on(RoomEvent.TrackUnsubscribed, (track, pub)=>{ document.getElementById(`tile-${pub.trackSid}`)?.remove(); });
 
     // 🔥 CAMBIO ESTRATÉGICO: Forzamos tu dominio DuckDNS real con candado seguro
-    await room.connect('wss://academia-addison.duckdns.org:7880', token);
+    await room.connect('wss://academia-addison.duckdns.org', token);
     
     liveStatus.textContent = isTeacher? 'En vivo (Profesor)' : 'En vivo';
   }catch(err){
