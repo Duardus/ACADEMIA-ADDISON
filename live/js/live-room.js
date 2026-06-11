@@ -1,7 +1,10 @@
 // live/js/live-room.js - TODO EN UNO (LiveKit + Controles + Pizarra)
-// (Este es el cerebro de tu sala en vivo)
 
 import { Room, RoomEvent, Track } from 'https://cdn.jsdelivr.net/npm/livekit-client@2.5.7/+esm';
+
+// --- CONFIGURACIÓN ESTRATÉGICA ---
+const LIVEKIT_URL = "wss://academia-addison.duckdns.org";
+const TOKEN_URL = '/api/token'; // coincide con functions/api/token.js
 
 // --- Firebase (tu login) ---
 const firebaseConfig = { apiKey:"AIzaSyBbp3kZtxiluZTI7xC_UDcUUyYF9Jb0yBQ", authDomain:"academia-adison.firebaseapp.com", projectId:"academia-adison", storageBucket:"academia-adison.firebasestorage.app", messagingSenderId:"92334581820", appId:"1:92334581820:web:5e456f7c475119db95fb39" };
@@ -9,7 +12,6 @@ if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 
 const TEACHER_EMAILS = ['eduardofloreshu@gmail.com','profesor@addison.edu.pe'];
-const TOKEN_URL = '/api/livekit-token'; // (ruta correcta a tu Worker)
 
 const params = new URLSearchParams(location.search);
 const courseId = params.get('course') || 'clases-vivo';
@@ -29,9 +31,9 @@ auth.onAuthStateChanged(async user=>{
   liveCourseName.textContent = `Curso: ${courseId}`;
   liveStatus.textContent = 'Conectando...';
 
-  initWhiteboard(); // (iniciamos pizarra primero)
-  setupControls(); // (botones)
-  await connectLiveKit(user); // (video)
+  initWhiteboard();
+  setupControls();
+  await connectLiveKit(user);
 });
 
 // --- Conexión LiveKit ---
@@ -40,7 +42,9 @@ async function connectLiveKit(user){
     const identity = user.email;
     const name = user.displayName || identity.split('@')[0];
     const res = await fetch(`${TOKEN_URL}?room=${encodeURIComponent(courseId)}&identity=${encodeURIComponent(identity)}&name=${encodeURIComponent(name)}`);
-    const { token } = await res.json(); // Descartamos la url variable del Worker
+
+    // CAMBIO: tu función devuelve texto plano, no JSON
+    const token = await res.text();
 
     room = new Room({ adaptiveStream:true, dynacast:true });
 
@@ -56,14 +60,14 @@ async function connectLiveKit(user){
     });
     room.on(RoomEvent.TrackUnsubscribed, (track, pub)=>{ document.getElementById(`tile-${pub.trackSid}`)?.remove(); });
 
-    // 🔥 CAMBIO ESTRATÉGICO: Forzamos tu dominio DuckDNS real con candado seguro
-    await room.connect('wss://academia-addison.duckdns.org', token);
-    
+    // Usamos la constante
+    await room.connect(LIVEKIT_URL, token);
+
     liveStatus.textContent = isTeacher? 'En vivo (Profesor)' : 'En vivo';
   }catch(err){
     console.error(err);
     liveStatus.textContent = 'Error al conectar';
-    alert('No se pudo conectar a LiveKit. Mapeando directo a DuckDNS.');
+    alert('No se pudo conectar a LiveKit. Verifica que Oracle y Caddy estén activos.');
   }
 }
 
@@ -83,7 +87,7 @@ function setupControls(){
   btnBoard.onclick = ()=>{ document.querySelector('.whiteboard-area').classList.toggle('hidden'); btnBoard.classList.toggle('active'); };
 }
 
-// --- PIZARRA FUSIONADA ---
+// --- PIZARRA ---
 function initWhiteboard(){
   const canvas = document.getElementById('whiteboard');
   if(!canvas) return;
