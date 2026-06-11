@@ -1,39 +1,47 @@
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
-
-async function signJwt(payload, secret) {
-  const encoder = new TextEncoder();
-  const header = { alg: 'HS256', typ: 'JWT' };
-  const enc = (obj) => btoa(JSON.stringify(obj)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
-  const data = `${enc(header)}.${enc(payload)}`;
-  const key = await crypto.subtle.importKey('raw', encoder.encode(secret), {name:'HMAC',hash:'SHA-256'}, false, ['sign']);
-  const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(data));
-  const sigEnc = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
-  return `${data}.${sigEnc}`;
-}
-
 export async function onRequest(context) {
-  const { request, env } = context;
-  if (request.method === 'OPTIONS') return new Response(null, {headers:corsHeaders});
+  const { env } = context;
+  const cors = { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' };
+  
+  try {
+    const url = new URL(context.request.url);
+    const room = url.searchParams.get('room') || 'test';
+    const identity = url.searchParams.get('identity') || 'test';
+    
+    // 1. Verifica secrets
+    if (!env.LIVEKIT_API_KEY) throw new Error('Falta LIVEKIT_API_KEY');
+    if (!env.LIVEKIT_API_SECRET) throw new Error('Falta LIVEKIT_API_SECRET');
+    if (!env.LIVEKIT_URL) throw new Error('Falta LIVEKIT_URL');
 
-  const url = new URL(request.url);
-  const room = url.searchParams.get('room');
-  const identity = url.searchParams.get('identity');
-  const name = url.searchParams.get('name') || identity;
+    // 2. Crea token simple
+    const now = Math.floor(Date.now()/1000);
+    const header = { alg: 'HS256', typ: 'JWT' };
+    const payload = { 
+      iss: env.LIVEKIT_API_KEY, 
+      sub: identity, 
+      iat: now, 
+      exp: now+3600,
+      video: { room, roomJoin: true }
+    };
 
-  const apiKey = env.LIVEKIT_API_KEY;
-  const apiSecret = env.LIVEKIT_API_SECRET;
-  const livekitUrl = env.LIVEKIT_URL;
-
-  if (!room || !identity) return new Response(JSON.stringify({error:'faltan params'}), {status:400, headers:{...corsHeaders,'Content-Type':'application/json'}});
-  if (!apiKey || !apiSecret || !livekitUrl) return new Response(JSON.stringify({error:'Faltan secrets'}), {status:500, headers:{...corsHeaders,'Content-Type':'application/json'}});
-
-  const now = Math.floor(Date.now()/1000);
-  const payload = { iss: apiKey, sub: identity, name, nbf: now-5, iat: now, exp: now+3600, video:{ room, roomJoin:true, canPublish:true, canSubscribe:true } };
-
-  const token = await signJwt(payload, apiSecret);
-  return new Response(JSON.stringify({ token, url: livekitUrl }), { headers:{...corsHeaders,'Content-Type':'application/json'} });
+    const enc = obj => btoa(JSON.stringify(obj)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+    const data = `${enc(header)}.${enc(payload)}`;
+    
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.LIVEKIT_API_SECRET), {name:'HMAC', hash:'SHA-256'}, false, ['sign']);
+    const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data));
+    const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+    
+    const token = `${data}.${sigB64}`;
+    
+    return new Response(JSON.stringify({ ok:true, token, url: env.LIVEKIT_URL }), { headers: cors });
+    
+  } catch (e) {
+    // ESTO es lo importante: ahora verás el error real
+    return new Response(JSON.stringify({ 
+      error: e.message, 
+      stack: e.stack,
+      hasKey: !!env.LIVEKIT_API_KEY,
+      hasSecret: !!env.LIVEKIT_API_SECRET,
+      hasUrl: !!env.LIVEKIT_URL
+    }), { status: 500, headers: cors });
+  }
 }
