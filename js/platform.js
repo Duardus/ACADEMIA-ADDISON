@@ -1,18 +1,7 @@
-// ACADEMIA ADDISON - PLATFORM.JS CORREGIDO PARA PAGES + WORKERS
-const ALLOW_GROUP_CHANGE = true;
+// ACADEMIA ADDISON - PLATFORM.JS v4.0 FIRESTORE
+// Roles dinámicos + progreso en cadena + admin panel
 
-// === DOCENTES ===
-const TEACHER_EMAILS = [
-  'eduardo.floreshu@gmail.com',
-  'profesor@addison.edu.pe'
-];
-
-// === ALUMNOS AUTORIZADOS ===
-const ALLOWED_EMAILS = [
-  'nattv9000@gmail.com',
-  'eduardo.floreshu@gmail.com',
-  'addisoncusco@gmail.com',
-];
+const ADMIN_EMAIL_INICIAL = 'eduardo.floreshu@gmail.com';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBbp3kZtxiluZTI7xC_UDcUUyYF9Jb0yBQ",
@@ -32,85 +21,193 @@ googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 let DATA;
 async function loadData(){
-  // CORRECCIÓN: ruta relativa sin / inicial para Cloudflare Pages
   const res = await fetch('data/courses.json', { cache: 'no-store' });
   if(!res.ok) throw new Error('No se pudo cargar courses.json: '+res.status);
   DATA = await res.json();
-  console.log('[PLATFORM] courses.json cargado', DATA.courses.length, 'cursos');
 }
 
 function groupLabel(key){const g=DATA.groups[key];return g?`${key} - ${g.name}`:key;}
 const LS_USERS='addison_users';
 const loadUsers=()=>{try{return JSON.parse(localStorage.getItem(LS_USERS)||'{}')}catch{return{}}};
 const saveUsers=u=>localStorage.setItem(LS_USERS,JSON.stringify(u));
-let state={user:null,activeCourseId:null,isTeacher:false,liveSessions:{}};
+
+let state={user:null,activeCourseId:null,isTeacher:false,isAdmin:false,liveSessions:{}};
+
 const progKey=(c,t,s,type)=>`${c}|${t}|${s||''}|${type}`;
 const getProgress=(c,t,s,type)=>state.user?.progress?.[progKey(c,t,s,type)];
-const setProgress=(c,t,s,type,val)=>{if(!state.user)return;state.user.progress=state.user.progress||{};state.user.progress[progKey(c,t,s,type)]=val;persistUser();renderTopics();renderCourses();};
-function persistUser(){const users=loadUsers();users[state.user.email]=state.user;saveUsers(users);}
 
-const welcomeEl=document.getElementById('welcome');const appEl=document.getElementById('app');
-const inpGroup=document.getElementById('inpGroup');const btnGoogleLogin=document.getElementById('btnGoogleLogin');
-const btnToggleSidebar=document.getElementById('btnToggleSidebar');const appBody=document.getElementById('appBody');const sidebarEl=document.getElementById('sidebar');
-const sidebarBackdrop=document.getElementById('sidebarBackdrop');const courseListEl=document.getElementById('courseList');const sidebarGroupEl=document.getElementById('sidebarGroup');const sidebarOverallEl=document.getElementById('sidebarOverall');
-const topicsGridEl=document.getElementById('topicsGrid');const userNameTop=document.getElementById('userNameTop');
-const modalAccount=document.getElementById('modalAccount');const btnAccount=document.getElementById('btnAccount');
-const accName=document.getElementById('accName');const accEmail=document.getElementById('accEmail');const accGroup=document.getElementById('accGroup');
+const setProgress=async(c,t,s,type,val)=>{
+  if(!state.user)return;
+  state.user.progress=state.user.progress||{};
+  state.user.progress[progKey(c,t,s,type)]=val;
+  await persistUser();
+  renderTopics();
+  renderCourses();
+};
+
+async function persistUser(){
+  if(!state.user) return;
+  try{
+    await db.collection('users').doc(state.user.email).set({
+      nombre: state.user.name,
+      email: state.user.email,
+      grupo: state.user.group,
+      rol: state.user.rol,
+      progreso: state.user.progress || {},
+      ultimaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
+    }, {merge:true});
+  }catch(e){ console.error('Error guardando:', e); }
+}
+
+const welcomeEl=document.getElementById('welcome');
+const appEl=document.getElementById('app');
+const inpGroup=document.getElementById('inpGroup');
+const btnGoogleLogin=document.getElementById('btnGoogleLogin');
+const btnToggleSidebar=document.getElementById('btnToggleSidebar');
+const appBody=document.getElementById('appBody');
+const sidebarEl=document.getElementById('sidebar');
+const sidebarBackdrop=document.getElementById('sidebarBackdrop');
+const courseListEl=document.getElementById('courseList');
+const sidebarGroupEl=document.getElementById('sidebarGroup');
+const sidebarOverallEl=document.getElementById('sidebarOverall');
+const topicsGridEl=document.getElementById('topicsGrid');
+const userNameTop=document.getElementById('userNameTop');
+const modalAccount=document.getElementById('modalAccount');
+const btnAccount=document.getElementById('btnAccount');
+const accName=document.getElementById('accName');
+const accEmail=document.getElementById('accEmail');
+const accGroup=document.getElementById('accGroup');
 const accGroupHint=document.getElementById('accGroupHint');
-const btnSaveAccount=document.getElementById('btnSaveAccount');const btnLogout=document.getElementById('btnLogout');const btnCloseAccount=document.getElementById('btnCloseAccount');
-const modalIframe=document.getElementById('modalIframe');const iframeTitle=document.getElementById('iframeTitle');const iframeContent=document.getElementById('iframeContent');const btnCloseIframe=document.getElementById('btnCloseIframe');
+const btnSaveAccount=document.getElementById('btnSaveAccount');
+const btnLogout=document.getElementById('btnLogout');
+const btnCloseAccount=document.getElementById('btnCloseAccount');
 const liveBarEl=document.getElementById('liveBar');
 const liveCardContainer=document.getElementById('liveCardContainer');
 
-// Debug de elementos live
-console.log('[PLATFORM] liveBarEl:',!!liveBarEl, 'liveCardContainer:',!!liveCardContainer);
-
-function populateGroupSelect(selectEl,selectedKey){selectEl.innerHTML='';Object.keys(DATA.groups).forEach(key=>{const opt=document.createElement('option');opt.value=key;opt.textContent=groupLabel(key);if(key===selectedKey)opt.selected=true;selectEl.appendChild(opt);});}
+function populateGroupSelect(selectEl,selectedKey){
+  selectEl.innerHTML='';
+  Object.keys(DATA.groups).forEach(key=>{
+    const opt=document.createElement('option');
+    opt.value=key;
+    opt.textContent=groupLabel(key);
+    if(key===selectedKey)opt.selected=true;
+    selectEl.appendChild(opt);
+  });
+}
 
 btnGoogleLogin?.addEventListener('click', async ()=>{
-  try{ await auth.signInWithPopup(googleProvider); }catch(e){ alert('Error al iniciar sesión: '+e.message); }
+  try{ await auth.signInWithPopup(googleProvider); }catch(e){ alert('Error: '+e.message); }
 });
 
 auth.onAuthStateChanged(async user=>{
   if(user){
     if(!DATA) await loadData();
     const email=user.email.toLowerCase();
-    const isTeacher = TEACHER_EMAILS.includes(email);
-    const isAllowed = isTeacher || ALLOWED_EMAILS.includes(email);
-    if(!isAllowed){
-      alert('Tu cuenta no está autorizada para acceder a la plataforma. Contacta al administrador.');
-      await auth.signOut(); return;
-    }
-    const users=loadUsers();
-    let profile=users[email];
+    
+    const userRef = db.collection('users').doc(email);
+    const doc = await userRef.get();
+    
+    let profile;
     let isNewUser = false;
-    if(!profile){
-      const selectedGroup=inpGroup.value || Object.keys(DATA.groups)[0];
-      profile={name:user.displayName||email.split('@')[0], email, group:selectedGroup, progress:{}};
-      users[email]=profile; saveUsers(users); isNewUser = true;
+    
+    if(doc.exists){
+      const data = doc.data();
+      profile = {
+        name: data.nombre,
+        email: data.email,
+        group: data.grupo,
+        rol: data.rol || 'alumno',
+        progress: data.progreso || {}
+      };
+    } else {
+      isNewUser = true;
+      const selectedGroup = inpGroup.value || Object.keys(DATA.groups)[0];
+      const rolInicial = (email === ADMIN_EMAIL_INICIAL) ? 'administrador' : 'alumno';
+      
+      profile = {
+        name: user.displayName || email.split('@')[0],
+        email,
+        group: selectedGroup,
+        rol: rolInicial,
+        progress: {}
+      };
+      
+      await userRef.set({
+        nombre: profile.name,
+        email: profile.email,
+        grupo: profile.group,
+        rol: profile.rol,
+        progreso: {},
+        creadoEn: firebase.firestore.FieldValue.serverTimestamp(),
+        creadoPor: 'sistema'
+      });
     }
-    state.user=profile;
-    state.isTeacher = isTeacher;
-    console.log('[PLATFORM] Usuario:', email, 'isTeacher:', isTeacher);
+    
+    // Migrar localStorage
+    const localUsers = loadUsers();
+    if(localUsers[email] && localUsers[email].progress){
+      const localProgress = localUsers[email].progress;
+      if(Object.keys(localProgress).length > 0 && Object.keys(profile.progress).length === 0){
+        profile.progress = localProgress;
+        await userRef.update({ progreso: localProgress });
+        delete localUsers[email];
+        saveUsers(localUsers);
+      }
+    }
+    
+    state.user = profile;
+    state.isTeacher = profile.rol === 'docente' || profile.rol === 'administrador';
+    state.isAdmin = profile.rol === 'administrador';
+    
     enterApp();
-    if(isNewUser){ const nombre = state.user.name.split(' ')[0]; alert(`¡Bienvenido ${nombre}! Ya puedes empezar a estudiar en Academia Addison.`); }
-  }else{ state.user=null; appEl.classList.add('hidden'); welcomeEl.classList.remove('hidden'); }
+    if(isNewUser){ 
+      alert(`¡Bienvenido ${profile.name.split(' ')[0]}!`); 
+    }
+  }else{ 
+    state.user=null; 
+    appEl.classList.add('hidden'); 
+    welcomeEl.classList.remove('hidden'); 
+  }
 });
 
 function enterApp(){
-  welcomeEl.classList.add('hidden'); appEl.classList.remove('hidden');
+  welcomeEl.classList.add('hidden'); 
+  appEl.classList.remove('hidden');
   userNameTop.textContent=state.user.name.split(' ')[0];
+  
+  if(state.isAdmin && !document.getElementById('btnAdmin')){
+    const adminBtn = document.createElement('button');
+    adminBtn.id = 'btnAdmin';
+    adminBtn.className = 'user-btn';
+    adminBtn.innerHTML = '👑';
+    adminBtn.title = 'Panel Admin';
+    adminBtn.style.marginLeft = '8px';
+    adminBtn.onclick = ()=>document.getElementById('modalAdmin')?.classList.remove('hidden');
+    document.querySelector('.topbar').appendChild(adminBtn);
+  }
+  
   renderCourses();
   const courses=getCoursesForGroup(state.user.group);
   const lastCourse=sessionStorage.getItem('addison_last_course');
   if(lastCourse && courses.some(c=>c.id===lastCourse)){ state.activeCourseId=lastCourse; }
   else{ const first=courses[0]; if(first){state.activeCourseId=first.id;} }
-  renderTopics(); initLive();
+  renderTopics(); 
+  initLive();
 }
 
 function isMobile(){return window.innerWidth<=960}
-function toggleSidebar(){if(isMobile()){const open=!sidebarEl.classList.contains('open');sidebarEl.classList.toggle('open',open);sidebarBackdrop.classList.toggle('show',open);}else{appBody.classList.toggle('collapsed');}}
-btnToggleSidebar.onclick=toggleSidebar;sidebarBackdrop.onclick=()=>{sidebarEl.classList.remove('open');sidebarBackdrop.classList.remove('show')};
+function toggleSidebar(){
+  if(isMobile()){
+    const open=!sidebarEl.classList.contains('open');
+    sidebarEl.classList.toggle('open',open);
+    sidebarBackdrop.classList.toggle('show',open);
+  }else{
+    appBody.classList.toggle('collapsed');
+  }
+}
+btnToggleSidebar.onclick=toggleSidebar;
+sidebarBackdrop.onclick=()=>{sidebarEl.classList.remove('open');sidebarBackdrop.classList.remove('show')};
+
 function getCoursesForGroup(g){return DATA.courses.filter(c=>c.groups.includes(g))}
 
 function topicProgress(course,topic){
@@ -134,7 +231,9 @@ function topicProgress(course,topic){
 
 function courseProgress(course){
   if(!course.topics || course.topics.length===0) return 0;
-  let sum=0; course.topics.forEach(t=> sum+=topicProgress(course,t)); return Math.round(sum/course.topics.length);
+  let sum=0; 
+  course.topics.forEach(t=> sum+=topicProgress(course,t)); 
+  return Math.round(sum/course.topics.length);
 }
 
 function renderCourses(){
@@ -217,59 +316,69 @@ function openContent(title,url,courseId,topicId,subId,type){
   }else{ const val=type==='exam'?Math.floor(Math.random()*41)+60:true; setProgress(courseId,topicId,subId,type,val); }
 }
 
-btnCloseIframe.onclick = ()=>{ modalIframe.classList.add('hidden'); if(iframeContent){ iframeContent.src='about:blank'; } };
+document.getElementById('btnCloseIframe').onclick = ()=>{ document.getElementById('modalIframe').classList.add('hidden'); };
 window.addEventListener('message', e=>{ const d=e.data||{}; if(d.type==='progress'){ setProgress(d.courseId,d.topicId,d.subId,d.contentType,d.value??true); } });
 
-btnAccount.onclick=()=>{ accName.value=state.user.name; accEmail.value=state.user.email; populateGroupSelect(accGroup,state.user.group); if(ALLOW_GROUP_CHANGE){ accGroup.disabled=false; accGroupHint.textContent='Puedes cambiar de grupo.'; }else{ accGroup.disabled=true; accGroupHint.textContent='Cambio deshabilitado.'; } modalAccount.classList.remove('hidden'); };
+btnAccount.onclick=()=>{ 
+  accName.value=state.user.name; 
+  accEmail.value=state.user.email; 
+  populateGroupSelect(accGroup,state.user.group); 
+  const puedeCambiar = state.isAdmin || state.user.rol === 'docente';
+  accGroup.disabled = !puedeCambiar;
+  accGroupHint.textContent = puedeCambiar ? 'Puedes cambiar de grupo.' : 'Solo administradores pueden cambiar grupos.';
+  document.getElementById('accGroupField').style.display = state.user.rol === 'alumno' ? 'none' : 'block';
+  modalAccount.classList.remove('hidden'); 
+};
 btnCloseAccount.onclick=()=>modalAccount.classList.add('hidden');
-btnSaveAccount.onclick=()=>{ state.user.name=accName.value.trim()||state.user.name; if(ALLOW_GROUP_CHANGE && accGroup.value!==state.user.group){ state.user.group=accGroup.value; const first=getCoursesForGroup(state.user.group)[0]; state.activeCourseId=first?first.id:null; } persistUser(); userNameTop.textContent=state.user.name.split(' ')[0]; modalAccount.classList.add('hidden'); renderCourses(); renderTopics(); };
+btnSaveAccount.onclick=async()=>{
+  state.user.name=accName.value.trim()||state.user.name; 
+  if((state.isAdmin || state.user.rol==='docente') && accGroup.value!==state.user.group){ 
+    state.user.group=accGroup.value; 
+    const first=getCoursesForGroup(state.user.group)[0]; 
+    state.activeCourseId=first?first.id:null; 
+  } 
+  await persistUser(); 
+  userNameTop.textContent=state.user.name.split(' ')[0]; 
+  modalAccount.classList.add('hidden'); 
+  renderCourses(); 
+  renderTopics(); 
+};
 btnLogout.onclick=()=>{auth.signOut();};
 
-// ==================== SISTEMA DE CLASES EN VIVO ====================
 function initLive(){
   if(!state.user) return;
-  console.log('[LIVE] Iniciando listener de live_sessions');
   db.collection('live_sessions').where('active','==',true).onSnapshot(snapshot=>{
     const activeSessions = {};
     snapshot.forEach(doc=>{ activeSessions[doc.id]=doc.data(); });
     state.liveSessions = activeSessions;
-    console.log('[LIVE] Sesiones activas:', Object.keys(activeSessions));
     renderLiveBar(); renderLiveCard(); renderCourses();
-  }, err=>{
-    console.error('[LIVE] Error listener:', err);
   });
 }
+
 function renderLiveBar(){
   if(!liveBarEl) return;
-  if(!state.isTeacher){ liveBarEl.classList.add('hidden'); return; }
   const course = DATA.courses.find(c=>c.id===state.activeCourseId);
   if(!course){ liveBarEl.classList.add('hidden'); return; }
   const session = state.liveSessions?.[course.id];
   liveBarEl.classList.remove('hidden');
-  if(session && session.active){
-    liveBarEl.innerHTML = `
-      <div class="live-bar-left">
-        <div class="live-dot"></div>
-        <div>
-          <div class="live-bar-title">Clase en vivo activa</div>
-          <div class="live-bar-sub">${course.name} • ${session.participants||0} alumnos conectados</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button class="live-bar-btn" onclick="joinLiveClass('${course.id}')">Entrar a la sala</button>
-        <button class="live-bar-btn" style="background:#fff;color:#d32f2f" onclick="endLiveClass('${course.id}')">Finalizar</button>
-      </div>`;
-  }else{
-    liveBarEl.innerHTML = `
-      <div class="live-bar-left">
-        <div class="live-dot" style="background:rgba(255,255,255,.5);animation:none"></div>
-        <div>
-          <div class="live-bar-title">Iniciar clase en vivo</div>
-          <div class="live-bar-sub">${course.name} • Los alumnos verán la invitación al instante</div>
-        </div>
-      <button class="live-bar-btn" onclick="startLiveClass('${course.id}')">Iniciar ahora</button>`;
-  }
+  
+  // Mostrar historial de grabaciones para todos
+  db.collection('live_history').where('cursoId','==',course.id).orderBy('inicio','desc').limit(3).get().then(snap=>{
+    let historial = '';
+    snap.forEach(doc=>{
+      const d=doc.data();
+      const dias = Math.ceil((d.expiraEn.toDate() - new Date())/(1000*60*60*24));
+      historial += `<div style="font-size:12px;opacity:.9">${d.tema} - borra en ${dias}d</div>`;
+    });
+    
+    if(session && session.active && state.isTeacher){
+      liveBarEl.innerHTML = `<div class="live-bar-left"><div class="live-dot"></div><div><div class="live-bar-title">Clase en vivo</div><div class="live-bar-sub">${course.name}</div></div></div><div style="display:flex;gap:8px"><button class="live-bar-btn" onclick="joinLiveClass('${course.id}')">Entrar</button><button class="live-bar-btn" style="background:#fff;color:#d32f2f" onclick="endLiveClass('${course.id}')">Finalizar</button></div>`;
+    } else {
+      liveBarEl.innerHTML = `<div class="live-bar-left"><div style="width:12px"></div><div><div class="live-bar-title">Grabaciones recientes</div>${historial||'<div style="font-size:12px;opacity:.9">No hay grabaciones</div>'}</div></div>`;
+    }
+  });
 }
+
 function renderLiveCard(){
   if(!liveCardContainer) return;
   if(state.isTeacher){ liveCardContainer.innerHTML=''; return; }
@@ -277,23 +386,36 @@ function renderLiveCard(){
   if(!course){ liveCardContainer.innerHTML=''; return; }
   const session = state.liveSessions?.[course.id];
   if(session && session.active){
-    liveCardContainer.innerHTML = `<div class="live-card"><div class="live-card-head"><div class="live-dot"></div><div class="live-card-title">¡Clase en vivo ahora!</div></div><div class="live-card-msg">Tu profesor ${session.teacherName||''} está en línea. Únete ahora y no te pierdas la explicación en vivo. 🚀</div><button class="live-card-btn" onclick="joinLiveClass('${course.id}')">Entrar a clase en vivo</button></div>`;
+    liveCardContainer.innerHTML = `<div class="live-card"><div class="live-card-head"><div class="live-dot"></div><div class="live-card-title">¡Clase en vivo ahora!</div></div><div class="live-card-msg">Tu profesor está en línea.</div><button class="live-card-btn" onclick="joinLiveClass('${course.id}')">Entrar</button></div>`;
   }else{ liveCardContainer.innerHTML=''; }
 }
+
 async function startLiveClass(courseId){
-  try{
-    await db.collection('live_sessions').doc(courseId).set({ active:true, courseId, teacherEmail: state.user.email, teacherName: state.user.name, startedAt: firebase.firestore.FieldValue.serverTimestamp(), participants:0 },{merge:true});
-    window.location.href = `live/room.html?course=${encodeURIComponent(courseId)}`;
-  }catch(e){ alert('Error al iniciar clase: '+e.message); }
+  const tema = prompt('Tema de la clase de hoy:');
+  if(!tema) return;
+  sessionStorage.setItem('liveTema', tema);
+  await db.collection('live_sessions').doc(courseId).set({ active:true, courseId, teacherEmail: state.user.email, teacherName: state.user.name, tema, startedAt: firebase.firestore.FieldValue.serverTimestamp(), participants:0 },{merge:true});
+  window.location.href = `live/room.html?course=${encodeURIComponent(courseId)}`;
 }
 async function endLiveClass(courseId){
-  if(!confirm('¿Finalizar la clase en vivo? Los alumnos serán desconectados.')) return;
-  try{
-    await db.collection('live_sessions').doc(courseId).update({ active:false, endedAt: firebase.firestore.FieldValue.serverTimestamp() });
-  }catch(e){ alert('Error al finalizar: '+e.message); }
+  if(!confirm('¿Finalizar clase?')) return;
+  await db.collection('live_sessions').doc(courseId).update({ active:false, endedAt: firebase.firestore.FieldValue.serverTimestamp() });
 }
 function joinLiveClass(courseId){ window.location.href = `live/room.html?course=${encodeURIComponent(courseId)}`; }
 window.startLiveClass = startLiveClass; window.joinLiveClass = joinLiveClass; window.endLiveClass = endLiveClass;
 
 async function init(){ await loadData(); populateGroupSelect(inpGroup,'A'); }
 init();
+
+// Admin functions
+async function crearUsuario(){
+  const email = document.getElementById('adminEmail').value.trim().toLowerCase();
+  const nombre = document.getElementById('adminName').value.trim();
+  const rol = document.getElementById('adminRol').value;
+  const grupo = document.getElementById('adminGrupo').value;
+  if(!email || !nombre) return alert('Completa datos');
+  await db.collection('users').doc(email).set({ nombre, email, rol, grupo, progreso:{}, creadoEn: firebase.firestore.FieldValue.serverTimestamp(), creadoPor: state.user.email });
+  document.getElementById('adminMsg').textContent = '✓ Usuario creado';
+}
+document.getElementById('btnCreateUser')?.addEventListener('click', crearUsuario);
+document.getElementById('btnCloseAdmin')?.addEventListener('click', ()=>document.getElementById('modalAdmin').classList.add('hidden'));

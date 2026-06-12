@@ -86,6 +86,16 @@ entender qué hace cada parte y cómo editarla de forma segura.
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="js/platform.js"></script>
 
+<!-- MODAL ADMIN -->
+<div id="modalAdmin" class="modal hidden"><div class="modal-card"><h3>Panel Administrador</h3>
+  <div class="field"><label>Email</label><input id="adminEmail" type="email" placeholder="usuario@correo.com"></div>
+  <div class="field"><label>Nombre</label><input id="adminName" placeholder="Nombre completo"></div>
+  <div class="field"><label>Rol</label><select id="adminRol"><option value="alumno">Alumno</option><option value="docente">Docente</option><option value="administrador">Administrador</option></select></div>
+  <div class="field"><label>Grupo</label><select id="adminGrupo"></select></div>
+  <div class="modal-actions"><button id="btnCreateUser" class="primary">Crear usuario</button><button id="btnCloseAdmin">Cerrar</button></div>
+  <div id="adminMsg" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>
+</div></div>
+
 <!-- MODAL BIENVENIDA -->
 <div id="modalWelcome" class="modal hidden"><div class="modal-card"><h3 id="welcomeTitle">¡Bienvenido!</h3>
   <p id="welcomeText" style="color:var(--muted);margin:8px 0 16px"></p>

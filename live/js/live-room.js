@@ -1,6 +1,6 @@
 /**
- * ACADEMIA ADDISON - LIVE ROOM v3.0
- * Motor LiveKit con estándares internacionales
+ * ACADEMIA ADDISON - LIVE ROOM v3.1
+ * Motor LiveKit con grabación Oracle + encuesta
  * 
  * === SECCIONES CRÍTICAS - NO MODIFICAR ===
  * 1. Conexión LiveKit (líneas 25-70)
@@ -19,6 +19,10 @@ const LIVEKIT_URL = "wss://academia-addison.duckdns.org";
 const TOKEN_URL = '/api/token';
 const TEACHER_EMAILS = ['eduardofloreshu@gmail.com','profesor@addison.edu.pe'];
 
+// === CONFIGURACIÓN GRABACIÓN - PERSONALIZABLE ===
+const ORACLE_UPLOAD_URL = 'http://163.176.235.27:3000/upload'; // <-- CAMBIAR por tu endpoint
+const RECORDING_CHUNK_MS = 10000; // sube cada 10 segundos
+
 // Firebase
 const firebaseConfig = { apiKey:"AIzaSyBbp3kZtxiluZTI7xC_UDcUUyYF9Jb0yBQ", authDomain:"academia-adison.firebaseapp.com", projectId:"academia-adison", storageBucket:"academia-adison.firebasestorage.app", messagingSenderId:"92334581820", appId:"1:92334581820:web:5e456f7c475119db95fb39" };
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
@@ -31,6 +35,13 @@ let isTeacher = false;
 let currentRoom = '';
 let whiteboardData = [];
 let isDrawing = false;
+
+// Estado grabación
+let mediaRecorder = null;
+let recordedChunks = [];
+let isRecording = false;
+let recordingStartTime = null;
+let currentRecordingId = null;
 
 // Elementos DOM
 const $ = id => document.getElementById(id);
@@ -71,18 +82,17 @@ async function connectToRoom(user) {
 
     // 2. Crear room con configuración óptima internacional
     room = new Room({
-      adaptiveStream: true,      // Ajusta calidad según ancho de banda
-      dynacast: true,            // Publica solo cuando necesario
+      adaptiveStream: true,
+      dynacast: true,
       videoCaptureDefaults: {
-        resolution: VideoPresets.h720, // 720p estándar internacional
+        resolution: VideoPresets.h720,
       },
       publishDefaults: {
-        simulcast: true,         // Múltiples calidades
+        simulcast: true,
         videoSimulcastLayers: [VideoPresets.h180, VideoPresets.h360, VideoPresets.h720],
-        dtx: true,               // Discontinuous transmission para audio
-        red: true,               // Redundancia para audio
+        dtx: true,
+        red: true,
       },
-      // Reconnection automática
       reconnectPolicy: {
         nextRetryDelayInMs: (context) => Math.min(1000 * 2 ** context.retryCount, 30000),
       }
@@ -112,31 +122,27 @@ async function connectToRoom(user) {
 }
 
 function setupRoomListeners() {
-  // Participante se une
   room.on(RoomEvent.ParticipantConnected, (p) => {
     addParticipantToList(p);
     updateParticipantCount();
     showNotification(`${p.identity} se unió`);
   });
 
-  // Participante sale
   room.on(RoomEvent.ParticipantDisconnected, (p) => {
     removeParticipantFromList(p);
     updateParticipantCount();
   });
 
-  // Track suscrito (video/audio)
   room.on(RoomEvent.TrackSubscribed, (track, pub, participant) => {
     if (track.kind === Track.Kind.Video) {
       attachVideo(track, participant);
     }
     if (track.kind === Track.Kind.Audio) {
-      track.attach(); // Audio se reproduce automáticamente
+      track.attach();
     }
     updateParticipantMedia(participant, pub);
   });
 
-  // Active speaker - estándar internacional
   room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
     document.querySelectorAll('.participant-item').forEach(el => el.classList.remove('speaking'));
     if (speakers.length > 0) {
@@ -147,17 +153,14 @@ function setupRoomListeners() {
     }
   });
 
-  // Calidad de conexión
   room.on(RoomEvent.ConnectionQualityChanged, (quality, participant) => {
     updateConnectionQuality(participant, quality);
   });
 
-  // Datos (chat, reacciones, pizarra)
   room.on(RoomEvent.DataReceived, (payload, participant) => {
     handleDataMessage(payload, participant);
   });
 
-  // Reconexión
   room.on(RoomEvent.Reconnecting, () => {
     elements.liveStatus.innerHTML = '<span class="live-dot"></span>Reconectando...';
   });
@@ -168,21 +171,18 @@ function setupRoomListeners() {
 
 async function setupMedia() {
   if (isTeacher) {
-    // Profesor: cámara y mic encendidos por defecto (estándar educativo)
     await room.localParticipant.setMicrophoneEnabled(true);
     await room.localParticipant.setCameraEnabled(true);
     $('btnMic').classList.add('active');
     $('btnCam').classList.add('active');
     $('btnEndLive').classList.remove('hidden');
     
-    // Publicar video local en stage principal
     const camTrack = [...room.localParticipant.videoTrackPublications.values()][0]?.videoTrack;
     if (camTrack) {
       camTrack.attach(elements.mainVideo);
       $('stageLabel').textContent = 'Profesor - Tú';
     }
   } else {
-    // Estudiante: inicia silenciado (mejor práctica)
     await room.localParticipant.setMicrophoneEnabled(false);
     await room.localParticipant.setCameraEnabled(false);
   }
@@ -193,7 +193,6 @@ async function setupMedia() {
 
 // === UI CONTROLS ===
 function setupUI() {
-  // Mic
   $('btnMic').onclick = async () => {
     const enabled = !room.localParticipant.isMicrophoneEnabled;
     await room.localParticipant.setMicrophoneEnabled(enabled);
@@ -201,7 +200,6 @@ function setupUI() {
     sendData({ type: 'media', mic: enabled });
   };
   
-  // Cam
   $('btnCam').onclick = async () => {
     const enabled = !room.localParticipant.isCameraEnabled;
     await room.localParticipant.setCameraEnabled(enabled);
@@ -212,42 +210,51 @@ function setupUI() {
     }
   };
   
-  // Screen share
   $('btnScreen').onclick = async () => {
     const enabled = !room.localParticipant.isScreenShareEnabled;
     await room.localParticipant.setScreenShareEnabled(enabled);
     $('btnScreen').classList.toggle('active', enabled);
   };
   
-  // Whiteboard
   $('btnBoard').onclick = () => {
     const isWhiteboard = elements.whiteboardStage.classList.toggle('hidden');
     elements.videoStage.classList.toggle('hidden', !isWhiteboard);
     $('btnBoard').classList.toggle('active', !isWhiteboard);
   };
   
-  // Hand raise
   $('btnHand').onclick = () => {
     const raised = $('btnHand').classList.toggle('active');
     sendData({ type: 'hand', raised });
   };
   
-  // Chat
   $('sendChat').onclick = sendChatMessage;
   $('chatInput').onkeypress = (e) => e.key === 'Enter' && sendChatMessage();
   
-  // Reacciones
   $('btnReactions').onclick = () => showReaction('👍');
   
-  // Salir
   $('btnExit').onclick = async () => {
+    if (isRecording) await stopRecording();
+    await triggerSurvey();
     await room?.disconnect();
     location.href = '../index.html';
   };
   
-  // Panel toggle móvil
   $('btnParticipants').onclick = () => $('sidePanel').classList.toggle('open');
   $('btnChat').onclick = () => $('sidePanel').classList.toggle('open');
+  
+  // === BOTÓN REC - SOLO DOCENTES ===
+  if (isTeacher) {
+    const controlsBar = document.querySelector('.controls') || $('btnExit').parentNode;
+    if (!$('btnRec') && controlsBar) {
+      const recBtn = document.createElement('button');
+      recBtn.id = 'btnRec';
+      recBtn.className = 'ctrl-btn';
+      recBtn.innerHTML = '● REC';
+      recBtn.style.color = '#FF3B5C';
+      recBtn.onclick = toggleRecording;
+      controlsBar.insertBefore(recBtn, $('btnExit'));
+    }
+  }
   
   initWhiteboard();
 }
@@ -265,6 +272,134 @@ function updateConnectionStatus(connected) {
 function updateParticipantCount() {
   const count = room ? room.remoteParticipants.size + 1 : 0;
   elements.participantCount.textContent = count;
+}
+
+// === GRABACIÓN ORACLE ===
+async function toggleRecording() {
+  if (isRecording) {
+    await stopRecording();
+  } else {
+    await startRecording();
+  }
+}
+
+async function startRecording() {
+  try {
+    const displayStream = await navigator.mediaDevices.getDisplayMedia({ 
+      video: { displaySurface: 'monitor' }, 
+      audio: true 
+    });
+    const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    
+    const combinedStream = new MediaStream([
+      ...displayStream.getVideoTracks(),
+      ...micStream.getAudioTracks()
+    ]);
+    
+    recordedChunks = [];
+    mediaRecorder = new MediaRecorder(combinedStream, { 
+      mimeType: 'video/webm;codecs=vp9,opus' 
+    });
+    
+    mediaRecorder.ondataavailable = async (e) => {
+      if (e.data.size > 0) {
+        recordedChunks.push(e.data);
+        // Subir chunk cada 10s
+        await uploadChunk(e.data);
+      }
+    };
+    
+    mediaRecorder.onstop = async () => {
+      await finalizeRecording();
+    };
+    
+    recordingStartTime = Date.now();
+    currentRecordingId = `${currentRoom}_${Date.now()}`;
+    mediaRecorder.start(RECORDING_CHUNK_MS);
+    isRecording = true;
+    
+    $('btnRec').classList.add('active');
+    $('btnRec').innerHTML = '⏹ STOP';
+    showNotification('Grabación iniciada');
+    
+    // Guardar metadata en Firestore
+    await db.collection('live_history').doc(currentRecordingId).set({
+      cursoId: currentRoom,
+      tema: sessionStorage.getItem('liveTema') || 'Clase sin título',
+      profesorEmail: auth.currentUser.email,
+      inicio: firebase.firestore.FieldValue.serverTimestamp(),
+      grabacionUrl: `${ORACLE_UPLOAD_URL}/${currentRecordingId}.webm`,
+      expiraEn: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días
+      estado: 'grabando'
+    });
+    
+  } catch (err) {
+    console.error('Error grabación:', err);
+    alert('No se pudo iniciar grabación: ' + err.message);
+  }
+}
+
+async function stopRecording() {
+  if (mediaRecorder && isRecording) {
+    mediaRecorder.stop();
+    mediaRecorder.stream.getTracks().forEach(t => t.stop());
+    isRecording = false;
+    $('btnRec').classList.remove('active');
+    $('btnRec').innerHTML = '● REC';
+  }
+}
+
+async function uploadChunk(chunk) {
+  try {
+    const formData = new FormData();
+    formData.append('file', chunk, `${currentRecordingId}_chunk.webm`);
+    formData.append('recordingId', currentRecordingId);
+    
+    await fetch(ORACLE_UPLOAD_URL, {
+      method: 'POST',
+      body: formData
+    });
+  } catch (e) {
+    console.error('Error subiendo chunk:', e);
+  }
+}
+
+async function finalizeRecording() {
+  const blob = new Blob(recordedChunks, { type: 'video/webm' });
+  await uploadChunk(blob);
+  
+  await db.collection('live_history').doc(currentRecordingId).update({
+    fin: firebase.firestore.FieldValue.serverTimestamp(),
+    estado: 'finalizado',
+    duracionSegundos: Math.floor((Date.now() - recordingStartTime) / 1000)
+  });
+  
+  showNotification('Grabación guardada en Oracle');
+}
+
+// === ENCUESTA POST-CLASE ===
+async function triggerSurvey() {
+  if (isTeacher) return; // solo alumnos
+  
+  const stars = prompt('¿Te gustó la clase? Esto nos ayuda a darte un mejor servicio
+
+Califica del 1 al 5:');
+  if (!stars || isNaN(stars)) return;
+  
+  const comentario = prompt('Comentario opcional:') || '';
+  
+  const liveId = currentRoom + '_' + new Date().toISOString().split('T')[0];
+  const userHash = btoa(auth.currentUser.email).substring(0, 16);
+  
+  await db.collection('encuestas').doc(`${liveId}_${userHash}`).set({
+    liveId,
+    cursoId: currentRoom,
+    estrellas: parseInt(stars),
+    comentario,
+    emailHash: userHash,
+    emailReal_encrypted: btoa(auth.currentUser.email), // solo admin puede decodificar
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  });
 }
 
 // === FUNCIONES AUXILIARES ===
@@ -285,7 +420,6 @@ function addParticipantToList(p) {
 }
 
 function attachVideo(track, participant) {
-  // Si es profesor, mostrar en stage principal
   if (participant.identity.includes('profesor') || isTeacher) {
     track.attach(elements.mainVideo);
     $('stageLabel').textContent = participant.name || participant.identity;
@@ -347,7 +481,6 @@ function initWhiteboard() {
   resize();
   window.addEventListener('resize', resize);
   
-  // Eventos dibujo
   canvas.addEventListener('pointerdown', e => { drawing = true; });
   canvas.addEventListener('pointerup', () => drawing = false);
   canvas.addEventListener('pointermove', e => {
@@ -361,7 +494,6 @@ function initWhiteboard() {
     ctx.fill();
   });
   
-  // Colores
   document.querySelectorAll('.color-dot').forEach(btn => {
     btn.onclick = () => {
       document.querySelector('.color-dot.active')?.classList.remove('active');
@@ -371,7 +503,6 @@ function initWhiteboard() {
 }
 
 function syncPresence(user) {
-  // Guarda presencia en Firestore para analytics
   const ref = db.collection('live_presence').doc(currentRoom);
   setInterval(() => {
     ref.set({
@@ -382,12 +513,13 @@ function syncPresence(user) {
 }
 
 function showNotification(text) {
-  // Notificación sutil
   console.log('🔔', text);
 }
 
 function updateParticipantMedia() {}
-function removeParticipantFromList() {}
+function removeParticipantFromList(p) {
+  document.querySelector(`[data-identity="${p.identity}"]`)?.remove();
+}
 function updateConnectionQuality() {}
 function updateHandRaise() {}
 function focusParticipant() {}

@@ -1,45 +1,37 @@
 // ============================================================================
-//  MOTOR ÚNICO DE EXAMEN - VERSIÓN COMENTADA PARA PRINCIPIANTES
+//  MOTOR ÚNICO DE EXAMEN - VERSIÓN FIRESTORE v2.0
 // ============================================================================
-//  Hola! Este archivo es el cerebro del examen. Piensa en él como el director
-//  de orquesta de una obra de teatro escolar: no toca instrumentos, pero dice
-//  quién entra, cuándo, y qué debe pasar en cada escena.
-//
-//  Qué hace en resumen:
-//  1. Lee la URL para saber qué curso/tema se pidió
-//  2. Busca un archivo JSON con las preguntas (como buscar una receta en un libro)
-//  3. Muestra la pantalla de bienvenida, luego las preguntas una por una
-//  4. Controla el tiempo, puntaje y al final muestra resultados
-//
-//  Glosario rápido:
-//  - DOM: es el árbol de elementos HTML de la página. Cuando hacemos
-//         document.getElementById, estamos pidiendo "tráeme esa caja de la página".
-//  - Array (arreglo/lista): una colección ordenada de cosas, como una lista de compras.
-//  - Fetch: pedir datos a un archivo o servidor, como pedir un menú al mesero.
-//  - Event: un suceso del usuario, como un clic o pulsar una tecla.
-//  - localStorage / sessionStorage: cajitas del navegador para guardar datos pequeños.
+//  Cambios v2.0:
+//  - Progreso guarda directo en Firestore (no solo localStorage)
+//  - Reutiliza firebaseConfig de plataforma
+//  - Sin variables duplicadas
 // ============================================================================
 
 (function(){
 
-  // --------------------------------------------------------------------------
-  //  UTILIDADES BÁSICAS
-  // --------------------------------------------------------------------------
-
-  // qs = "query selector" abreviado.
-  // Esta función es como un apuntador láser: le dices el id y te devuelve el elemento.
-  function qs(id){ 
-    return document.getElementById(id); 
+  // === FIREBASE INIT - REUTILIZA CONFIG EXISTENTE ===
+  const firebaseConfig = { 
+    apiKey:"AIzaSyBbp3kZtxiluZTI7xC_UDcUUyYF9Jb0yBQ", 
+    authDomain:"academia-adison.firebaseapp.com", 
+    projectId:"academia-adison", 
+    storageBucket:"academia-adison.firebasestorage.app", 
+    messagingSenderId:"92334581820", 
+    appId:"1:92334581820:web:5e456f7c475119db95fb39" 
+  };
+  
+  // Cargar Firebase si no está (para examen standalone)
+  if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
   }
+  const db = (typeof firebase !== 'undefined') ? firebase.firestore() : null;
+  const auth = (typeof firebase !== 'undefined') ? firebase.auth() : null;
 
-  // getParams es como el recepcionista del hotel.
-  // Lee la URL (location.search) y extrae los datos que vienen después del "?".
-  // Por ejemplo: ?courseId=algebra&topicId=t1
-  // Devuelve un objeto con esos valores ya listos para usar.
+  function qs(id){ return document.getElementById(id); }
+
   function getParams(){
-    const p = new URLSearchParams(location.search); // URLSearchParams es un ayudante que parsea la URL
+    const p = new URLSearchParams(location.search);
     return {
-      courseId: p.get('courseId') || '',   // Si no viene, usamos texto vacío
+      courseId: p.get('courseId') || '',
       topicId: p.get('topicId') || '',
       subId: p.get('subId') || '',
       examKey: p.get('examKey') || '',
@@ -51,14 +43,8 @@
     };
   }
 
-  // Guardamos los parámetros una sola vez al iniciar, para no leer la URL todo el rato.
   const EXAM_PARAMS = getParams();
 
-  // --------------------------------------------------------------------------
-  //  REFERENCIAS AL DOM
-  //  Aquí guardamos en variables los elementos de la página que vamos a usar.
-  //  Es como ponerle etiquetas a las cajas antes de empezar a trabajar.
-  // --------------------------------------------------------------------------
   const welcome = qs('welcome');
   const results = qs('results');
   const review = qs('review');
@@ -92,60 +78,41 @@
   const welcomeClose = qs('welcomeClose');
   const resultsClose = qs('resultsClose');
 
-  // Tiempo por defecto si el JSON no dice otra cosa: 60 segundos por pregunta.
   const DEFAULT_TIME_PER_QUESTION_SECONDS = 120;
 
-  // --------------------------------------------------------------------------
-  //  FUNCIONES DE AYUDA
-  // --------------------------------------------------------------------------
-
-  // formatTime es como un reloj digital.
-  // Convierte segundos totales a formato mm:ss para que se vea bonito.
   function formatTime(s){
-    const m = Math.floor(s/60).toString().padStart(2,'0'); // minutos con 2 dígitos
-    const sec = (s%60).toString().padStart(2,'0');         // segundos con 2 dígitos
+    const m = Math.floor(s/60).toString().padStart(2,'0');
+    const sec = (s%60).toString().padStart(2,'0');
     return `${m}:${sec}`;
   }
 
-  // shuffleArray mezcla una lista al azar.
-  // Analogía: es como barajar cartas. Lo hacemos para que las preguntas no salgan siempre en el mismo orden.
   function shuffleArray(a){
-    const arr = a.slice(); // copiamos para no modificar la original
+    const arr = a.slice();
     for(let i=arr.length-1;i>0;i--){
-      const j = Math.floor(Math.random()*(i+1)); // elegimos posición aleatoria
-      [arr[i],arr[j]] = [arr[j],arr[i]]; // intercambiamos
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
     }
     return arr;
   }
 
-  // shuffleOptions mezcla las opciones de respuesta de una pregunta.
-  // Por qué: así el estudiante no memoriza "la correcta es siempre la B".
-  // Mantenemos cuál era la correcta después de mezclar.
   function shuffleOptions(opts, correctIdx){
-    // Creamos pares {texto, esCorrecta}
     const paired = opts.map((text,i)=>({text, isCorrect:i===correctIdx}));
     const shuffled = shuffleArray(paired);
     return {
-      options: shuffled.map(p=>p.text), // solo los textos mezclados
-      correct: shuffled.findIndex(p=>p.isCorrect) // nueva posición de la correcta
+      options: shuffled.map(p=>p.text),
+      correct: shuffled.findIndex(p=>p.isCorrect)
     };
   }
 
-  // tryFetchQuestions es el mensajero que va a buscar el JSON.
-  // Usa fetch (petición de red) y espera la respuesta.
   async function tryFetchQuestions(url){
-    const res = await fetch(url, {cache:'no-store'}); // pedimos el archivo sin usar caché viejo
-    if(!res.ok) throw new Error(`HTTP ${res.status}`); // si falla, lanzamos error
-    const json = await res.json(); // convertimos texto a objeto JS
-    // El JSON puede ser un array directo o un objeto con propiedad questions
+    const res = await fetch(url, {cache:'no-store'});
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
     const questions = Array.isArray(json)? json : (Array.isArray(json?.questions)? json.questions : null);
     if(!questions ||!questions.length) throw new Error('JSON sin preguntas');
-    // Devolvemos tanto las preguntas como el resto de metadatos
     return {questions, meta: (json &&!Array.isArray(json))? json : {}};
   }
 
-  // buildCandidateUrls construye la lista de rutas donde podría estar el banco.
-  // Es como probar varias llaves hasta abrir la puerta correcta.
   function buildCandidateUrls(){
     const c = [];
     if(EXAM_PARAMS.examKey){
@@ -158,16 +125,12 @@
     if(EXAM_PARAMS.courseId && EXAM_PARAMS.topicId){
       c.push(`data/questions/${EXAM_PARAMS.courseId}/${EXAM_PARAMS.topicId}.json`);
     }
-    c.push('data/questions.json'); // último recurso
+    c.push('data/questions.json');
     return c;
   }
 
-  // safeText convierte cualquier valor a texto seguro, evitando null/undefined.
   function safeText(v){ return (v==null?'':String(v)); }
 
-  // normalizeQuestions limpia y estandariza las preguntas que vienen del JSON.
-  // Por qué: los archivos pueden tener nombres distintos (q/question, exp/explanation).
-  // Aquí unificamos todo a un mismo formato interno.
   function normalizeQuestions(raw){
     return raw.map(q=>{
       const topic = safeText(q.topic || '');
@@ -176,56 +139,39 @@
       const correct = Number.isFinite(q.correct)? q.correct : Number(q.correct);
       const exp = safeText(q.exp || q.explanation || '');
       return {topic, q:text, options, correct, exp};
-    }).filter(q=>q.q && q.options.length>=2 && Number.isFinite(q.correct)); // quitamos preguntas incompletas
+    }).filter(q=>q.q && q.options.length>=2 && Number.isFinite(q.correct));
   }
 
-  // --------------------------------------------------------------------------
-  //  ESTADO GLOBAL DEL EXAMEN
-  //  Aquí guardamos todo lo que cambia mientras el usuario responde.
-  // --------------------------------------------------------------------------
-  let QUESTIONS = []; // banco original limpio
-  let CURRENT = [];   // banco con opciones mezcladas para esta partida
-  let TOTAL = 0;      // número total de preguntas
+  let QUESTIONS = [];
+  let CURRENT = [];
+  let TOTAL = 0;
   let TIME_PER_QUESTION_SECONDS = DEFAULT_TIME_PER_QUESTION_SECONDS;
-  let DURATION = 0;   // tiempo total del examen en segundos
+  let DURATION = 0;
 
   let state = {
-    name: localStorage.getItem('ava_name') || '', // recordamos nombre entre visitas
-    idx: 0,          // índice de pregunta actual
-    answers: [],     // respuestas del usuario
+    name: localStorage.getItem('ava_name') || '',
+    idx: 0,
+    answers: [],
     selected: null,
     answered: false,
     startTime: null,
     elapsed: 0,
-    timer: null,     // referencia al setInterval del reloj
+    timer: null,
     finished: false
   };
 
-  // --------------------------------------------------------------------------
-  //  ACTUALIZACIÓN DE CABECERAS
-  // --------------------------------------------------------------------------
-
-  // updateWelcomeHeader pone el título del examen en la pantalla de bienvenida.
-  // Usa datos de la URL o del JSON.
   function updateWelcomeHeader(meta){
     const courseName = safeText(EXAM_PARAMS.courseName || meta?.courseName || meta?.course || '');
     const topicName = safeText(EXAM_PARAMS.topicName || meta?.examTopic || meta?.topic || '');
     const subName = safeText(EXAM_PARAMS.subName || '');
     const fullTitle = subName? `Examen de ${courseName} - ${topicName} - ${subName}` : (topicName? `Examen de ${topicName}` : 'Examen');
-    if(welcomeTitle){
-      welcomeTitle.textContent = fullTitle;
-    }
-    if(resultsExamTitle){
-      resultsExamTitle.textContent = fullTitle;
-    }
+    if(welcomeTitle) welcomeTitle.textContent = fullTitle;
+    if(resultsExamTitle) resultsExamTitle.textContent = fullTitle;
     const courseEl = document.querySelector('.course');
-    if(courseEl && courseName){
-      courseEl.textContent = courseName;
-    }
+    if(courseEl && courseName) courseEl.textContent = courseName;
     document.title = fullTitle? `Academia Virtual Addison - ${fullTitle}` : 'Academia Virtual Addison - Examen';
   }
 
-  // updateWelcomeSub muestra "X preguntas · Y minutos" en la bienvenida.
   function updateWelcomeSub(){
     const subEl = document.querySelector('#welcome .sub');
     if(subEl){
@@ -234,8 +180,6 @@
     }
   }
 
-  // buildQuestions prepara la lista que se va a jugar.
-  // Si randomizeOrder es true, baraja el orden de preguntas.
   function buildQuestions(randomizeOrder){
     const base = randomizeOrder? shuffleArray(QUESTIONS) : QUESTIONS.slice();
     return base.map(q=>{
@@ -244,29 +188,20 @@
     });
   }
 
-  // --------------------------------------------------------------------------
-  //  TEMPORIZADOR
-  // --------------------------------------------------------------------------
-
-  // updateTimer se ejecuta cada segundo.
-  // Calcula cuánto tiempo queda y actualiza el reloj en pantalla.
   function updateTimer(){
     const now = Date.now();
     state.elapsed = Math.floor((now - state.startTime)/1000);
     const remaining = Math.max(0, DURATION - state.elapsed);
     if(timeTxt) timeTxt.textContent = formatTime(remaining);
-    // Si queda menos de 1 minuto, pintamos el tiempo de rojo para avisar
     if(timePill) timePill.style.color = remaining<=60? '#b91c1c' : '';
-    if(remaining<=0){
-      finishExam(); // tiempo agotado → terminamos
-    }
+    if(remaining<=0) finishExam();
   }
 
   function startTimer(){
     state.startTime = Date.now();
     updateTimer();
     clearInterval(state.timer);
-    state.timer = setInterval(updateTimer, 1000); // ejecuta updateTimer cada 1000 ms
+    state.timer = setInterval(updateTimer, 1000);
   }
 
   function stopTimer(){
@@ -274,31 +209,24 @@
     state.timer = null;
   }
 
-  // --------------------------------------------------------------------------
-  //  RENDERIZADO DE PREGUNTAS
-  // --------------------------------------------------------------------------
-
-  // renderQuestion pinta en pantalla la pregunta actual y sus opciones.
-  // Es como montar el escenario antes de que actúe el actor.
   function renderQuestion(){
     const q = CURRENT[state.idx];
     if(!q) return;
     state.selected = null;
     state.answered = false;
-    if(nextBtn) nextBtn.disabled = true; // no se puede avanzar sin responder
+    if(nextBtn) nextBtn.disabled = true;
 
     if(qMeta) qMeta.textContent = `Pregunta ${state.idx+1} de ${TOTAL}`;
     if(qText) qText.innerHTML = q.q;
 
     if(optionsEl){
-      optionsEl.innerHTML = ''; // limpiamos opciones anteriores
+      optionsEl.innerHTML = '';
       const letters = ['A','B','C','D','E','F','G'];
       q.options.forEach((opt,i)=>{
         const btn = document.createElement('button');
         btn.className = 'opt';
         btn.setAttribute('role','option');
         btn.innerHTML = `<span class="badge">${letters[i]||i+1}</span><span class="opt-text">${opt}</span><span class="state"></span>`;
-        // Cuando el usuario hace clic, llamamos a selectOption
         btn.onclick = ()=> selectOption(i);
         optionsEl.appendChild(btn);
       });
@@ -306,14 +234,11 @@
 
     if(explanationEl) explanationEl.classList.remove('show');
     if(expTxt) expTxt.textContent = 'Selecciona una opción para ver la explicación.';
-
     updateProgress();
   }
 
-  // selectOption maneja el clic en una opción.
-  // Marca correcta/incorrecta, muestra explicación y habilita "Siguiente".
   function selectOption(idx){
-    if(state.answered) return; // ya respondió, ignoramos clics extra
+    if(state.answered) return;
     state.answered = true;
     state.selected = idx;
     const q = CURRENT[state.idx];
@@ -357,11 +282,27 @@
     }
   }
 
-  // --------------------------------------------------------------------------
-  //  FINALIZACIÓN
-  // --------------------------------------------------------------------------
+  // === GUARDAR PROGRESO EN FIRESTORE ===
+  async function saveProgressToFirestore(percent) {
+    try {
+      if (!db || !auth?.currentUser) return;
+      
+      const user = auth.currentUser;
+      const progressKey = `${EXAM_PARAMS.courseId}|${EXAM_PARAMS.topicId}|${EXAM_PARAMS.subId}|exam`;
+      
+      await db.collection('users').doc(user.email).set({
+        progreso: {
+          [progressKey]: percent
+        },
+        ultimaActualizacion: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      
+      console.log('[EXAMEN] Progreso guardado en Firestore:', progressKey, percent);
+    } catch (e) {
+      console.error('[EXAMEN] Error guardando progreso:', e);
+    }
+  }
 
-  // finishExam calcula resultados, guarda progreso y muestra la pantalla final.
   function finishExam(){
     if(state.finished) return;
     stopTimer();
@@ -370,7 +311,7 @@
     const correctCount = state.answers.filter(a=>a?.correct).length;
     const percent = TOTAL? Math.round((correctCount/TOTAL)*100) : 0;
 
-    // Guardar resultado en localStorage para que la plataforma lo recoja al volver
+    // Guardar en localStorage (compatibilidad)
     try{
       const payload = {
         courseId: EXAM_PARAMS.courseId,
@@ -382,20 +323,9 @@
       sessionStorage.setItem('examProgress', JSON.stringify({...payload, contentType:'exam'}));
     }catch(e){}
 
+    // === NUEVO: Guardar en Firestore ===
+    saveProgressToFirestore(percent);
 
-    // Guardamos progreso en sessionStorage para que la plataforma lo lea
-    try{
-      const data = {
-        courseId: EXAM_PARAMS.courseId,
-        topicId: EXAM_PARAMS.topicId,
-        subId: EXAM_PARAMS.subId,
-        contentType: EXAM_PARAMS.type || 'exam',
-        value: percent
-      };
-      sessionStorage.setItem('examProgress', JSON.stringify(data));
-    }catch(e){}
-
-    // Actualizamos UI de resultados
     if(scoreWrap) scoreWrap.style.setProperty('--p', percent);
     if(scoreVal) scoreVal.innerHTML = `${percent}<span>%</span>`;
     if(resultsTitle) resultsTitle.innerHTML = `Resultado<br><span style='color:var(--red)'>¡Completado!</span>`;
@@ -411,7 +341,6 @@
 
     if(results) results.classList.add('active');
 
-    // Avisamos a la ventana padre (si el examen está en un iframe)
     try{
       parent.postMessage({
         type:"progress",
@@ -429,7 +358,7 @@
     if(results) results.classList.remove('active');
     if(review) review.classList.remove('active');
     if(welcome) welcome.classList.add('active');
-    CURRENT = buildQuestions(true); // nueva partida con orden distinto
+    CURRENT = buildQuestions(true);
     state.idx = 0;
     state.answers = Array(TOTAL).fill(null);
     state.finished = false;
@@ -437,7 +366,6 @@
     setTimeout(()=>nameInput?.focus(), 50);
   }
 
-  // openReview muestra la lista de preguntas con tu respuesta y la correcta.
   function openReview(){
     if(!reviewList) return;
     reviewList.innerHTML = '';
@@ -460,12 +388,11 @@
     setTimeout(()=>closeReviewBtn?.focus(), 50);
   }
 
-  // startExam inicia la partida después de la bienvenida.
   function startExam(){
     if(startBtn && startBtn.disabled) return;
     const name = (nameInput?.value || '').trim();
     state.name = name;
-    if(name) localStorage.setItem('ava_name', name); // recordamos nombre
+    if(name) localStorage.setItem('ava_name', name);
     state.idx = 0;
     state.answers = Array(TOTAL).fill(null);
     state.finished = false;
@@ -484,22 +411,15 @@
         localStorage.setItem('ava_name', EXAM_PARAMS.name);
       }
     }catch(e){}
-    if(state.name && nameInput){
-      nameInput.value = state.name;
-    }
+    if(state.name && nameInput) nameInput.value = state.name;
     if(state.name && nameDisplay){
       nameDisplay.textContent = `Estudiante: ${state.name}`;
       nameDisplay.style.display = 'block';
     }
   }
 
-  // --------------------------------------------------------------------------
-  //  BOOTSTRAP - Punto de entrada
-  // --------------------------------------------------------------------------
-
-  // bootstrap es el director que pone todo en marcha al cargar la página.
   async function bootstrap(){
-    if(startBtn) startBtn.disabled = true; // evitamos clic antes de cargar
+    if(startBtn) startBtn.disabled = true;
     initName();
 
     const subEl = document.querySelector('#welcome .sub');
@@ -507,7 +427,6 @@
 
     const candidates = buildCandidateUrls();
     let payload = null;
-    // Probamos cada ruta hasta encontrar una que funcione
     for(const url of candidates){
       try{
         payload = await tryFetchQuestions(url);
@@ -519,7 +438,6 @@
     const meta = payload?.meta || {};
     QUESTIONS = normalizeQuestions(raw);
 
-    // Filtrado opcional por parámetros
     if(EXAM_PARAMS.courseId || EXAM_PARAMS.topicName || EXAM_PARAMS.subName){
       const cId = EXAM_PARAMS.courseId;
       const tId = EXAM_PARAMS.topicId;
@@ -552,9 +470,6 @@
     if(startBtn) startBtn.disabled = false;
   }
 
-  // --------------------------------------------------------------------------
-  //  EVENTOS
-  // --------------------------------------------------------------------------
   startBtn?.addEventListener('click', startExam);
   nextBtn?.addEventListener('click', ()=>{ if(state.answered) nextQuestion(); });
   reviewBtn?.addEventListener('click', openReview);
@@ -569,7 +484,6 @@
     window.location.href = ret;
   });
 
-  // Atajos de teclado para accesibilidad
   document.addEventListener('keydown', (e)=>{
     const welcomeActive = welcome?.classList.contains('active');
     const resultsActive = results?.classList.contains('active');
@@ -596,9 +510,7 @@
       const key = e.key.toLowerCase();
       if(!state.answered){
         let idx = letters.indexOf(key);
-        if(idx===-1 && /^[1-7]$/.test(key)){
-          idx = parseInt(key)-1;
-        }
+        if(idx===-1 && /^[1-7]$/.test(key)) idx = parseInt(key)-1;
         if(idx>=0 && optionsEl){
           const opts = optionsEl.querySelectorAll('.opt');
           if(idx < opts.length){
@@ -616,6 +528,5 @@
     }
   });
 
-  // ¡Arrancamos!
   bootstrap();
 })();
