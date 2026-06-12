@@ -20,7 +20,7 @@ const TOKEN_URL = '/api/token';
 const TEACHER_EMAILS = ['eduardofloreshu@gmail.com','profesor@addison.edu.pe'];
 
 // === CONFIGURACIÓN GRABACIÓN - PERSONALIZABLE ===
-const ORACLE_UPLOAD_URL = 'http://163.176.235.27:3000/upload'; // <-- CAMBIAR por tu endpoint
+const ORACLE_UPLOAD_URL = 'https://planner-role-sell-encounter.trycloudflare.com/upload'; // <-- CAMBIAR por tu endpoint
 const RECORDING_CHUNK_MS = 10000; // sube cada 10 segundos
 
 // Firebase
