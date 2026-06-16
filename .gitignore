@@ -11,3 +11,4 @@ npm-debug.log
 # Backups locales
 backup-*
 *.tar.gz
+config/serviceAccountKey.json

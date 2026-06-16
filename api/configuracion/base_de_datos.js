@@ -1,50 +1,18 @@
 const { Pool } = require('pg');
 
 const poolPostgres = new Pool({
-  user: process.env.POSTGRES_USUARIO,
-  password: process.env.POSTGRES_CONTRASENA,
-  host: process.env.POSTGRES_HOST,
-  port: parseInt(process.env.POSTGRES_PUERTO || '5432'),
-  database: process.env.POSTGRES_BASE_DE_DATOS,
+  user: 'addison',
+  password: 'Alejita*69',
+  host: 'localhost',
+  port: 5432,
+  database: 'academia_addison',
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
 });
 
-async function probarConexion() {
-  const cliente = await poolPostgres.connect();
-  const resultado = await cliente.query('SELECT NOW() as ahora');
-  cliente.release();
-  return resultado.rows[0].ahora;
-}
-
 async function consulta(sql, parametros = []) {
-  const resultado = await poolPostgres.query(sql, parametros);
-  return resultado;
+  return await poolPostgres.query(sql, parametros);
 }
 
-async function transaccion(operaciones) {
-  const cliente = await poolPostgres.connect();
-  try {
-    await cliente.query('BEGIN');
-    const resultados = [];
-    for (const op of operaciones) {
-      const res = await cliente.query(op.sql, op.parametros || []);
-      resultados.push(res);
-    }
-    await cliente.query('COMMIT');
-    return resultados;
-  } catch (error) {
-    await cliente.query('ROLLBACK');
-    throw error;
-  } finally {
-    cliente.release();
-  }
-}
-
-module.exports = {
-  poolPostgres,
-  probarConexion,
-  consulta,
-  transaccion
-};
+module.exports = { consulta };
