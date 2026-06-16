@@ -403,6 +403,10 @@ class App {
       ArbolAcademico.iniciar();
       return;
     }
+    if (vista === 'usuarios') {
+      GestionUsuarios.iniciar();
+      return;
+    }
     this.mostrarToast('Navegando a ' + vista + '...', 'info');
   }
 

@@ -538,3 +538,98 @@
     align-items: flex-start;
   }
 }
+
+/* ============================================
+   TABLA DE USUARIOS
+   ============================================ */
+
+.tabla-usuarios {
+  background: #1A2230;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #2A3441;
+}
+
+.tabla-header {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr 1fr 1fr;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #0F141D;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #8B95A5;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tabla-fila {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr 1fr 1fr;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #222B3A;
+  align-items: center;
+  transition: background 0.2s;
+}
+
+.tabla-fila:hover {
+  background: #222B3A;
+}
+
+.tabla-fila:last-child {
+  border-bottom: none;
+}
+
+.usuario-nombre {
+  font-weight: 600;
+  color: #E8ECF1;
+}
+
+.usuario-email {
+  font-size: 0.85rem;
+  color: #8B95A5;
+}
+
+.badge-rol {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-superadmin {
+  background: rgba(255, 215, 0, 0.15);
+  color: #FFD700;
+}
+
+.badge-director {
+  background: rgba(255, 77, 141, 0.15);
+  color: #FF4D8D;
+}
+
+.badge-profesor {
+  background: rgba(74, 144, 217, 0.15);
+  color: #4A90D9;
+}
+
+.badge-auxiliar {
+  background: rgba(80, 200, 120, 0.15);
+  color: #50C878;
+}
+
+.badge-estudiante {
+  background: rgba(139, 149, 165, 0.15);
+  color: #8B95A5;
+}
+
+.usuario-estado {
+  font-size: 0.8rem;
+  color: #50C878;
+}
+
+.usuario-acciones {
+  display: flex;
+  gap: 4px;
+}
