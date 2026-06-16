@@ -36,7 +36,7 @@ async function login(req, res) {
         // ❌ RECHAZO: No está pre-registrado
         return res.status(403).json({
           error: 'No estás registrado en la plataforma',
-          mensaje: 'Contacta al administrador o director de tu academia para que te matricule primero.',
+          mensaje: 'Para tener acceso a la plataforma educativa matriculate primero.',
           codigo: 'NO_REGISTRADO',
           correo: correo
         });
