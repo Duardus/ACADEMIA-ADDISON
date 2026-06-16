@@ -14,7 +14,7 @@ const GestionUsuarios = {
       <div class="layout-app">
         <header class="app-header">
           <div class="header-left">
-            <button class="btn-icono" onclick="app.toggleSidebar()" id="btnMenu" style="display:none;">☰</button>
+            <button class="btn-icono" onclick="window.location.reload()" title="Volver al dashboard" style="font-size:1.2rem;">←</button>
             <span class="app-titulo">Academia Addison</span>
           </div>
           <div class="header-right">
@@ -23,8 +23,6 @@ const GestionUsuarios = {
           </div>
         </header>
         <div class="app-body">
-          <aside class="sidebar" id="sidebar"></aside>
-          <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="app.toggleSidebar()"></div>
           <main class="main" id="main">
             <div class="arbol-header">
               <h2 class="arbol-titulo">👥 Gestión de Usuarios</h2>
@@ -43,7 +41,6 @@ const GestionUsuarios = {
       </div>
     `;
     
-    if (app.renderizarSidebar) app.renderizarSidebar();
     this.cargar();
   },
 
@@ -70,7 +67,7 @@ const GestionUsuarios = {
       contenedor.innerHTML = `
         <div class="estado-vacio">
           <p>📭 No hay usuarios en esta institución</p>
-          <p class="texto-secundario">Invita al primer director o profesor</p>
+          <p class="texto-secundario">Crea al primer director o profesor</p>
         </div>`;
       return;
     }
@@ -152,7 +149,7 @@ const GestionUsuarios = {
       </div>
     `;
     document.body.appendChild(modal);
-    document.getElementById('crear-email').focus();
+    setTimeout(() => document.getElementById('crear-email').focus(), 100);
   },
 
   cerrarModal() {
@@ -174,7 +171,7 @@ const GestionUsuarios = {
     try {
       const btn = evento.target.querySelector('button[type="submit"]');
       btn.disabled = true;
-      btn.textContent = 'Invitando...';
+      btn.textContent = 'Creando...';
 
       const resultado = await api.crearUsuario({
         correo_electronico: email,
@@ -182,14 +179,14 @@ const GestionUsuarios = {
         tipo_rol: rol
       });
 
-      if (resultado.error) {
+      if (resultado && resultado.error) {
         app.mostrarToast(resultado.error, 'error');
         btn.disabled = false;
         btn.textContent = 'Crear';
         return;
       }
 
-      app.mostrarToast(`✅ ${nombre} invitado como ${rol}`, 'exito');
+      app.mostrarToast(`✅ ${nombre} creado como ${rol}`, 'exito');
       this.cerrarModal();
       this.cargar();
     } catch (error) {

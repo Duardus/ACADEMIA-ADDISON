@@ -1,6 +1,5 @@
 /**
  * ÁRBOL ACADÉMICO INTERACTIVO — ACADEMIA ADDISON v3.0
- * Standalone: no depende de app.renderizarVista()
  */
 
 const ArbolAcademico = {
@@ -20,7 +19,7 @@ const ArbolAcademico = {
       <div class="layout-app">
         <header class="app-header">
           <div class="header-left">
-            <button class="btn-icono" onclick="app.toggleSidebar()" id="btnMenu" style="display:none;">☰</button>
+            <button class="btn-icono" onclick="window.location.reload()" title="Volver al dashboard" style="font-size:1.2rem;">←</button>
             <span class="app-titulo">Academia Addison</span>
           </div>
           <div class="header-right">
@@ -29,8 +28,6 @@ const ArbolAcademico = {
           </div>
         </header>
         <div class="app-body">
-          <aside class="sidebar" id="sidebar"></aside>
-          <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="app.toggleSidebar()"></div>
           <main class="main" id="main">
             <div class="arbol-header">
               <h2 class="arbol-titulo">🌳 Árbol Académico</h2>
@@ -48,9 +45,6 @@ const ArbolAcademico = {
         </div>
       </div>
     `;
-    
-    // Renderizar sidebar
-    if (app.renderizarSidebar) app.renderizarSidebar();
     
     this.cargar();
   },
