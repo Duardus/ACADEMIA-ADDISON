@@ -13,6 +13,12 @@ const rutasUsuario = require('./rutas/usuario.rutas');
 const rutasInstitucion = require('./rutas/institucion.rutas');
 const rutasArbol = require('./rutas/arbol.rutas');
 const rutasLiveKit = require('./rutas/livekit.rutas');
+const rutasTeoria = require('./rutas/teoria.rutas');
+const rutasMaterial = require('./rutas/material.rutas');
+const rutasPregunta = require('./rutas/pregunta.rutas');
+const rutasExamen = require('./rutas/examen.rutas');
+const rutasIntento = require('./rutas/intento.rutas');
+const rutasProgreso = require('./rutas/progreso.rutas');
 const rutasGrabacion = require('./rutas/grabacion.rutas');
 
 const app = express();
