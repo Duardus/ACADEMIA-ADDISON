@@ -14,19 +14,24 @@ class App {
   async iniciar() {
     console.log('[APP] Iniciando Academia Addison v3.0...');
     
-    // Verificar si hay sesión activa
     const token = localStorage.getItem('token_sesion');
-    const institucion = localStorage.getItem('institucion_activa');
+    const institucionRaw = localStorage.getItem('institucion_activa');
     
-    if (token && institucion) {
-      // Hay sesión - mostrar dashboard según rol
-      this.institucion = JSON.parse(institucion);
-      this.rol = this.institucion.tipo_rol;
-      await this.mostrarDashboard();
-    } else {
-      // No hay sesión - mostrar login
-      this.mostrarLogin();
+    if (token && institucionRaw && institucionRaw !== 'undefined' && institucionRaw !== 'null') {
+      try {
+        this.institucion = JSON.parse(institucionRaw);
+        this.rol = this.institucion.tipo_rol || this.institucion.rol;
+        await this.mostrarDashboard();
+        return;
+      } catch (e) {
+        console.warn('[APP] Datos corruptos en localStorage, limpiando...');
+        localStorage.removeItem('token_sesion');
+        localStorage.removeItem('institucion_activa');
+        localStorage.removeItem('usuario_datos');
+      }
     }
+    
+    this.mostrarLogin();
   }
 
   // ============ PÁGINAS ============
@@ -76,12 +81,12 @@ class App {
       
       if (respuesta && respuesta.tipo === "login_directo") {
         // Una sola institución
-        localStorage.setItem('token_sesion', respuesta.token);
+        localStorage.setItem('token_sesion', respuesta.token_sesion);
         localStorage.setItem('institucion_activa', JSON.stringify(respuesta.institucion));
         localStorage.setItem('usuario_activo', JSON.stringify(respuesta.usuario));
         
         this.institucion = respuesta.institucion;
-        this.rol = respuesta.institucion.tipo_rol;
+        this.rol = respuesta.usuario.rol;
         this.usuario = respuesta.usuario;
         
         await this.mostrarDashboard();
@@ -129,10 +134,10 @@ class App {
       btn.addEventListener('click', async () => {
         const respuesta = await api.seleccionarContexto(datos.token_preliminar, m.membresia_id);
         if (respuesta.token) {
-          localStorage.setItem('token_sesion', respuesta.token);
+          localStorage.setItem('token_sesion', respuesta.token_sesion);
           localStorage.setItem('institucion_activa', JSON.stringify(respuesta.institucion));
           this.institucion = respuesta.institucion;
-          this.rol = respuesta.institucion.tipo_rol;
+          this.rol = respuesta.usuario.rol;
           await this.mostrarDashboard();
         }
       });
