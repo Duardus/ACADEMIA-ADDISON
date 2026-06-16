@@ -211,5 +211,27 @@ class ServicioAPI {
   }
 }
 
+
+  // ============ ÁRBOL ACADÉMICO — MÉTODOS COMPLETOS ============
+  async actualizarArbol(tipo, id, datos) {
+    return await this._llamar(`/arbol/${tipo}/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(datos)
+    });
+  }
+
+  async eliminarArbol(tipo, id, motivo) {
+    return await this._llamar(`/arbol/${tipo}/${id}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ motivo_eliminacion: motivo })
+    });
+  }
+
+  async clonarArbol(tipo, id) {
+    return await this._llamar(`/arbol/${tipo}/${id}/clonar`, {
+      method: 'POST'
+    });
+  }
+
 // Instancia global
 const api = new ServicioAPI();
