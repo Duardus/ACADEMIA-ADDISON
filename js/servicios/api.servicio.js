@@ -1,6 +1,5 @@
 /* ============================================
    📡 SERVICIO API - TODAS las llamadas al backend
-   NO EDITAR. Si necesitas un endpoint nuevo, dime.
    ============================================ */
 
 class ServicioAPI {
@@ -83,20 +82,36 @@ class ServicioAPI {
     });
   }
 
+  async actualizarArbol(tipo, id, datos) {
+    return await this._llamar(`/arbol/${tipo}/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(datos)
+    });
+  }
+
+  async eliminarArbol(tipo, id, motivo) {
+    return await this._llamar(`/arbol/${tipo}/${id}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ motivo_eliminacion: motivo })
+    });
+  }
+
+  async clonarArbol(tipo, id) {
+    return await this._llamar(`/arbol/${tipo}/${id}/clonar`, {
+      method: 'POST'
+    });
+  }
+
   // ============ USUARIOS ============
+  async listarUsuarios() {
+    return await this._llamar('/usuarios');
+  }
+
   async crearUsuario(datos) {
     return await this._llamar('/usuarios', {
       method: 'POST',
       body: JSON.stringify(datos)
     });
-  }
-
-  async listarUsuarios() {
-    return await this._llamar('/usuarios');
-  }
-
-  async obtenerUsuario(usuarioId) {
-    return await this._llamar(`/usuarios/${usuarioId}`);
   }
 
   // ============ TEORÍAS ============
@@ -210,28 +225,6 @@ class ServicioAPI {
     });
   }
 }
-
-
-  // ============ ÁRBOL ACADÉMICO — MÉTODOS COMPLETOS ============
-  async actualizarArbol(tipo, id, datos) {
-    return await this._llamar(`/arbol/${tipo}/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(datos)
-    });
-  }
-
-  async eliminarArbol(tipo, id, motivo) {
-    return await this._llamar(`/arbol/${tipo}/${id}`, {
-      method: 'DELETE',
-      body: JSON.stringify({ motivo_eliminacion: motivo })
-    });
-  }
-
-  async clonarArbol(tipo, id) {
-    return await this._llamar(`/arbol/${tipo}/${id}/clonar`, {
-      method: 'POST'
-    });
-  }
 
 // Instancia global
 const api = new ServicioAPI();
