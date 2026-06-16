@@ -20,7 +20,10 @@ class App {
     if (token && institucionRaw && institucionRaw !== 'undefined' && institucionRaw !== 'null') {
       try {
         this.institucion = JSON.parse(institucionRaw);
-        this.rol = this.institucion.tipo_rol || this.institucion.rol;
+        const usuarioRaw = localStorage.getItem('usuario_activo');
+        const usuario = usuarioRaw && usuarioRaw !== 'undefined' ? JSON.parse(usuarioRaw) : {};
+        this.rol = usuario.rol || this.institucion.rol || 'estudiante';
+        this.usuario = usuario;
         await this.mostrarDashboard();
         return;
       } catch (e) {
@@ -235,7 +238,8 @@ class App {
     html += `<div style="padding:0 16px;">`;
     arbol.forEach(grupo => {
       html += `<div style="margin-bottom:8px;font-weight:700;font-size:13px;color:var(--texto-secundario);">${grupo.nombre_grupo}</div>`;
-      grupo.cursos.forEach(curso => {
+      const cursos = grupo.hijos || grupo.cursos || [];
+      cursos.forEach(curso => {
         html += `
           <div class="curso-item" style="padding:10px 12px;border-radius:var(--radio-borde-sm);cursor:pointer;margin-bottom:4px;transition:var(--transicion-rapida);">
             <div style="display:flex;justify-content:space-between;align-items:center;">
