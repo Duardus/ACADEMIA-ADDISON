@@ -1,0 +1,23 @@
+{
+  "name": "api-addison",
+  "version": "3.0.0",
+  "description": "Backend API REST Academia Addison",
+  "main": "servidor.js",
+  "scripts": {
+    "start": "node servidor.js",
+    "dev": "node --watch servidor.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.5.2",
+    "firebase-admin": "^13.10.0",
+    "helmet": "^8.2.0",
+    "jsonwebtoken": "^9.0.3",
+    "livekit-server-sdk": "^2.15.4",
+    "morgan": "^1.11.0",
+    "pg": "^8.21.0"
+  }
+}
