@@ -133,7 +133,7 @@ class App {
       `;
       btn.addEventListener('click', async () => {
         const respuesta = await api.seleccionarContexto(datos.token_preliminar, m.membresia_id);
-        if (respuesta.token) {
+        if (respuesta.token_sesion) {
           localStorage.setItem('token_sesion', respuesta.token_sesion);
           localStorage.setItem('institucion_activa', JSON.stringify(respuesta.institucion));
           this.institucion = respuesta.institucion;
