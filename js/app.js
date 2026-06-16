@@ -367,6 +367,10 @@ class App {
     contenedor.innerHTML = `
       <h2 style="margin-bottom:20px;">Panel Superadmin</h2>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px;">
+        <div class="tarjeta" style="cursor:pointer;" onclick="app.navegar('usuarios')">
+          <strong>👥 Usuarios</strong>
+          <p style="font-size:13px;color:var(--texto-secundario);">Invitar directores, profesores y estudiantes</p>
+        </div>
         <div class="tarjeta" style="cursor:pointer;" onclick="app.navegar('instituciones')">
           <strong>🏛️ Instituciones</strong>
           <p style="font-size:13px;color:var(--texto-secundario);">Crear y gestionar academias</p>
