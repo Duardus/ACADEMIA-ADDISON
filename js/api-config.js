@@ -7,7 +7,7 @@ const API_CONFIG = {
   // NOTA: Si usas HTTPS en el frontend, el navegador bloquea HTTP.
   // Solucion: Configurar Caddy/Cloudflare Tunnel para HTTPS en el backend.
   // Por ahora, para desarrollo local funciona. Para produccion necesita HTTPS.
-  BASE_URL: 'http://163.176.235.27:3000/api/v1',
+  BASE_URL: 'https://academia-addison.duckdns.org/api',
   
   // Headers por defecto
   getHeaders: function() {
