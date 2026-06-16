@@ -23,7 +23,7 @@ class App {
       this.institucion = JSON.parse(institucion);
       this.rol = this.institucion.tipo_rol;
       await this.mostrarDashboard();
-    } else if (respuesta) {
+    } else {
       // No hay sesión - mostrar login
       this.mostrarLogin();
     }
