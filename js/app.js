@@ -206,7 +206,7 @@ class App {
     
     // Obtener cursos del backend
     const respuesta = await api.obtenerArbol();
-    const arbol = respuesta?.arbol || [];
+    const arbol = respuesta?.datos || [];
     
     let html = `
       <div class="sidebar-top">
