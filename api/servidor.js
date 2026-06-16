@@ -13,6 +13,7 @@ const rutasUsuario = require('./rutas/usuario.rutas');
 const rutasInstitucion = require('./rutas/institucion.rutas');
 const rutasArbol = require('./rutas/arbol.rutas');
 const rutasLiveKit = require('./rutas/livekit.rutas');
+const rutasGrabacion = require('./rutas/grabacion.rutas');
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use('/api/v1/usuarios', rutasUsuario);
 app.use('/api/v1/instituciones', rutasInstitucion);
 app.use('/api/v1/arbol', rutasArbol);
 app.use('/api/v1/livekit', rutasLiveKit);
+app.use('/api/v1/grabaciones', rutasGrabacion);
 
 app.use((error, req, res, next) => {
   console.error('ERROR:', error);
