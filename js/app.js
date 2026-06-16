@@ -98,8 +98,17 @@ class App {
         // Múltiples instituciones
         this.mostrarSelectorInstituciones(respuesta);
       }
+      else if (respuesta && respuesta.codigo === 'NO_REGISTRADO') {
+        this.mostrarToast('⚠️ ' + respuesta.mensaje, 'error');
+        auth.signOut();
+      }
+      else if (respuesta && respuesta.codigo === 'SIN_MEMBRESIA') {
+        this.mostrarToast('⚠️ ' + respuesta.mensaje, 'error');
+        auth.signOut();
+      }
       else if (respuesta) {
         this.mostrarToast('Error: ' + (respuesta.error || 'No se pudo iniciar sesión'), 'error');
+        auth.signOut();
       }
     } catch (error) {
       console.error('[APP] Error login:', error);

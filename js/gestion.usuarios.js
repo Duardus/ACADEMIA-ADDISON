@@ -1,6 +1,6 @@
 /**
  * GESTIÓN DE USUARIOS — ACADEMIA ADDISON v3.0
- * Superadmin/Director: invitar, listar, gestionar usuarios
+ * Superadmin/Director: crear, listar, gestionar usuarios
  */
 
 const GestionUsuarios = {
@@ -28,8 +28,8 @@ const GestionUsuarios = {
           <main class="main" id="main">
             <div class="arbol-header">
               <h2 class="arbol-titulo">👥 Gestión de Usuarios</h2>
-              <button class="btn-primario" onclick="GestionUsuarios.mostrarModalInvitar()">
-                <span>+</span> Invitar Usuario
+              <button class="btn-primario" onclick="GestionUsuarios.mostrarModalCrear()">
+                <span>+</span> Crear Usuario
               </button>
             </div>
             <div id="usuarios-contenedor">
@@ -115,28 +115,28 @@ const GestionUsuarios = {
     return colores[rol] || `<span class="badge-rol">${rol}</span>`;
   },
 
-  mostrarModalInvitar() {
+  mostrarModalCrear() {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay activo';
-    modal.id = 'modal-invitar';
+    modal.id = 'modal-crear';
     modal.innerHTML = `
       <div class="modal-panel modal-panel-arbol">
         <div class="modal-header">
-          <h3>📨 Invitar Usuario</h3>
+          <h3>➕ Crear Usuario</h3>
           <button class="btn-cerrar" onclick="GestionUsuarios.cerrarModal()">✕</button>
         </div>
-        <form id="form-invitar" onsubmit="GestionUsuarios.invitar(event)">
+        <form id="form-crear" onsubmit="GestionUsuarios.crear(event)">
           <div class="campo-formulario">
             <label>Correo electrónico</label>
-            <input type="email" id="invitar-email" placeholder="ejemplo@gmail.com" required>
+            <input type="email" id="crear-email" placeholder="ejemplo@gmail.com" required>
           </div>
           <div class="campo-formulario">
             <label>Nombre completo</label>
-            <input type="text" id="invitar-nombre" placeholder="Juan Pérez" required>
+            <input type="text" id="crear-nombre" placeholder="Juan Pérez" required>
           </div>
           <div class="campo-formulario">
             <label>Rol</label>
-            <select id="invitar-rol" required>
+            <select id="crear-rol" required>
               <option value="">Seleccionar...</option>
               <option value="director">🎓 Director</option>
               <option value="professor">📚 Profesor</option>
@@ -146,25 +146,25 @@ const GestionUsuarios = {
           </div>
           <div class="modal-acciones">
             <button type="button" class="btn-secundario" onclick="GestionUsuarios.cerrarModal()">Cancelar</button>
-            <button type="submit" class="btn-primario">Invitar</button>
+            <button type="submit" class="btn-primario">Crear</button>
           </div>
         </form>
       </div>
     `;
     document.body.appendChild(modal);
-    document.getElementById('invitar-email').focus();
+    document.getElementById('crear-email').focus();
   },
 
   cerrarModal() {
-    const m = document.getElementById('modal-invitar');
+    const m = document.getElementById('modal-crear');
     if (m) m.remove();
   },
 
-  async invitar(evento) {
+  async crear(evento) {
     evento.preventDefault();
-    const email = document.getElementById('invitar-email').value.trim();
-    const nombre = document.getElementById('invitar-nombre').value.trim();
-    const rol = document.getElementById('invitar-rol').value;
+    const email = document.getElementById('crear-email').value.trim();
+    const nombre = document.getElementById('crear-nombre').value.trim();
+    const rol = document.getElementById('crear-rol').value;
 
     if (!email || !nombre || !rol) {
       app.mostrarToast('Todos los campos son obligatorios', 'error');
@@ -185,7 +185,7 @@ const GestionUsuarios = {
       if (resultado.error) {
         app.mostrarToast(resultado.error, 'error');
         btn.disabled = false;
-        btn.textContent = 'Invitar';
+        btn.textContent = 'Crear';
         return;
       }
 
@@ -195,7 +195,7 @@ const GestionUsuarios = {
     } catch (error) {
       app.mostrarToast(`Error: ${error.message}`, 'error');
       const btn = evento.target.querySelector('button[type="submit"]');
-      if (btn) { btn.disabled = false; btn.textContent = 'Invitar'; }
+      if (btn) { btn.disabled = false; btn.textContent = 'Crear'; }
     }
   },
 
