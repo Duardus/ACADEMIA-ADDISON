@@ -23,7 +23,7 @@ class App {
       this.institucion = JSON.parse(institucion);
       this.rol = this.institucion.tipo_rol;
       await this.mostrarDashboard();
-    } else {
+    } else if (respuesta) {
       // No hay sesión - mostrar login
       this.mostrarLogin();
     }
@@ -74,7 +74,7 @@ class App {
       
       const respuesta = await api.login(tokenFirebase);
       
-      if (respuesta.tipo === 'login_directo') {
+      if (respuesta && respuesta.tipo === "login_directo") {
         // Una sola institución
         localStorage.setItem('token_sesion', respuesta.token);
         localStorage.setItem('institucion_activa', JSON.stringify(respuesta.institucion));
@@ -86,11 +86,11 @@ class App {
         
         await this.mostrarDashboard();
       }
-      else if (respuesta.tipo === 'selector_requerido') {
+      else if (respuesta && respuesta.tipo === "selector_requerido") {
         // Múltiples instituciones
         this.mostrarSelectorInstituciones(respuesta);
       }
-      else {
+      else if (respuesta) {
         this.mostrarToast('Error: ' + (respuesta.error || 'No se pudo iniciar sesión'), 'error');
       }
     } catch (error) {
