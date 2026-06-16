@@ -1,0 +1,101 @@
+<!--
+
+ACADEMIA VIRTUAL ADDISON - VERSIÓN COMENTADA
+
+Este archivo es el mismo index.html original pero con comentarios
+explicativos añadidos para que una persona sin experiencia pueda
+entender qué hace cada parte y cómo editarla de forma segura.
+
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Academia Virtual Addison</title>
+
+  <link rel="stylesheet" href="css/platform.css">
+</head>
+<body>
+
+<!-- ==================== PANTALLA DE BIENVENIDA / LOGIN ==================== -->
+<section id="welcome">
+  <div class="welcome-left">
+    <h1>Prepárate con los mejores</h1>
+    <p>Academia preuniversitaria virtual Addison. Entra y empieza a estudiar ahora.</p>
+  </div>
+  <div class="welcome-right">
+        <form class="login-card" id="loginForm" novalidate>
+      <h2>Ingresar</h2>
+      <div class="sub">Acceso con Google para estudiar</div>
+      <div class="field"><label for="inpGroup">Grupo</label><select id="inpGroup"></select></div>
+      <button class="btn" type="button" id="btnGoogleLogin">Continuar con Google</button>
+    </form>
+  </div>
+</section>
+
+<!-- ==================== APLICACIÓN PRINCIPAL ==================== -->
+<section id="app" class="hidden">
+  <header class="topbar">
+    <button class="brand-btn" id="btnToggleSidebar" aria-label="Menú">
+      <div class="dots"><span></span><span></span></div>
+      <div class="logo">A</div>
+      <div class="brand-text"><strong>ADDISON</strong><span>academia virtual</span></div>
+    </button>
+    <button class="user-btn" id="btnAccount"><span id="userNameTop">Usuario</span></button>
+  </header>
+  <div class="app-body" id="appBody">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-top">
+        <div class="sidebar-title-wrap">
+          <div class="sidebar-header">Mis cursos</div>
+          <div class="sidebar-group" id="sidebarGroup"></div>
+        </div>
+        <div class="sidebar-overall" id="sidebarOverall"></div>
+      </div>
+      <nav id="courseList"></nav>
+    </aside>
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+    <main class="main">
+      <!-- BARRA LIVE PARA DOCENTES -->
+      <div id="liveBar" class="live-bar hidden"></div>
+      <!-- TARJETA LIVE PARA ALUMNOS -->
+      <div id="liveCardContainer"></div>
+      <div class="topics-grid" id="topicsGrid"></div>
+    </main>
+  </div>
+  <footer class="app-footer">
+    <a href="https://wa.me/51900081858" target="_blank" rel="noopener">prepárate con los mejores - 9000 81 858</a>
+  </footer>
+</section>
+
+<!-- MODAL DE CUENTA -->
+<div id="modalAccount" class="modal hidden"><div class="modal-card"><h3>Cuenta</h3>
+  <div class="field"><label>Nombre</label><input id="accName"></div>
+  <div class="field"><label>Correo</label><input id="accEmail" disabled></div>
+  <div class="field" id="accGroupField"><label>Grupo</label><select id="accGroup"></select><small id="accGroupHint" style="color:var(--muted);font-size:12px;display:block;margin-top:4px"></small></div>
+  <div class="modal-actions"><button id="btnSaveAccount" class="primary">Guardar</button><button id="btnLogout">Salir</button><button id="btnCloseAccount">Cerrar</button></div>
+</div></div>
+
+<!-- MODAL IFRAME -->
+<div id="modalIframe" class="modal hidden iframe-modal"><div class="modal-card"><div class="iframe-head"><strong id="iframeTitle">Contenido</strong><button id="btnCloseIframe" class="btn" style="width:auto;padding:8px 12px">Cerrar</button></div><div class="iframe-body"><iframe id="iframeContent" src="about:blank"></iframe></div></div></div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <!-- FIRESTORE para clases en vivo -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/platform.js"></script>
+
+<!-- MODAL BIENVENIDA -->
+<div id="modalWelcome" class="modal hidden"><div class="modal-card"><h3 id="welcomeTitle">¡Bienvenido!</h3>
+  <p id="welcomeText" style="color:var(--muted);margin:8px 0 16px"></p>
+  <div class="modal-actions"><button id="btnCloseWelcome" class="primary">Empezar</button></div>
+</div></div>
+
+
+    <!-- API Backend Addison v3.0 -->
+    <script src="js/api-config.js"></script>
+    <script src="js/api-addison.js"></script>
+    <script src="js/platform-patch.js"></script>
+</body>
+</html>
