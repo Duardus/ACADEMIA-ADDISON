@@ -148,6 +148,14 @@ class App {
     });
   }
 
+  toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    if (!sidebar || !backdrop) return;
+    sidebar.classList.toggle('abierto');
+    backdrop.classList.toggle('visible');
+  }
+
   async mostrarDashboard() {
     console.log('[APP] Dashboard para rol:', this.rol);
     

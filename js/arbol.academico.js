@@ -20,7 +20,7 @@ const ArbolAcademico = {
       <div class="layout-app">
         <header class="app-header">
           <div class="header-left">
-            <button class="btn-icono" onclick="app.toggleSidebar()" id="btnMenu">☰</button>
+            <button class="btn-icono" onclick="app.toggleSidebar()" id="btnMenu" style="display:none;">☰</button>
             <span class="app-titulo">Academia Addison</span>
           </div>
           <div class="header-right">
