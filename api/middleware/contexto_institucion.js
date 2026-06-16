@@ -17,12 +17,8 @@ async function middlewareContexto(req, res, next) {
     }
 
     const m = membresia.rows[0];
-    let metadata = {};
-    try {
-      if (m.metadata_rol) metadata = JSON.parse(m.metadata_rol);
-    } catch (e) {
-      metadata = {};
-    }
+    // metadata_rol es jsonb en PostgreSQL, ya es objeto o null
+    let metadata = m.metadata_rol || {};
 
     req.contexto_institucion = {
       usuario_id: usuario.usuario_id,
