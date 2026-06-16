@@ -22,6 +22,7 @@ const rutasProgreso = require('./rutas/progreso.rutas');
 const rutasGrabacion = require('./rutas/grabacion.rutas');
 
 const app = express();
+app.set('trust proxy', 1);
 
 app.use(helmet());
 app.use(cors({ origin: process.env.FRONTEND_URL || '*', credentials: true }));
@@ -29,7 +30,7 @@ app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 
-app.get('/salud', (req, res) => {
+app.get('/api/v1/salud', (req, res) => {
   res.json({ estado: 'ok', version: '3.0.0', timestamp: new Date().toISOString() });
 });
 
