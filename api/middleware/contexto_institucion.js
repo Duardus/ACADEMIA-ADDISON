@@ -3,30 +3,25 @@ const { consulta } = require('../configuracion/base_de_datos');
 
 async function middlewareContexto(req, res, next) {
   try {
-    const header = req.headers.authorization;
-    if (!header || !header.startsWith('Bearer ')) {
-      return res.status(404).json({ error: 'Recurso no encontrado', codigo: 'NO_ENCONTRADO' });
+    // Usar el usuario ya autenticado por middlewareAutenticar
+    const usuario = req.usuario_autenticado;
+    if (!usuario) {
+      return res.status(401).json({ error: 'Token requerido', codigo: 'SIN_TOKEN' });
     }
 
-    const tokenCompleto = header.split('Bearer ')[1];
-    const payload = verificarToken(tokenCompleto);
-
-    if (payload.tipo !== 'definitivo') {
-      return res.status(404).json({ error: 'Recurso no encontrado', codigo: 'NO_ENCONTRADO' });
-    }
-
+    // Buscar membresía activa del usuario
     const membresia = await consulta(
-      'SELECT membresia_id, institucion_id, tipo_rol, estado_membresia, metadata_rol FROM membresias WHERE membresia_id = $1 AND usuario_id = $2 AND estado_membresia = $3',
-      [payload.membresia_id, payload.usuario_id, 'active']
+      'SELECT membresia_id, institucion_id, tipo_rol, estado_membresia, metadata_rol FROM membresias WHERE usuario_id = $1 AND estado_membresia = $2 LIMIT 1',
+      [usuario.usuario_id, 'active']
     );
 
     if (membresia.rows.length === 0) {
-      return res.status(404).json({ error: 'Recurso no encontrado', codigo: 'NO_ENCONTRADO' });
+      return res.status(403).json({ error: 'Sin membresía activa', codigo: 'SIN_MEMBRESIA' });
     }
 
     const m = membresia.rows[0];
     req.contexto_institucion = {
-      usuario_id: payload.usuario_id,
+      usuario_id: usuario.usuario_id,
       membresia_id: m.membresia_id,
       institucion_id: m.institucion_id,
       tipo_rol: m.tipo_rol,
@@ -36,7 +31,8 @@ async function middlewareContexto(req, res, next) {
 
     next();
   } catch (error) {
-    return res.status(404).json({ error: 'Recurso no encontrado', codigo: 'NO_ENCONTRADO' });
+    console.error('Contexto error:', error.message);
+    return res.status(500).json({ error: 'Error de contexto', codigo: 'CONTEXTO_ERROR' });
   }
 }
 
