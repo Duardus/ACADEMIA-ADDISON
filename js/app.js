@@ -232,6 +232,9 @@ class App {
     // Si es director/superadmin, mostrar botón de crear
     if (['superadmin', 'director'].includes(this.rol)) {
       html += `<button class="btn btn-sm" style="margin:0 16px 12px;" id="btnCrearCurso">+ Nuevo Curso</button>`;
+      html += `<button class="btn btn-sm btn-secundario" style="margin:0 16px 12px;display:flex;align-items:center;gap:6px;" onclick="app.navegar('arbol')">
+        <span>🌳</span> Árbol Académico
+      </button>`;
     }
     
     // Listar cursos
@@ -396,6 +399,10 @@ class App {
 
   navegar(vista) {
     console.log('[APP] Navegar a:', vista);
+    if (vista === 'arbol') {
+      ArbolAcademico.iniciar();
+      return;
+    }
     this.mostrarToast('Navegando a ' + vista + '...', 'info');
   }
 
