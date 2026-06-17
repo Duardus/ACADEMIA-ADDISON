@@ -24,15 +24,20 @@ async function login(req, res) {
       const porEmail = await consulta('SELECT * FROM usuarios WHERE correo_electronico = $1', [correo]);
       
       if (porEmail.rows.length > 0) {
-        // MIGRACIÓN CORRECTA: Primero membresías, luego usuario
+        // MIGRACIÓN FIX: Usuario PRIMERO, luego tablas dependientes
         const uidViejo = porEmail.rows[0].usuario_id;
         
-        // 1. Actualizar membresías primero (FK apunta a usuario_id viejo)
-        await consulta('UPDATE membresias SET usuario_id = $1 WHERE usuario_id = $2', [uid, uidViejo]);
-        // 2. Actualizar instituciones si es superadmin
-        await consulta('UPDATE instituciones SET superadmin_id = $1 WHERE superadmin_id = $2', [uid, uidViejo]);
-        // 3. Ahora sí actualizar el usuario (sin conflictos de FK)
-        await consulta('UPDATE usuarios SET usuario_id = $1, ultimo_login = NOW(), auth_provider = $2, estado_usuario = $3 WHERE correo_electronico = $4', [uid, 'firebase', 'active', correo]);
+        try {
+          // 1. Actualizar usuario PRIMERO (el nuevo UID debe existir antes)
+          await consulta('UPDATE usuarios SET usuario_id = $1, ultimo_login = NOW(), auth_provider = $2, estado_usuario = $3 WHERE correo_electronico = $4', [uid, 'firebase', 'active', correo]);
+          // 2. Ahora sí actualizar membresías (FK ya no falla porque usuario existe)
+          await consulta('UPDATE membresias SET usuario_id = $1 WHERE usuario_id = $2', [uid, uidViejo]);
+          // 3. Actualizar instituciones si es superadmin
+          await consulta('UPDATE instituciones SET superadmin_id = $1 WHERE superadmin_id = $2', [uid, uidViejo]);
+        } catch (err) {
+          console.error('❌ Error en migración de usuario:', err);
+          return res.status(500).json({ error: 'Error al migrar usuario', detalle: err.message });
+        }
         
         result = await consulta('SELECT * FROM usuarios WHERE usuario_id = $1', [uid]);
         usuario = result.rows[0];
