@@ -55,6 +55,4 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = 3000;
-app.get('/api/v1/finanzas/*',(req,res)=>res.json({ok:true,data:[],mensaje:'Finanzas en construcción'}));
-app.get('/api/v1/auditoria/*',(req,res)=>res.json({ok:true,data:[],mensaje:'Auditoría en construcción'}));
 app.listen(PORT, () => console.log('Servidor activo en puerto ' + PORT));
