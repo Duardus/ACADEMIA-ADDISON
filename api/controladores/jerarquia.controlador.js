@@ -171,7 +171,7 @@ class JerarquiaControlador {
       await consulta("UPDATE membresias SET estado_membresia = 'suspended', padre_membresia_id = NULL WHERE membresia_id = $1", [objetivo_membresia_id]);
       await consulta(`INSERT INTO jerarquia_log (accion, actor_membresia_id, actor_usuario_id, objetivo_membresia_id, objetivo_usuario_id, detalle_json) VALUES ('desactivar_usuario', $1, $2, $3, $4, $5)`, [creador_membresia_id, creador_usuario_id, objetivo_membresia_id, infoObjetivo.rows[0]?.usuario_id, JSON.stringify({metodo: 'soft_delete', nivel_previo: infoObjetivo.rows[0]?.nivel})]);
       res.json({ exito: true, mensaje: 'Usuario desactivado', membresia_id: objetivo_membresia_id });
-    } catch (error) { res.status(500).json({ error: 'Error', codigo: 'ERROR_INTERNO' }); }
+    } catch (error) { console.error('Error eliminarHijo:', error); res.status(500).json({ error: 'Error', codigo: 'ERROR_INTERNO', detalle: error.message }); }
   }
 
   async arbolCompletoInstitucion(req, res) {

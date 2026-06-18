@@ -16,13 +16,13 @@ const GestionJerarquia = {
         try {
             const [capResp, hijosResp] = await Promise.all([
                 jerarquiaServicio.obtenerCapacidadesDelegables(),
-                jerarquiaServicio.obtenerMisHijos()
+                jerarquiaServicio.obtenerArbolCompleto()
             ]);
             if (capResp && capResp.exito) { 
                 this.capacidadesDelegables = capResp.capacidades_delegables || []; 
                 this.puedeCrearHijos = capResp.puede_crear_hijos || false; 
             }
-            if (hijosResp && hijosResp.exito) this.hijos = hijosResp.hijos || [];
+            if (hijosResp && hijosResp.exito) this.hijos = hijosResp.arbol || [];
             this.renderizar();
         } catch (e) { 
             const arbol = document.getElementById('jerarquia-arbol');

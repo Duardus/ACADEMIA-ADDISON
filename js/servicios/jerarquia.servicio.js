@@ -5,7 +5,11 @@ class JerarquiaServicio {
     async crearUsuarioHijo(datos) {
         return await this.api._llamar('/jerarquia/crear', { method: 'POST', body: JSON.stringify(datos) });
     }
-    async obtenerMisHijos() {
+    async obtenerArbolCompleto() {
+    return await this._llamar('/jerarquia/arbol-completo');
+  }
+
+  async obtenerMisHijos() {
         return await this.api._llamar('/jerarquia/mis-hijos');
     }
     async obtenerMisCapacidades() {
