@@ -136,7 +136,7 @@ class JerarquiaControlador {
       const objetivo_membresia_id = parseInt(req.params.membresia_id);
       const { capacidades_ids, puede_crear_hijos } = req.body;
       if (!creador_membresia_id) return res.status(400).json({ error: 'Sin membresia', codigo: 'SIN_MEMBRESIA' });
-      const esDescendiente = await consulta('SELECT 1 FROM obtener_descendientes_membresia($1) WHERE membresia_id = $2', [creador_membresia_id, objetivo_membresia_id]);
+      const esDescendiente = await consulta('SELECT 1 FROM obtener_descendientes_membresia($1) WHERE r_membresia_id = $2', [creador_membresia_id, objetivo_membresia_id]);
       if (esDescendiente.rows.length === 0) return res.status(403).json({ error: 'No es tu descendiente', codigo: 'NO_ES_DESCENDIENTE' });
       if (capacidades_ids && capacidades_ids.length > 0) {
         const capsCreador = await consulta(`SELECT c.capacidad_id FROM membresia_capacidades mc INNER JOIN capacidades c ON mc.capacidad_id = c.capacidad_id WHERE mc.membresia_id = $1 AND c.capacidad_id = ANY($2::int[])`, [creador_membresia_id, capacidades_ids]);
@@ -164,7 +164,7 @@ class JerarquiaControlador {
       const creador_usuario_id = req.usuario_autenticado?.usuario_id;
       const objetivo_membresia_id = parseInt(req.params.membresia_id);
       if (!creador_membresia_id) return res.status(400).json({ error: 'Sin membresia', codigo: 'SIN_MEMBRESIA' });
-      const esDescendiente = await consulta('SELECT 1 FROM obtener_descendientes_membresia($1) WHERE membresia_id = $2', [creador_membresia_id, objetivo_membresia_id]);
+      const esDescendiente = await consulta('SELECT 1 FROM obtener_descendientes_membresia($1) WHERE r_membresia_id = $2', [creador_membresia_id, objetivo_membresia_id]);
       if (esDescendiente.rows.length === 0) return res.status(403).json({ error: 'No es tu descendiente', codigo: 'NO_ES_DESCENDIENTE' });
       const infoObjetivo = await consulta('SELECT nivel, usuario_id FROM membresias WHERE membresia_id = $1', [objetivo_membresia_id]);
       if (infoObjetivo.rows[0]?.nivel === 0) return res.status(403).json({ error: 'No puedes eliminar superadmin', codigo: 'PROTECCION_SUPERADMIN' });
