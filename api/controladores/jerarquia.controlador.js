@@ -39,7 +39,7 @@ class JerarquiaControlador {
         await consulta(`INSERT INTO usuarios (usuario_id, correo_electronico, nombre_completo, auth_provider, estado_usuario, creado_en) VALUES ($1, $2, $3, $4, $5, NOW())`, [uid_firebase, email, nombre_completo || email.split('@')[0], 'bootstrap', 'active']);
       }
 
-      const existe = await consulta('SELECT membresia_id FROM membresias WHERE usuario_id = $1 AND institucion_id = $2 AND estado_membresia = $3', [uid_firebase, institucion_id, 'active']);
+      const existe = await consulta('SELECT membresia_id FROM membresias WHERE usuario_id = $1 AND institucion_id = $2', [uid_firebase, institucion_id]);
       if (existe.rows.length > 0) return res.status(409).json({ error: 'Ya tiene membresia', codigo: 'MEMBRESIA_EXISTENTE' });
 
       if (capacidades_ids && capacidades_ids.length > 0) {
@@ -53,11 +53,27 @@ class JerarquiaControlador {
       if (capacidades_ids?.includes(capCrear.rows[0]?.capacidad_id)) return res.status(403).json({ error: 'crear_usuarios no delegable directamente', codigo: 'CREAR_USUARIOS_NO_DELEGABLE' });
 
       const nivelHijo = creador_nivel + 1;
-      const nuevaMembresia = await consulta(
-        `INSERT INTO membresias (usuario_id, institucion_id, tipo_rol, nombre_rol, nivel, padre_membresia_id, puede_crear_hijos, creado_por_usuario_id, estado_membresia, creado_en) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()) RETURNING membresia_id`,
-        [uid_firebase, institucion_id, 'custom', nombre_rol, nivelHijo, creador_membresia_id, puede_crear_hijos || false, creador_usuario_id, 'active']
-      );
-      const nueva_membresia_id = nuevaMembresia.rows[0].membresia_id;
+      // Si ya existe una membresia suspended, reactivarla
+      const membresiaExistente = await consulta('SELECT membresia_id FROM membresias WHERE usuario_id = $1 AND institucion_id = $2', [uid_firebase, institucion_id]);
+      let nueva_membresia_id;
+      
+      if (membresiaExistente.rows.length > 0) {
+        // Reactivar membresia existente
+        nueva_membresia_id = membresiaExistente.rows[0].membresia_id;
+        await consulta(
+          `UPDATE membresias SET estado_membresia = 'active', tipo_rol = $1, nombre_rol = $2, nivel = $3, padre_membresia_id = $4, puede_crear_hijos = $5, creado_por_usuario_id = $6 WHERE membresia_id = $7`,
+          ['custom', nombre_rol, nivelHijo, creador_membresia_id, puede_crear_hijos || false, creador_usuario_id, nueva_membresia_id]
+        );
+        // Limpiar capacidades anteriores
+        await consulta('DELETE FROM membresia_capacidades WHERE membresia_id = $1', [nueva_membresia_id]);
+      } else {
+        // Crear nueva membresia
+        const nuevaMembresia = await consulta(
+          `INSERT INTO membresias (usuario_id, institucion_id, tipo_rol, nombre_rol, nivel, padre_membresia_id, puede_crear_hijos, creado_por_usuario_id, estado_membresia, creado_en) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()) RETURNING membresia_id`,
+          [uid_firebase, institucion_id, 'custom', nombre_rol, nivelHijo, creador_membresia_id, puede_crear_hijos || false, creador_usuario_id, 'active']
+        );
+        nueva_membresia_id = nuevaMembresia.rows[0].membresia_id;
+      }
 
       if (capacidades_ids && capacidades_ids.length > 0) {
         const values = capacidades_ids.map((cap_id, idx) => `($1, $${idx+2}, $${idx+2+capacidades_ids.length}, $${idx+2+2*capacidades_ids.length}, $${idx+2+3*capacidades_ids.length})`).join(', ');
