@@ -46,6 +46,7 @@ app.use('/api/v1/examenes', rutasExamen);
 app.use('/api/v1/intentos', rutasIntento);
 app.use('/api/v1/progreso', rutasProgreso);
 app.use('/api/v1/jerarquia', rutasJerarquia);
+app.use('/api/jerarquia', rutasJerarquia);
 
 // 404
 app.use((req, res) => {
