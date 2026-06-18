@@ -803,5 +803,6 @@ class JerarquiaControlador {
       res.status(500).json({ error: 'Error', codigo: 'ERROR_INTERNO', detalle: error.message });
     }
   }
+}
 
 module.exports = new JerarquiaControlador();
