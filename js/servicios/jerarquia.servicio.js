@@ -1,6 +1,6 @@
 class JerarquiaServicio {
   constructor() {
-    this.baseURL = window.API_CONFIG?.baseURL || '/api/v1';
+    this.baseURL = 'https://academia-addison.duckdns.org/api/v1';
   }
 
   async _llamar(ruta, opciones = {}) {
