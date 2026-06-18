@@ -39,8 +39,12 @@ class JerarquiaControlador {
         await consulta(`INSERT INTO usuarios (usuario_id, correo_electronico, nombre_completo, auth_provider, estado_usuario, creado_en) VALUES ($1, $2, $3, $4, $5, NOW())`, [uid_firebase, email, nombre_completo || email.split('@')[0], 'bootstrap', 'active']);
       }
 
-      const existe = await consulta('SELECT membresia_id FROM membresias WHERE usuario_id = $1 AND institucion_id = $2', [uid_firebase, institucion_id]);
-      if (existe.rows.length > 0) return res.status(409).json({ error: 'Ya tiene membresia', codigo: 'MEMBRESIA_EXISTENTE' });
+      // Verificar solo membresias ACTIVAS
+      const existeActiva = await consulta('SELECT membresia_id FROM membresias WHERE usuario_id = $1 AND institucion_id = $2 AND estado_membresia = $3', [uid_firebase, institucion_id, 'active']);
+      if (existeActiva.rows.length > 0) return res.status(409).json({ error: 'Ya tiene membresia activa', codigo: 'MEMBRESIA_EXISTENTE' });
+      
+      // Si existe una membresia suspendida, reactivarla
+      const existeSuspendida = await consulta('SELECT membresia_id FROM membresias WHERE usuario_id = $1 AND institucion_id = $2 AND estado_membresia = $3', [uid_firebase, institucion_id, 'suspended']);
 
       if (capacidades_ids && capacidades_ids.length > 0) {
         const capsCreador = await consulta(`SELECT c.capacidad_id FROM membresia_capacidades mc INNER JOIN capacidades c ON mc.capacidad_id = c.capacidad_id WHERE mc.membresia_id = $1 AND c.capacidad_id = ANY($2::int[])`, [creador_membresia_id, capacidades_ids]);
