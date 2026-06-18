@@ -78,13 +78,35 @@ class JerarquiaControlador {
     try {
       const membresia_id = req.contexto_institucion?.membresia_id;
       if (!membresia_id) return res.status(400).json({ error: 'Sin membresia', codigo: 'SIN_MEMBRESIA' });
-      const resultado = await consulta(`SELECT * FROM obtener_descendientes_membresia($1)`, [membresia_id]);
+      
+      // Consultar descendientes con datos de usuario
+      const resultado = await consulta(`
+        SELECT 
+          d.r_membresia_id as membresia_id,
+          d.r_usuario_id as usuario_id,
+          d.r_nombre_rol as nombre_rol,
+          d.r_nivel as nivel,
+          d.r_padre_membresia_id as padre_membresia_id,
+          d.r_puede_crear_hijos as puede_crear_hijos,
+          d.r_tipo_rol as tipo_rol,
+          d.r_estado_membresia as estado_membresia,
+          u.correo_electronico,
+          u.nombre_completo
+        FROM obtener_descendientes_membresia($1) d
+        LEFT JOIN usuarios u ON d.r_usuario_id = u.usuario_id
+        ORDER BY d.r_nivel, u.nombre_completo
+      `, [membresia_id]);
+      
       const hijosConCapacidades = await Promise.all(resultado.rows.map(async (hijo) => {
         const caps = await consulta(`SELECT c.codigo, c.nombre, c.categoria FROM membresia_capacidades mc INNER JOIN capacidades c ON mc.capacidad_id = c.capacidad_id WHERE mc.membresia_id = $1`, [hijo.membresia_id]);
         return { ...hijo, capacidades: caps.rows };
       }));
+      
       res.json({ exito: true, total: resultado.rows.length, hijos: hijosConCapacidades });
-    } catch (error) { res.status(500).json({ error: 'Error', codigo: 'ERROR_INTERNO' }); }
+    } catch (error) { 
+      console.error('Error obtenerMisHijos:', error);
+      res.status(500).json({ error: 'Error', codigo: 'ERROR_INTERNO', detalle: error.message }); 
+    }
   }
 
   async obtenerMisCapacidades(req, res) {
