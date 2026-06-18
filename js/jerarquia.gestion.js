@@ -307,6 +307,33 @@ const GestionJerarquia = {
             app.mostrarToast('Error: ' + err.message, 'error');
         }
     },
+
+    async cambiarEstado(membresiaId, nuevoEstado) {
+        const accion = nuevoEstado === 'active' ? 'activar' : (nuevoEstado === 'suspended' ? 'suspender' : 'eliminar');
+        const mensajeConfirm = nuevoEstado === 'deleted' ? 
+            '¿ELIMINAR PERMANENTEMENTE este usuario? Esta acción no se puede deshacer.' : 
+            '¿' + accion.charAt(0).toUpperCase() + accion.slice(1) + ' este usuario?';
+        
+        if (!confirm(mensajeConfirm)) return;
+        try {
+            const r = await api._llamar('/jerarquia/cambiar-estado/' + membresiaId, { 
+                method: 'POST', 
+                body: JSON.stringify({ nuevo_estado: nuevoEstado }) 
+            });
+            if (r.exito) {
+                app.mostrarToast('Usuario ' + accion + 'ado correctamente', 'exito');
+                this.cargar();
+            } else {
+                app.mostrarToast(r.error || 'Error', 'error');
+            }
+        } catch (err) {
+            app.mostrarToast('Error: ' + err.message, 'error');
+        }
+    },
+
+    async eliminarUsuario(membresiaId) {
+        return this.cambiarEstado(membresiaId, 'deleted');
+    },
     
     cerrarModal() {
         const m1 = document.getElementById('modal-crear-jerarquia');
