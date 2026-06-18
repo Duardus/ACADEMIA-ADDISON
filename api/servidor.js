@@ -51,6 +51,16 @@ app.use('/api/v1/progreso', rutasProgreso);
 app.use('/api/v1/jerarquia', rutasJerarquia);
 app.use('/api/jerarquia', rutasJerarquia);
 
+// Endpoint para verificar si la sesion sigue valida (usado por heartbeat)
+app.get('/api/v1/sesion/verificar', middlewareAutenticar, (req, res) => {
+  res.json({
+    estado: 'ok',
+    usuario_id: req.usuario_autenticado.usuario_id,
+    correo: req.usuario_autenticado.correo,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // 404
 app.use((req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada', ruta: req.path });
