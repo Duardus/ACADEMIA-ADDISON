@@ -178,7 +178,7 @@ class JerarquiaControlador {
         nueva_membresia_id = nuevaMembresia.rows[0].membresia_id;
       }
 
-      // Registrar superior inmediato en superiores_membresia
+      // Registrar superior inmediato
       await consulta(
         `INSERT INTO superiores_membresia (superior_membresia_id, subordinado_membresia_id, tipo_vinculo, asignado_por_membresia_id)
          VALUES ($1, $2, 'directo', $3)`,
@@ -188,7 +188,6 @@ class JerarquiaControlador {
       // Registrar superiores adicionales
       if (superiores_adicionales && superiores_adicionales.length > 0) {
         for (const sup_id of superiores_adicionales) {
-          // Validar que el superior adicional tiene nivel menor
           const supInfo = await consulta('SELECT nivel FROM membresias WHERE membresia_id = $1', [sup_id]);
           if (supInfo.rows.length > 0 && supInfo.rows[0].nivel < parseInt(nivel_jerarquico)) {
             await consulta(
@@ -259,21 +258,54 @@ class JerarquiaControlador {
   }
 
   // ============================================
-  // OBTENER MIS SUBORDINADOS (nueva funcion)
+  // OBTENER MIS SUBORDINADOS (incluye a mi mismo si soy nivel 0)
   // ============================================
   async obtenerMisSubordinados(req, res) {
     try {
       const membresia_id = req.contexto_institucion?.membresia_id;
+      const institucion_id = req.contexto_institucion?.institucion_id;
+      
       if (!membresia_id) {
         return res.status(400).json({ error: 'Sin membresia', codigo: 'SIN_MEMBRESIA' });
       }
 
-      const resultado = await consulta(
-        `SELECT * FROM obtener_subordinados_membresia($1)`,
+      // Obtener mi nivel
+      const miInfo = await consulta(
+        'SELECT nivel FROM membresias WHERE membresia_id = $1',
         [membresia_id]
       );
+      const miNivel = miInfo.rows[0]?.nivel;
 
-      // Obtener capacidades de cada subordinado
+      let resultado;
+      
+      if (miNivel === 0) {
+        // SOY NIVEL 0: Ver TODOS los usuarios de la institucion incluyendome
+        resultado = await consulta(
+          `SELECT 
+            m.membresia_id as sub_membresia_id,
+            m.usuario_id as sub_usuario_id,
+            m.nivel as sub_nivel,
+            m.nombre_rol as sub_nombre_rol,
+            m.estado_membresia as sub_estado,
+            m.puede_crear_hijos as sub_puede_crear_hijos,
+            u.correo_electronico as sub_correo,
+            u.nombre_completo as sub_nombre_completo,
+            'directo' as sub_tipo_vinculo
+           FROM membresias m
+           JOIN usuarios u ON m.usuario_id = u.usuario_id
+           WHERE m.institucion_id = $1 AND m.estado_membresia = 'active'
+           ORDER BY m.nivel, u.nombre_completo`,
+          [institucion_id]
+        );
+      } else {
+        // SOY NIVEL > 0: Ver solo mis subordinados
+        resultado = await consulta(
+          `SELECT * FROM obtener_subordinados_membresia($1)`,
+          [membresia_id]
+        );
+      }
+
+      // Obtener capacidades de cada uno
       const subordinadosConCapacidades = await Promise.all(
         resultado.rows.map(async (sub) => {
           const caps = await consulta(
@@ -349,6 +381,11 @@ class JerarquiaControlador {
         return res.status(400).json({ error: 'Sin membresia', codigo: 'SIN_MEMBRESIA' });
       }
 
+      // PROTECCION: No puedes modificarte a ti mismo
+      if (objetivo_membresia_id === creador_membresia_id) {
+        return res.status(403).json({ error: 'No puedes modificarte a ti mismo', codigo: 'AUTO_MODIFICACION' });
+      }
+
       // Verificar que el objetivo es subordinado del creador (directo o asignado)
       const esSubordinado = await consulta(
         `SELECT 1 FROM superiores_membresia 
@@ -361,7 +398,7 @@ class JerarquiaControlador {
 
       // Verificar nivel del creador vs objetivo
       const niveles = await consulta(
-        'SELECT nivel FROM membresias WHERE membresia_id IN ($1, $2)',
+        'SELECT membresia_id, nivel FROM membresias WHERE membresia_id IN ($1, $2)',
         [creador_membresia_id, objetivo_membresia_id]
       );
       const nivelCreador = niveles.rows.find(r => r.membresia_id === creador_membresia_id)?.nivel;
@@ -462,6 +499,11 @@ class JerarquiaControlador {
         return res.status(400).json({ error: 'Sin membresia', codigo: 'SIN_MEMBRESIA' });
       }
 
+      // PROTECCION: No puedes desactivarte a ti mismo
+      if (objetivo_membresia_id === creador_membresia_id) {
+        return res.status(403).json({ error: 'No puedes desactivarte a ti mismo', codigo: 'AUTO_DESACTIVACION' });
+      }
+
       // Verificar que es subordinado
       const esSubordinado = await consulta(
         `SELECT 1 FROM superiores_membresia 
@@ -476,6 +518,8 @@ class JerarquiaControlador {
         'SELECT nivel, usuario_id FROM membresias WHERE membresia_id = $1',
         [objetivo_membresia_id]
       );
+      
+      // PROTECCION: No puedes desactivar nivel 0
       if (infoObjetivo.rows[0]?.nivel === 0) {
         return res.status(403).json({ error: 'No puedes desactivar nivel 0', codigo: 'PROTECCION_NIVEL_CERO' });
       }
@@ -584,7 +628,7 @@ class JerarquiaControlador {
   }
 
   // ============================================
-  // OBTENER SUPERPIORES DE UNA MEMBRESIA
+  // OBTENER SUPERIORES DE UNA MEMBRESIA
   // ============================================
   async obtenerSuperiores(req, res) {
     try {
