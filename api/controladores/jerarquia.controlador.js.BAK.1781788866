@@ -29,18 +29,18 @@ class JerarquiaControlador {
       }
       const creador_nivel = puedeCrear.rows[0].nivel;
 
-      // Pre-registro: generar UID bootstrap, NO verificar Firebase
-      let uid_firebase = `bootstrap_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      const usuarioExiste = await consulta('SELECT usuario_id FROM usuarios WHERE correo_electronico = $1', [email]);
-      if (usuarioExiste.rows.length > 0) {
-        uid_firebase = usuarioExiste.rows[0].usuario_id;
-      } else {
-        await consulta(`INSERT INTO usuarios (usuario_id, correo_electronico, nombre_completo, auth_provider, estado_usuario, creado_en) VALUES ($1, $2, $3, $4, $5, NOW())`, [uid_firebase, email, nombre_completo || email.split('@')[0], 'bootstrap', 'active']);
-      }
+      let usuarioFirebase;
+      try { usuarioFirebase = await admin.auth().getUserByEmail(email); }
+      catch (e) { return res.status(400).json({ error: 'Email no en Firebase', codigo: 'EMAIL_NO_FIREBASE' }); }
+      const uid_firebase = usuarioFirebase.uid;
 
       const existe = await consulta('SELECT membresia_id FROM membresias WHERE usuario_id = $1 AND institucion_id = $2 AND estado_membresia = $3', [uid_firebase, institucion_id, 'active']);
       if (existe.rows.length > 0) return res.status(409).json({ error: 'Ya tiene membresia', codigo: 'MEMBRESIA_EXISTENTE' });
+
+      const usuarioExiste = await consulta('SELECT usuario_id FROM usuarios WHERE usuario_id = $1', [uid_firebase]);
+      if (usuarioExiste.rows.length === 0) {
+        await consulta(`INSERT INTO usuarios (usuario_id, correo_electronico, nombre_completo, auth_provider, estado_usuario, creado_en) VALUES ($1, $2, $3, $4, $5, NOW())`, [uid_firebase, email, nombre_completo || usuarioFirebase.displayName || email.split('@')[0], 'firebase', 'active']);
+      }
 
       if (capacidades_ids && capacidades_ids.length > 0) {
         const capsCreador = await consulta(`SELECT c.capacidad_id FROM membresia_capacidades mc INNER JOIN capacidades c ON mc.capacidad_id = c.capacidad_id WHERE mc.membresia_id = $1 AND c.capacidad_id = ANY($2::int[])`, [creador_membresia_id, capacidades_ids]);
