@@ -3,13 +3,25 @@ const GestionJerarquia = {
     capacidadesDelegables: [],
     puedeCrearHijos: false,
     etiquetasFrecuentes: [],
+    miNivel: 0,
+    miMembresiaId: null,
     
     async iniciar() {
         const main = document.getElementById('main') || document.getElementById('contenidoPrincipal');
         if (!main) { console.error('[JERARQUIA] No se encontro contenedor principal'); return; }
         
+        // Obtener mi info del contexto
+        const usuarioActivo = JSON.parse(localStorage.getItem('usuario_activo') || '{}');
+        const institucionActiva = JSON.parse(localStorage.getItem('institucion_activa') || '{}');
+        this.miMembresiaId = usuarioActivo.membresia_id || 1;
+        this.miNivel = usuarioActivo.nivel || 0;
+        
         main.innerHTML = '<div style="padding:20px;">' +
             '<h2 style="margin-bottom:20px;">Gestion de Jerarquia</h2>' +
+            '<div style="background:var(--fondo-secundario);padding:12px 16px;border-radius:8px;margin-bottom:16px;">' +
+            '<strong>Tu nivel jerarquico: ' + this.miNivel + '</strong> ' +
+            '<span style="color:var(--texto-secundario);">(Solo tu y tus superiores lo ven)</span>' +
+            '</div>' +
             '<div id="jerarquia-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px;"></div>' +
             '<div id="jerarquia-acciones" style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;"></div>' +
             '<div id="jerarquia-lista"></div>' +
@@ -119,14 +131,56 @@ const GestionJerarquia = {
         modal.innerHTML = '<div class="modal-panel">' +
             '<div class="modal-header"><h3>Crear Nuevo Usuario</h3><button class="btn-cerrar" onclick="GestionJerarquia.cerrarModal()">X</button></div>' +
             '<form id="form-crear-jerarquia" onsubmit="GestionJerarquia.crear(event)">' +
-            '<div class="campo-formulario"><label>Nombre del Cargo</label><input list="etiquetas-lista" type="text" id="crear-nombre-rol" placeholder="Ej: Coordinador..." required><datalist id="etiquetas-lista">' + etiquetasHtml + '</datalist></div>' +
-            '<div class="campo-formulario"><label>Email</label><input type="email" id="crear-email" placeholder="usuario@email.com" required></div>' +
-            '<div class="campo-formulario"><label>Nombre Completo</label><input type="text" id="crear-nombre-completo" placeholder="Juan Perez"></div>' +
-            '<div class="campo-formulario"><label>Nivel Jerarquico</label><input type="number" id="crear-nivel" min="0" placeholder="Mayor que el tuyo" required></div>' +
-            '<div class="campo-formulario"><label>Superior Inmediato ID</label><input type="number" id="crear-superior" placeholder="ID del superior" required></div>' +
-            '<div class="campo-formulario"><label>Capacidades a Delegar</label><div class="capacidades-container">' + capsHtml + '</div></div>' +
-            '<div class="campo-formulario"><label><input type="checkbox" id="crear-puede-crear-hijos"> Puede crear mas usuarios</label></div>' +
-            '<div class="modal-acciones"><button type="button" class="btn-secundario" onclick="GestionJerarquia.cerrarModal()">Cancelar</button><button type="submit" class="btn-primario">Crear</button></div>' +
+            
+            // NOMBRE DEL CARGO
+            '<div class="campo-formulario">' +
+            '<label>Nombre del Cargo *</label>' +
+            '<input list="etiquetas-lista" type="text" id="crear-nombre-rol" placeholder="Ej: Coordinador, Facilitador..." required>' +
+            '<datalist id="etiquetas-lista">' + etiquetasHtml + '</datalist>' +
+            '<small>Escribe libremente o selecciona de las etiquetas frecuentes</small>' +
+            '</div>' +
+            
+            // EMAIL
+            '<div class="campo-formulario">' +
+            '<label>Email *</label>' +
+            '<input type="email" id="crear-email" placeholder="usuario@email.com" required>' +
+            '</div>' +
+            
+            // NOMBRE COMPLETO
+            '<div class="campo-formulario">' +
+            '<label>Nombre Completo</label>' +
+            '<input type="text" id="crear-nombre-completo" placeholder="Juan Perez">' +
+            '</div>' +
+            
+            // NIVEL JERARQUICO - CAMPO NUEVO CRITICO
+            '<div class="campo-formulario">' +
+            '<label>Nivel Jerarquico *</label>' +
+            '<input type="number" id="crear-nivel" min="' + (this.miNivel + 1) + '" value="' + (this.miNivel + 1) + '" required>' +
+            '<small>Debe ser mayor que tu nivel (' + this.miNivel + '). Tu subordinado tendra este nivel.</small>' +
+            '</div>' +
+            
+            // SUPERIOR INMEDIATO - CAMPO NUEVO CRITICO
+            '<div class="campo-formulario">' +
+            '<label>Superior Inmediato ID *</label>' +
+            '<input type="number" id="crear-superior" value="' + this.miMembresiaId + '" required>' +
+            '<small>ID de la membresia que sera su superior. Por defecto: tu ID (' + this.miMembresiaId + ')</small>' +
+            '</div>' +
+            
+            // CAPACIDADES
+            '<div class="campo-formulario">' +
+            '<label>Capacidades a Delegar</label>' +
+            '<div class="capacidades-container">' + capsHtml + '</div>' +
+            '</div>' +
+            
+            // PUEDE CREAR HIJOS
+            '<div class="campo-formulario">' +
+            '<label><input type="checkbox" id="crear-puede-crear-hijos"> Este usuario puede crear mas subordinados</label>' +
+            '</div>' +
+            
+            '<div class="modal-acciones">' +
+            '<button type="button" class="btn-secundario" onclick="GestionJerarquia.cerrarModal()">Cancelar</button>' +
+            '<button type="submit" class="btn-primario">Crear Usuario</button>' +
+            '</div>' +
             '</form></div>';
         
         document.body.appendChild(modal);
@@ -150,6 +204,12 @@ const GestionJerarquia = {
             return;
         }
         
+        // Validacion adicional: nivel debe ser mayor que el mio
+        if (datos.nivel_jerarquico <= this.miNivel) {
+            app.mostrarToast('El nivel debe ser mayor que el tuyo (' + this.miNivel + ')', 'error');
+            return;
+        }
+        
         try {
             const btn = e.target.querySelector('button[type="submit"]');
             btn.disabled = true;
@@ -163,7 +223,7 @@ const GestionJerarquia = {
                 return;
             }
             
-            app.mostrarToast('Usuario creado exitosamente', 'exito');
+            app.mostrarToast('Usuario creado: ' + datos.nombre_rol + ' (nivel ' + datos.nivel_jerarquico + ')', 'exito');
             this.cerrarModal();
             this.cargar();
         } catch (err) {
@@ -219,6 +279,12 @@ const GestionJerarquia = {
     },
     
     async desactivarSubordinado(membresiaId) {
+        // PROTECCION: No puedes desactivarte a ti mismo
+        if (membresiaId === this.miMembresiaId) {
+            app.mostrarToast('No puedes desactivarte a ti mismo', 'error');
+            return;
+        }
+        
         if (!confirm('¿Desactivar este usuario?')) return;
         try {
             const r = await jerarquiaServicio.desactivarSubordinado(membresiaId);
