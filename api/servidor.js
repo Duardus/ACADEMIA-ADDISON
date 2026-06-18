@@ -4,6 +4,9 @@ const cors = require('cors');
 const app = express();
 app.set('trust proxy', 1);
 
+// Middleware de autenticacion para endpoints protegidos
+const { middlewareAutenticar } = require('./middleware/autenticar');
+
 app.use(cors({ 
   origin: '*', 
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

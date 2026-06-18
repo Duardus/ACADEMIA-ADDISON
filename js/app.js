@@ -466,7 +466,7 @@ class App {
       if (!token) return;
       
       try {
-        const resp = await fetch('/api/v1/salud', {
+        const resp = await fetch('/api/v1/sesion/verificar', {
           headers: { 'Authorization': 'Bearer ' + token }
         });
         
