@@ -13,6 +13,7 @@ router.post('/crear', (req, res) => controlador.crearUsuarioHijo(req, res));
 
 // Obtener mis subordinados (reemplaza mis-hijos)
 router.get('/mis-subordinados', (req, res) => controlador.obtenerMisSubordinados(req, res));
+router.post('/cambiar-estado/:membresia_id', (req, res) => controlador.cambiarEstado(req, res));
 
 // Obtener capacidades que puedo delegar
 router.get('/mis-capacidades', (req, res) => controlador.obtenerMisCapacidadesDelegables(req, res));

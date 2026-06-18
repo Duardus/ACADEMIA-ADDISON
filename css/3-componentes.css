@@ -229,3 +229,41 @@
   .bienvenida-izquierda { padding: 24px; }
 }
 * { scroll-behavior: smooth; }
+
+/* ============================================
+   BADGES DE ESTADO EN JERARQUÍA
+   ============================================ */
+
+.badge-estado {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.estado-activo {
+  background: #10b981;
+  color: white;
+}
+
+.estado-suspendido {
+  background: #f59e0b;
+  color: white;
+}
+
+.estado-eliminado {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-exito {
+  background: #10b981 !important;
+  color: white !important;
+}
+
+.btn-exito:hover {
+  background: #059669 !important;
+}

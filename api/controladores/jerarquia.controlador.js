@@ -85,11 +85,18 @@ class JerarquiaControlador {
       let uid_firebase = `bootstrap_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       const usuarioExiste = await consulta(
-        'SELECT usuario_id FROM usuarios WHERE correo_electronico = $1', 
+        'SELECT usuario_id, estado_usuario FROM usuarios WHERE correo_electronico = $1', 
         [email]
       );
       if (usuarioExiste.rows.length > 0) {
         uid_firebase = usuarioExiste.rows[0].usuario_id;
+        // REACTIVAR: Si el usuario estaba suspendido/deleted, volver a activarlo
+        if (usuarioExiste.rows[0].estado_usuario !== 'active') {
+          await consulta(
+            "UPDATE usuarios SET estado_usuario = 'active', sesion_revocada_en = NULL, auth_provider = 'bootstrap', ultimo_login = NOW() WHERE correo_electronico = $1",
+            [email]
+          );
+        }
       } else {
         await consulta(
           `INSERT INTO usuarios (usuario_id, correo_electronico, nombre_completo, auth_provider, estado_usuario, creado_en) 
@@ -697,5 +704,107 @@ class JerarquiaControlador {
   }
 
 }
+
+
+  // ============================================
+  // CAMBIAR ESTADO DE USUARIO (activar/suspender/eliminar)
+  // ============================================
+  async cambiarEstado(req, res) {
+    try {
+      const creador_membresia_id = req.contexto_institucion?.membresia_id;
+      const creador_usuario_id = req.usuario_autenticado?.usuario_id;
+      const objetivo_membresia_id = parseInt(req.params.membresia_id);
+      const { nuevo_estado } = req.body;
+
+      if (!creador_membresia_id) {
+        return res.status(400).json({ error: 'Sin membresia', codigo: 'SIN_MEMBRESIA' });
+      }
+
+      if (!['active', 'suspended', 'deleted'].includes(nuevo_estado)) {
+        return res.status(400).json({ error: 'Estado invalido', codigo: 'ESTADO_INVALIDO' });
+      }
+
+      // PROTECCION: No puedes cambiar tu propio estado
+      if (objetivo_membresia_id === creador_membresia_id) {
+        return res.status(403).json({ error: 'No puedes cambiar tu propio estado', codigo: 'AUTO_MODIFICACION' });
+      }
+
+      // Verificar que es subordinado
+      const esSubordinado = await consulta(
+        `SELECT 1 FROM superiores_membresia 
+         WHERE superior_membresia_id = $1 AND subordinado_membresia_id = $2`,
+        [creador_membresia_id, objetivo_membresia_id]
+      );
+      if (esSubordinado.rows.length === 0) {
+        return res.status(403).json({ error: 'No es tu subordinado', codigo: 'NO_ES_SUBORDINADO' });
+      }
+
+      const infoObjetivo = await consulta(
+        'SELECT nivel, usuario_id FROM membresias WHERE membresia_id = $1',
+        [objetivo_membresia_id]
+      );
+      
+      // PROTECCION: No puedes cambiar nivel 0
+      if (infoObjetivo.rows[0]?.nivel === 0) {
+        return res.status(403).json({ error: 'No puedes modificar nivel 0', codigo: 'PROTECCION_NIVEL_CERO' });
+      }
+
+      const objetivo_usuario_id = infoObjetivo.rows[0]?.usuario_id;
+
+      // Actualizar estado de usuario
+      if (nuevo_estado === 'active') {
+        await consulta(
+          "UPDATE usuarios SET estado_usuario = 'active', sesion_revocada_en = NULL WHERE usuario_id = $1",
+          [objetivo_usuario_id]
+        );
+        await consulta(
+          "UPDATE membresias SET estado_membresia = 'active' WHERE membresia_id = $1",
+          [objetivo_membresia_id]
+        );
+      } else if (nuevo_estado === 'suspended') {
+        await consulta(
+          "UPDATE usuarios SET estado_usuario = 'suspended', sesion_revocada_en = NOW() WHERE usuario_id = $1",
+          [objetivo_usuario_id]
+        );
+        await consulta(
+          "UPDATE membresias SET estado_membresia = 'suspended', padre_membresia_id = NULL WHERE membresia_id = $1",
+          [objetivo_membresia_id]
+        );
+        await consulta(
+          'DELETE FROM superiores_membresia WHERE subordinado_membresia_id = $1',
+          [objetivo_membresia_id]
+        );
+      } else if (nuevo_estado === 'deleted') {
+        await consulta(
+          "UPDATE usuarios SET estado_usuario = 'deleted', sesion_revocada_en = NOW() WHERE usuario_id = $1",
+          [objetivo_usuario_id]
+        );
+        await consulta(
+          "UPDATE membresias SET estado_membresia = 'deleted', padre_membresia_id = NULL WHERE membresia_id = $1",
+          [objetivo_membresia_id]
+        );
+        await consulta(
+          'DELETE FROM superiores_membresia WHERE subordinado_membresia_id = $1',
+          [objetivo_membresia_id]
+        );
+      }
+
+      await consulta(
+        `INSERT INTO jerarquia_log (accion, actor_membresia_id, actor_usuario_id, objetivo_membresia_id, objetivo_usuario_id, detalle_json)
+         VALUES ('cambiar_estado', $1, $2, $3, $4, $5)`,
+        [
+          creador_membresia_id, creador_usuario_id, objetivo_membresia_id,
+          objetivo_usuario_id,
+          JSON.stringify({ estado_anterior: infoObjetivo.rows[0]?.estado_membresia, nuevo_estado })
+        ]
+      );
+
+      res.json({ exito: true, mensaje: 'Estado actualizado a ' + nuevo_estado, membresia_id: objetivo_membresia_id });
+
+    } catch (error) {
+      console.error('Error cambiarEstado:', error);
+      res.status(500).json({ error: 'Error', codigo: 'ERROR_INTERNO', detalle: error.message });
+    }
+  }
 
 module.exports = new JerarquiaControlador();

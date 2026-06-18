@@ -92,14 +92,22 @@ const GestionJerarquia = {
         
         this.subordinados.forEach(s => {
             const caps = (s.capacidades || []).map(c => '<span class="capacidad-tag">' + c.codigo + '</span>').join('');
+            const estadoClass = s.sub_estado === 'active' ? 'estado-activo' : (s.sub_estado === 'suspended' ? 'estado-suspendido' : 'estado-eliminado');
+            const estadoTexto = s.sub_estado === 'active' ? 'Activo' : (s.sub_estado === 'suspended' ? 'Suspendido' : 'Eliminado');
+            const botonesEstado = s.sub_estado === 'suspended' ? 
+                '<button class="btn-mini btn-exito" onclick="GestionJerarquia.cambiarEstado(' + s.sub_membresia_id + ', \'active\')">Activar</button>' : 
+                '<button class="btn-mini btn-peligro" onclick="GestionJerarquia.cambiarEstado(' + s.sub_membresia_id + ', \'suspended\')">Suspender</button>';
+            
             html += '<tr>' +
                 '<td><strong>' + this.esc(s.sub_nombre_completo || '') + '</strong><br><small>' + this.esc(s.sub_correo || '') + '</small></td>' +
                 '<td>' + this.esc(s.sub_nombre_rol || '') + '</td>' +
                 '<td>' + s.sub_nivel + '</td>' +
+                '<td><span class="badge-estado ' + estadoClass + '">' + estadoTexto + '</span></td>' +
                 '<td>' + (caps || '<span class="sin-capacidades">Ninguna</span>') + '</td>' +
                 '<td>' +
                 '<button class="btn-mini" onclick="GestionJerarquia.editarSubordinado(' + s.sub_membresia_id + ')">Editar</button>' +
-                '<button class="btn-mini btn-peligro" onclick="GestionJerarquia.desactivarSubordinado(' + s.sub_membresia_id + ')">Desactivar</button>' +
+                botonesEstado +
+                '<button class="btn-mini btn-peligro" onclick="GestionJerarquia.eliminarUsuario(' + s.sub_membresia_id + ')">Eliminar</button>' +
                 '</td>' +
                 '</tr>';
         });
