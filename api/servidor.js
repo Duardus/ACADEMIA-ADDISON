@@ -7,22 +7,15 @@ app.set('trust proxy', 1);
 // ============================================
 // CORS PRIMERO - Antes de cualquier middleware
 // ============================================
-app.use(cors({ 
-  origin: '*', 
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  credentials: true,
-  preflightContinue: false,
-  optionsSuccessStatus: 204
-}));
-
-// Manejar OPTIONS manualmente para TODAS las rutas
-app.options('*', (req, res) => {
+app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
   res.header('Access-Control-Allow-Credentials', 'true');
-  res.status(204).send();
+  if (req.method === 'OPTIONS') {
+    return res.status(204).send();
+  }
+  next();
 });
 
 app.use(express.json());
