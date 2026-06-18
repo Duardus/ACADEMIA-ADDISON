@@ -4,10 +4,9 @@ const cors = require('cors');
 const app = express();
 app.set('trust proxy', 1);
 
-// Middleware de autenticacion para endpoints protegidos
-const { middlewareAutenticar } = require('./middleware/autenticar');
-
-// CORS - Permitir origen del frontend
+// ============================================
+// CORS PRIMERO - Antes de cualquier middleware
+// ============================================
 app.use(cors({ 
   origin: '*', 
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
@@ -17,8 +16,15 @@ app.use(cors({
   optionsSuccessStatus: 204
 }));
 
-// Manejar OPTIONS manualmente por si acaso
-app.options('*', cors());
+// Manejar OPTIONS manualmente para TODAS las rutas
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.status(204).send();
+});
+
 app.use(express.json());
 
 // Salud
@@ -28,7 +34,6 @@ app.get('/api/v1/salud', (req, res) => {
 
 // Rutas
 const rutasAuth = require('./rutas/auth.rutas');
-app.use('/api/v1/auth', rutasAuth);
 const rutasUsuario = require('./rutas/usuario.rutas');
 const rutasInstitucion = require('./rutas/institucion.rutas');
 const rutasArbol = require('./rutas/arbol.rutas');
@@ -42,6 +47,7 @@ const rutasIntento = require('./rutas/intento.rutas');
 const rutasProgreso = require('./rutas/progreso.rutas');
 const rutasJerarquia = require('./rutas/jerarquia.rutas');
 
+app.use('/api/v1/auth', rutasAuth);
 app.use('/api/auth', rutasAuth);
 app.use('/api/v1/auth', rutasAuth);
 app.use('/api/v1/usuarios', rutasUsuario);
@@ -58,13 +64,14 @@ app.use('/api/v1/progreso', rutasProgreso);
 app.use('/api/v1/jerarquia', rutasJerarquia);
 app.use('/api/jerarquia', rutasJerarquia);
 
-// Endpoint para verificar si la sesion sigue valida (usado por heartbeat)
+// Endpoint para verificar sesión (heartbeat)
+const { middlewareAutenticar } = require('./middleware/autenticar');
 app.get('/api/v1/sesion/verificar', middlewareAutenticar, (req, res) => {
-  res.json({
-    estado: 'ok',
+  res.json({ 
+    estado: 'ok', 
     usuario_id: req.usuario_autenticado.usuario_id,
     correo: req.usuario_autenticado.correo,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString() 
   });
 });
 
@@ -73,11 +80,9 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada', ruta: req.path });
 });
 
-// Error handler
-app.use((err, req, res, next) => {
-  console.error('❌ Error no capturado:', err);
-  res.status(500).json({ error: 'Error interno del servidor', detalle: err.message });
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 API Addison v3.0 en puerto ${PORT}`);
 });
 
-const PORT = 3000;
-app.listen(PORT, () => console.log('Servidor activo en puerto ' + PORT));
+module.exports = app;
