@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head><title>Test API</title></head>
+<body>
+<h2>Test API Jerarquía</h2>
+<button onclick="testAPI()">Probar /arbol-completo</button>
+<pre id="resultado"></pre>
+<script>
+async function testAPI() {
+  const token = localStorage.getItem('token_sesion');
+  console.log('Token:', token ? token.substring(0, 50) + '...' : 'NO HAY TOKEN');
+  
+  const resp = await fetch('/api/v1/jerarquia/arbol-completo', {
+    headers: {
+      'Authorization': token ? `Bearer ${token}` : '',
+      'Content-Type': 'application/json'
+    }
+  });
+  
+  console.log('Status:', resp.status);
+  console.log('Content-Type:', resp.headers.get('content-type'));
+  
+  const text = await resp.text();
+  console.log('Respuesta:', text.substring(0, 200));
+  
+  document.getElementById('resultado').textContent = text;
+}
+</script>
+</body>
+</html>
