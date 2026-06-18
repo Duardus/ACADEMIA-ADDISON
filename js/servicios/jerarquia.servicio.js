@@ -1,6 +1,6 @@
 class JerarquiaServicio {
     constructor() {
-        this.api = window.api;
+        this.api = api;
     }
     async crearUsuarioHijo(datos) {
         return await this.api._llamar('/jerarquia/crear', { method: 'POST', body: JSON.stringify(datos) });
