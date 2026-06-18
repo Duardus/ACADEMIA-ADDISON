@@ -15,65 +15,42 @@ async function login(req, res) {
     const correo = decoded.email;
     const nombre = decoded.name || 'Usuario';
 
-    // PASO 1: Buscar por UID real de Firebase
-    let result = await consulta('SELECT * FROM usuarios WHERE usuario_id = $1', [uid]);
+    // ============================================
+    // IDENTIFICADOR UNIVERSAL: EL EMAIL
+    // ============================================
+    
+    // PASO 1: Buscar por email (siempre)
+    let result = await consulta('SELECT * FROM usuarios WHERE correo_electronico = $1', [correo]);
     let usuario;
 
-    if (result.rows.length === 0) {
-      // PASO 2: Buscar por EMAIL (caso pre-registrado con UID bootstrap)
-      const porEmail = await consulta('SELECT * FROM usuarios WHERE correo_electronico = $1', [correo]);
+    if (result.rows.length > 0) {
+      // Usuario existe con este email
+      usuario = result.rows[0];
       
-      if (porEmail.rows.length > 0) {
-        // Usuario PRE-REGISTRADO encontrado por email
-        const usuarioPre = porEmail.rows[0];
-        
-        // VERIFICAR: Si el pre-registrado esta eliminado o suspendido
-        if (usuarioPre.estado_usuario === 'deleted') {
-          return res.status(403).json({
-            error: 'Usuario eliminado',
-            mensaje: 'Tu cuenta ha sido eliminada. Contacta al administrador para matricularte nuevamente.',
-            codigo: 'USUARIO_ELIMINADO',
-            correo: correo
-          });
-        }
-        
-        if (usuarioPre.estado_usuario === 'suspended') {
-          return res.status(403).json({
-            error: 'Usuario suspendido',
-            mensaje: 'Tu cuenta esta suspendida. Contacta al administrador para renovar tu matricula.',
-            codigo: 'USUARIO_SUSPENDIDO',
-            correo: correo
-          });
-        }
-
-        // MIGRACION: Actualizar usuario_id del bootstrap al UID real de Firebase
-        // Gracias a ON UPDATE CASCADE, todas las tablas hijas se actualizan automaticamente
-        try {
-          await consulta(
-            'UPDATE usuarios SET usuario_id = $1, auth_provider = $2, ultimo_login = NOW(), estado_usuario = $3 WHERE correo_electronico = $4',
-            [uid, 'firebase', 'active', correo]
-          );
-          
-          // Obtener el usuario actualizado
-          result = await consulta('SELECT * FROM usuarios WHERE usuario_id = $1', [uid]);
-          usuario = result.rows[0];
-          
-        } catch (err) {
-          console.error('Error en migracion:', err);
-          return res.status(500).json({ error: 'Error al migrar usuario', codigo: 'ERROR_MIGRACION', detalle: err.message });
-        }
-        
+      // Si es bootstrap, migrar UID a Firebase (ON UPDATE CASCADE maneja tablas hijas)
+      if (usuario.auth_provider === 'bootstrap') {
+        await consulta(
+          'UPDATE usuarios SET usuario_id = $1, auth_provider = $2, ultimo_login = NOW() WHERE correo_electronico = $3',
+          [uid, 'firebase', correo]
+        );
+        // Recargar
+        result = await consulta('SELECT * FROM usuarios WHERE correo_electronico = $1', [correo]);
+        usuario = result.rows[0];
       } else {
-        // NO REGISTRADO
-        return res.status(403).json({
-          error: 'No estas registrado',
-          mensaje: 'Para tener acceso a la plataforma matriculate primero.',
-          codigo: 'NO_REGISTRADO',
-          correo: correo
-        });
+        // Ya es firebase, solo actualizar ultimo login
+        await consulta(
+          'UPDATE usuarios SET ultimo_login = NOW() WHERE correo_electronico = $1',
+          [correo]
+        );
       }
     } else {
-      // Usuario ya existe con UID real
+      // NO EXISTE: Crear nuevo usuario con UID de Firebase
+      await consulta(
+        `INSERT INTO usuarios (usuario_id, correo_electronico, nombre_completo, auth_provider, estado_usuario, creado_en, ultimo_login)
+         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
+        [uid, correo, nombre, 'firebase', 'active']
+      );
+      result = await consulta('SELECT * FROM usuarios WHERE correo_electronico = $1', [correo]);
       usuario = result.rows[0];
     }
 
@@ -96,24 +73,30 @@ async function login(req, res) {
       });
     }
 
-    // Actualizar ultimo login
-    await consulta("UPDATE usuarios SET ultimo_login = NOW(), auth_provider = COALESCE(auth_provider, 'firebase') WHERE usuario_id = $1", [uid]);
+    if (usuario.estado_usuario === 'banned') {
+      return res.status(403).json({
+        error: 'Usuario bloqueado',
+        mensaje: 'Tu cuenta ha sido bloqueada permanentemente.',
+        codigo: 'BLOQUEADO',
+        correo: correo
+      });
+    }
 
-    // PASO 3: Buscar membresias activas
+    // PASO 2: Buscar membresias activas
     const membresias = await consulta(
       `SELECT m.membresia_id, m.institucion_id, m.tipo_rol, m.estado_membresia, 
               m.nivel, m.nombre_rol, i.nombre_institucion, i.institucion_slug 
        FROM membresias m 
        JOIN instituciones i ON m.institucion_id = i.institucion_id 
        WHERE m.usuario_id = $1 AND m.estado_membresia = 'active'`,
-      [uid]
+      [usuario.usuario_id]
     );
 
     if (membresias.rows.length === 0) {
       // Verificar si tiene membresias suspendidas
       const suspendidas = await consulta(
         'SELECT 1 FROM membresias WHERE usuario_id = $1 AND estado_membresia = $2',
-        [uid, 'suspended']
+        [usuario.usuario_id, 'suspended']
       );
       
       if (suspendidas.rows.length > 0) {
@@ -133,11 +116,11 @@ async function login(req, res) {
       });
     }
 
-    // PASO 4: Generar JWT y responder
+    // PASO 3: Generar JWT y responder
     if (membresias.rows.length === 1) {
       const membresia = membresias.rows[0];
       const tokenSesion = generarToken({
-        usuario_id: uid,
+        usuario_id: usuario.usuario_id,
         membresia_id: membresia.membresia_id,
         institucion_id: membresia.institucion_id,
         tipo_rol: membresia.tipo_rol,
@@ -168,7 +151,7 @@ async function login(req, res) {
       // Multiple membresias
       return res.status(200).json({
         tipo: 'selector_requerido',
-        token_preliminar: generarToken({ usuario_id: uid, correo: usuario.correo_electronico }),
+        token_preliminar: generarToken({ usuario_id: usuario.usuario_id, correo: usuario.correo_electronico }),
         usuario: {
           nombre: usuario.nombre_completo || nombre,
           correo: usuario.correo_electronico || correo,
@@ -188,7 +171,7 @@ async function login(req, res) {
 
   } catch (error) {
     console.error('Error en login:', error);
-    return res.status(500).json({ error: 'Error interno', codigo: 'ERROR_INTERNO' });
+    return res.status(500).json({ error: 'Error interno', codigo: 'ERROR_INTERNO', detalle: error.message });
   }
 }
 
