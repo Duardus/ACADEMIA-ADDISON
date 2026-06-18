@@ -218,6 +218,9 @@ class App {
     
     // Renderizar contenido según rol
     await this.renderizarSidebar();
+    
+    // Iniciar verificacion periodica de sesion
+    this.iniciarHeartbeat();
     await this.renderizarMain();
   }
 
@@ -441,11 +444,67 @@ class App {
   }
 
   cerrarSesion() {
+    this.detenerHeartbeat();
     localStorage.removeItem('token_sesion');
     localStorage.removeItem('institucion_activa');
     localStorage.removeItem('usuario_activo');
     auth.signOut();
     window.location.reload();
+  }
+
+  // ============ HEARTBEAT DE SESION ============
+  // Verifica cada 30 segundos si la sesion sigue valida
+  // Si el usuario fue desactivado/suspendido/eliminado, lo desloguea inmediatamente
+  
+  iniciarHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+    }
+    
+    this.heartbeatInterval = setInterval(async () => {
+      const token = localStorage.getItem('token_sesion');
+      if (!token) return;
+      
+      try {
+        const resp = await fetch('/api/v1/salud', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        
+        // Si 401, la sesion fue revocada (usuario desactivado/suspendido/eliminado)
+        if (resp.status === 401) {
+          const data = await resp.json().catch(() => ({}));
+          
+          // Mostrar mensaje segun el codigo de error
+          let mensaje = 'Tu sesion ha sido cerrada por el administrador.';
+          if (data.codigo === 'USUARIO_SUSPENDIDO') {
+            mensaje = 'Tu cuenta ha sido suspendida. Contacta al administrador para renovar tu matricula.';
+          } else if (data.codigo === 'USUARIO_ELIMINADO') {
+            mensaje = 'Tu cuenta ha sido eliminada. Contacta al administrador para matricularte nuevamente.';
+          } else if (data.codigo === 'SESION_REVOCADA') {
+            mensaje = 'Tu sesion ha sido cerrada por el administrador. Vuelve a iniciar sesion.';
+          }
+          
+          // Mostrar alerta y desloguear
+          alert(mensaje);
+          this.cerrarSesion();
+          return;
+        }
+        
+        // Si otro error, solo loguear (no desloguear para evitar loops)
+        if (!resp.ok) {
+          console.warn('[HEARTBEAT] Error verificando sesion:', resp.status);
+        }
+      } catch (err) {
+        console.warn('[HEARTBEAT] Error de red:', err.message);
+      }
+    }, 30000); // 30 segundos
+  }
+  
+  detenerHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
   }
 }
 
