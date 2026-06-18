@@ -20,7 +20,7 @@ async function login(req, res) {
     // ============================================
     
     // PASO 1: Buscar por email (siempre)
-    let result = await consulta('SELECT * FROM usuarios WHERE correo_electronico = $1 ORDER BY CASE WHEN auth_provider = 'firebase' THEN 0 ELSE 1 END, creado_en DESC', [correo]);
+    let result = await consulta(`SELECT * FROM usuarios WHERE correo_electronico = $1 ORDER BY CASE WHEN auth_provider = 'firebase' THEN 0 ELSE 1 END, creado_en DESC`, [correo]);
     let usuario;
 
     if (result.rows.length > 0) {
@@ -34,7 +34,7 @@ async function login(req, res) {
           [uid, 'firebase', correo]
         );
         // Recargar
-        result = await consulta('SELECT * FROM usuarios WHERE correo_electronico = $1 ORDER BY CASE WHEN auth_provider = 'firebase' THEN 0 ELSE 1 END, creado_en DESC', [correo]);
+        result = await consulta(`SELECT * FROM usuarios WHERE correo_electronico = $1 ORDER BY CASE WHEN auth_provider = 'firebase' THEN 0 ELSE 1 END, creado_en DESC`, [correo]);
         usuario = result.rows[0];
       } else {
         // Ya es firebase, solo actualizar ultimo login
@@ -50,7 +50,7 @@ async function login(req, res) {
          VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
         [uid, correo, nombre, 'firebase', 'active']
       );
-      result = await consulta('SELECT * FROM usuarios WHERE correo_electronico = $1 ORDER BY CASE WHEN auth_provider = 'firebase' THEN 0 ELSE 1 END, creado_en DESC', [correo]);
+      result = await consulta(`SELECT * FROM usuarios WHERE correo_electronico = $1 ORDER BY CASE WHEN auth_provider = 'firebase' THEN 0 ELSE 1 END, creado_en DESC`, [correo]);
       usuario = result.rows[0];
     }
 
