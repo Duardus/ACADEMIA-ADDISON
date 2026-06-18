@@ -86,6 +86,7 @@ const GestionJerarquia = {
             '<th>Usuario</th>' +
             '<th>Cargo</th>' +
             '<th>Nivel</th>' +
+            '<th>Estado</th>' +
             '<th>Capacidades</th>' +
             '<th>Acciones</th>' +
             '</tr></thead><tbody>';
