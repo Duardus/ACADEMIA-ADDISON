@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { obtenerArbol, crearGrupo, crearCurso, crearTema, crearSubtema, actualizar, eliminar } = require('../controladores/arbol.controlador');
+const controlador = require('../controladores/arbol.controlador');
 const { verificarToken } = require('../utilidades/jwt');
 
 function autenticar(req, res, next) {
@@ -18,12 +18,6 @@ function autenticar(req, res, next) {
   }
 }
 
-router.get('/', autenticar, obtenerArbol);
-router.post('/grupos', autenticar, crearGrupo);
-router.post('/cursos', autenticar, crearCurso);
-router.post('/temas', autenticar, crearTema);
-router.post('/subtemas', autenticar, crearSubtema);
-router.put('/:tipo/:id', autenticar, actualizar);
-router.delete('/:tipo/:id', autenticar, eliminar);
+router.get('/', autenticar, (req, res) => controlador.obtenerArbol(req, res));
 
 module.exports = router;
