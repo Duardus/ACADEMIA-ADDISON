@@ -4,6 +4,22 @@ const GestionJerarquia = {
     puedeCrearHijos: false,
     
     async iniciar() {
+        // Crear contenedores HTML si no existen
+        const main = document.getElementById('main') || document.getElementById('contenidoPrincipal');
+        if (!main) {
+            console.error('[JERARQUIA] No se encontró el contenedor principal');
+            return;
+        }
+        
+        main.innerHTML = `
+            <div style="padding:20px;">
+                <h2 style="margin-bottom:20px;">🏛️ Gestión de Jerarquía</h2>
+                <div id="jerarquia-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px;"></div>
+                <div id="jerarquia-acciones" style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;"></div>
+                <div id="jerarquia-arbol"></div>
+            </div>
+        `;
+        
         await this.cargar();
     },
     
@@ -20,7 +36,8 @@ const GestionJerarquia = {
             if (hijosResp && hijosResp.exito) this.hijos = hijosResp.hijos || [];
             this.renderizar();
         } catch (e) { 
-            document.getElementById('jerarquia-arbol').innerHTML = `<div class="estado-vacio"><p>❌ Error: ${e.message}</p><button class="btn-secundario" onclick="GestionJerarquia.cargar()">Reintentar</button></div>`; 
+            const arbol = document.getElementById('jerarquia-arbol');
+            if (arbol) arbol.innerHTML = `<div class="estado-vacio"><p>❌ Error: ${e.message}</p><button class="btn-secundario" onclick="GestionJerarquia.cargar()">Reintentar</button></div>`; 
         }
     },
     
@@ -171,13 +188,13 @@ const GestionJerarquia = {
         modal.id = 'modal-editar-jerarquia';
         
         // Capacidades actuales del usuario
-        const capsActuales = (u.capacidades || []).map(c => c.capacidad_id || c.codigo);
+        const capsActuales = (u.capacidades || []).map(c => c.codigo);
         
         // Mostrar TODAS las capacidades delegables con checkboxes
         const capsHtml = this.capacidadesDelegables.length === 0
             ? '<p class="sin-caps">No tienes capacidades para delegar.</p>'
             : this.capacidadesDelegables.map(cap => {
-                const estaMarcada = capsActuales.includes(cap.capacidad_id) || capsActuales.includes(cap.codigo);
+                const estaMarcada = capsActuales.includes(cap.codigo);
                 return `
                     <label class="checkbox-capacidad">
                         <input type="checkbox" name="capacidad_edit" value="${cap.capacidad_id}" ${estaMarcada ? 'checked' : ''}>
@@ -206,7 +223,7 @@ const GestionJerarquia = {
                 <form id="form-editar-jerarquia" onsubmit="GestionJerarquia.guardarEdicion(event, ${mid})">
                     <div class="campo-formulario">
                         <label>Capacidades</label>
-                        <small>Marca las capacidades que este usuario debe tener:</small>
+                        <small>Marca/desmarca las capacidades que este usuario debe tener:</small>
                         <div class="capacidades-container">${capsHtml}</div>
                     </div>
                     <div class="campo-formulario">
