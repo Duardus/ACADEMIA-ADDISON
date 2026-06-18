@@ -7,11 +7,18 @@ app.set('trust proxy', 1);
 // Middleware de autenticacion para endpoints protegidos
 const { middlewareAutenticar } = require('./middleware/autenticar');
 
+// CORS - Permitir origen del frontend
 app.use(cors({ 
   origin: '*', 
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
+
+// Manejar OPTIONS manualmente por si acaso
+app.options('*', cors());
 app.use(express.json());
 
 // Salud
