@@ -54,8 +54,8 @@ class JerarquiaControlador {
 
       const nivelHijo = creador_nivel + 1;
       const nuevaMembresia = await consulta(
-        `INSERT INTO membresias (usuario_id, institucion_id, tipo_rol, nombre_rol, nivel, padre_membresia_id, puede_crear_hijos, creado_por_usuario_id, estado_membresia, creado_en) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()) RETURNING membresia_id`,
-        [uid_firebase, institucion_id, 'custom', nombre_rol, nivelHijo, creador_membresia_id, puede_crear_hijos || false, creador_usuario_id, 'active']
+        `INSERT INTO membresias (usuario_id, institucion_id, tipo_rol, nombre_rol, nivel, padre_membresia_id, puede_crear_hijos, creado_por_usuario_id, creado_por_membresia_id, estado_membresia, creado_en) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW()) RETURNING membresia_id`,
+        [uid_firebase, institucion_id, 'custom', nombre_rol, nivelHijo, creador_membresia_id, puede_crear_hijos || false, creador_usuario_id, creador_membresia_id, 'active']
       );
       const nueva_membresia_id = nuevaMembresia.rows[0].membresia_id;
 
