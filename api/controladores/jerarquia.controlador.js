@@ -726,24 +726,39 @@ class JerarquiaControlador {
         return res.status(403).json({ error: 'No puedes cambiar tu propio estado', codigo: 'AUTO_MODIFICACION' });
       }
 
-      // Verificar que es subordinado
-      const esSubordinado = await consulta(
-        `SELECT 1 FROM superiores_membresia 
-         WHERE superior_membresia_id = $1 AND subordinado_membresia_id = $2`,
-        [creador_membresia_id, objetivo_membresia_id]
+      // Obtener info del creador para verificar si es superadmin
+      const infoCreador = await consulta(
+        'SELECT nivel, institucion_id FROM membresias WHERE membresia_id = $1',
+        [creador_membresia_id]
       );
-      if (esSubordinado.rows.length === 0) {
-        return res.status(403).json({ error: 'No es tu subordinado', codigo: 'NO_ES_SUBORDINADO' });
-      }
+      const creadorNivel = infoCreador.rows[0]?.nivel;
+      const creadorInstitucion = infoCreador.rows[0]?.institucion_id;
 
       const infoObjetivo = await consulta(
-        'SELECT nivel, usuario_id FROM membresias WHERE membresia_id = $1',
+        'SELECT nivel, usuario_id, institucion_id, estado_membresia FROM membresias WHERE membresia_id = $1',
         [objetivo_membresia_id]
       );
       
-      // PROTECCION: No puedes cambiar nivel 0
+      // PROTECCION: No puedes cambiar tu propio estado ni nivel 0
       if (infoObjetivo.rows[0]?.nivel === 0) {
         return res.status(403).json({ error: 'No puedes modificar nivel 0', codigo: 'PROTECCION_NIVEL_CERO' });
+      }
+
+      // Si NO es superadmin (nivel > 0), verificar que sea su subordinado
+      if (creadorNivel > 0) {
+        const esSubordinado = await consulta(
+          `SELECT 1 FROM superiores_membresia 
+           WHERE superior_membresia_id = $1 AND subordinado_membresia_id = $2`,
+          [creador_membresia_id, objetivo_membresia_id]
+        );
+        if (esSubordinado.rows.length === 0) {
+          return res.status(403).json({ error: 'No es tu subordinado', codigo: 'NO_ES_SUBORDINADO' });
+        }
+      }
+      
+      // Si es superadmin, verificar que el objetivo sea de la misma institución
+      if (creadorNivel === 0 && infoObjetivo.rows[0]?.institucion_id !== creadorInstitucion) {
+        return res.status(403).json({ error: 'Usuario de otra institucion', codigo: 'INSTITUCION_DIFERENTE' });
       }
 
       const objetivo_usuario_id = infoObjetivo.rows[0]?.usuario_id;
