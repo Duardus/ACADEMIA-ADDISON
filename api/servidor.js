@@ -18,6 +18,7 @@ app.get('/api/v1/salud', (req, res) => {
 
 // Rutas
 const rutasAuth = require('./rutas/auth.rutas');
+app.use('/api/v1/auth', rutasAuth);
 const rutasUsuario = require('./rutas/usuario.rutas');
 const rutasInstitucion = require('./rutas/institucion.rutas');
 const rutasArbol = require('./rutas/arbol.rutas');
@@ -29,7 +30,9 @@ const rutasPregunta = require('./rutas/pregunta.rutas');
 const rutasExamen = require('./rutas/examen.rutas');
 const rutasIntento = require('./rutas/intento.rutas');
 const rutasProgreso = require('./rutas/progreso.rutas');
+const rutasJerarquia = require('./rutas/jerarquia.rutas');
 
+app.use('/api/auth', rutasAuth);
 app.use('/api/v1/auth', rutasAuth);
 app.use('/api/v1/usuarios', rutasUsuario);
 app.use('/api/v1/instituciones', rutasInstitucion);
@@ -42,6 +45,7 @@ app.use('/api/v1/preguntas', rutasPregunta);
 app.use('/api/v1/examenes', rutasExamen);
 app.use('/api/v1/intentos', rutasIntento);
 app.use('/api/v1/progreso', rutasProgreso);
+app.use('/api/v1/jerarquia', rutasJerarquia);
 
 // 404
 app.use((req, res) => {
@@ -55,4 +59,6 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = 3000;
+  app.get('/api/v1/finanzas',(req,res)=>res.json({ok:true,data:[],mensaje:'Finanzas en construcción'}));
+  app.get('/api/v1/auditoria',(req,res)=>res.json({ok:true,data:[],mensaje:'Auditoría en construcción'}));
 app.listen(PORT, () => console.log('Servidor activo en puerto ' + PORT));
