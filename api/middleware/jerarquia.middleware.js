@@ -35,7 +35,7 @@ class JerarquiaMiddleware {
         if (!creador_membresia_id) return res.status(401).json({ error: 'Sin membresia', codigo: 'SIN_MEMBRESIA' });
         const esSuperadmin = await consulta('SELECT 1 FROM membresias WHERE membresia_id = $1 AND nivel = 0', [creador_membresia_id]);
         if (esSuperadmin.rows.length > 0) return next();
-        const esDescendiente = await consulta('SELECT 1 FROM obtener_descendientes_membresia($1) WHERE membresia_id = $2', [creador_membresia_id, objetivo_membresia_id]);
+        const esDescendiente = await consulta('SELECT 1 FROM obtener_descendientes_membresia($1) WHERE r_membresia_id = $2', [creador_membresia_id, objetivo_membresia_id]);
         if (esDescendiente.rows.length === 0) return res.status(403).json({ error: 'No es descendiente', codigo: 'NO_ES_DESCENDIENTE' });
         next();
       } catch (error) { res.status(500).json({ error: 'Error', codigo: 'ERROR_VERIFICACION' }); }
