@@ -703,9 +703,6 @@ class JerarquiaControlador {
     }
   }
 
-}
-
-
   // ============================================
   // CAMBIAR ESTADO DE USUARIO (activar/suspender/eliminar)
   // ============================================
