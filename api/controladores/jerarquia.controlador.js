@@ -524,16 +524,24 @@ class JerarquiaControlador {
         return res.status(403).json({ error: 'No puedes desactivar nivel 0', codigo: 'PROTECCION_NIVEL_CERO' });
       }
 
-      // Soft delete
+      const objetivo_usuario_id = infoObjetivo.rows[0]?.usuario_id;
+
+      // 1. Suspender membresia
       await consulta(
         "UPDATE membresias SET estado_membresia = 'suspended', padre_membresia_id = NULL WHERE membresia_id = $1",
         [objetivo_membresia_id]
       );
 
-      // Limpiar superiores
+      // 2. Limpiar superiores
       await consulta(
         'DELETE FROM superiores_membresia WHERE subordinado_membresia_id = $1',
         [objetivo_membresia_id]
+      );
+
+      // 3. REVOCAR SESION: Suspender usuario y revocar token
+      await consulta(
+        "UPDATE usuarios SET estado_usuario = 'suspended', sesion_revocada_en = NOW() WHERE usuario_id = $1",
+        [objetivo_usuario_id]
       );
 
       await consulta(
@@ -541,12 +549,12 @@ class JerarquiaControlador {
          VALUES ('desactivar_usuario', $1, $2, $3, $4, $5)`,
         [
           creador_membresia_id, creador_usuario_id, objetivo_membresia_id,
-          infoObjetivo.rows[0]?.usuario_id,
-          JSON.stringify({ metodo: 'soft_delete', nivel_previo: infoObjetivo.rows[0]?.nivel })
+          objetivo_usuario_id,
+          JSON.stringify({ metodo: 'soft_delete', nivel_previo: infoObjetivo.rows[0]?.nivel, sesion_revocada: true })
         ]
       );
 
-      res.json({ exito: true, mensaje: 'Usuario desactivado', membresia_id: objetivo_membresia_id });
+      res.json({ exito: true, mensaje: 'Usuario desactivado y sesion cerrada', membresia_id: objetivo_membresia_id });
 
     } catch (error) {
       console.error('Error desactivarSubordinado:', error);

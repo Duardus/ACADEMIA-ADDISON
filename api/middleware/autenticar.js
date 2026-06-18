@@ -19,7 +19,7 @@ async function middlewareAutenticar(req, res, next) {
     const uid = decoded.usuario_id || decoded.uid; 
 
     let usuario = await consulta(
-      'SELECT usuario_id, correo_electronico, nombre_completo, estado_usuario FROM usuarios WHERE usuario_id = $1',
+      'SELECT usuario_id, correo_electronico, nombre_completo, estado_usuario, sesion_revocada_en FROM usuarios WHERE usuario_id = $1',
       [uid]
     );
 
@@ -28,8 +28,52 @@ async function middlewareAutenticar(req, res, next) {
     }
 
     const datos = usuario.rows[0];
+
+    // VERIFICAR ESTADO DEL USUARIO
+    if (datos.estado_usuario === 'deleted') {
+      return res.status(401).json({ 
+        error: 'Usuario eliminado', 
+        mensaje: 'Tu cuenta ha sido eliminada. Contacta al administrador para matricularte nuevamente.',
+        codigo: 'USUARIO_ELIMINADO' 
+      });
+    }
+
+    if (datos.estado_usuario === 'suspended') {
+      return res.status(401).json({ 
+        error: 'Usuario suspendido', 
+        mensaje: 'Tu cuenta esta suspendida. Contacta al administrador para renovar tu matricula.',
+        codigo: 'USUARIO_SUSPENDIDO' 
+      });
+    }
+
     if (datos.estado_usuario === 'banned') {
-      return res.status(401).json({ error: 'Usuario bloqueado', codigo: 'BLOQUEADO' });
+      return res.status(401).json({ 
+        error: 'Usuario bloqueado', 
+        mensaje: 'Tu cuenta ha sido bloqueada permanentemente.',
+        codigo: 'BLOQUEADO' 
+      });
+    }
+
+    if (datos.estado_usuario !== 'active' && datos.estado_usuario !== 'por_activar') {
+      return res.status(401).json({ 
+        error: 'Cuenta no activa', 
+        mensaje: 'Tu cuenta no esta activa. Contacta al administrador.',
+        codigo: 'CUENTA_INACTIVA' 
+      });
+    }
+
+    // VERIFICAR SI LA SESION FUE REVOCADA (token emitido antes de la revocacion)
+    if (datos.sesion_revocada_en && decoded.iat) {
+      const tokenEmitidoEn = new Date(decoded.iat * 1000);
+      const sesionRevocadaEn = new Date(datos.sesion_revocada_en);
+      
+      if (tokenEmitidoEn < sesionRevocadaEn) {
+        return res.status(401).json({ 
+          error: 'Sesion revocada', 
+          mensaje: 'Tu sesion ha sido cerrada por el administrador. Vuelve a iniciar sesion.',
+          codigo: 'SESION_REVOCADA' 
+        });
+      }
     }
 
     req.usuario_autenticado = {
