@@ -24,20 +24,75 @@ async function login(req, res) {
       const porEmail = await consulta('SELECT * FROM usuarios WHERE correo_electronico = $1', [correo]);
       
       if (porEmail.rows.length > 0) {
-        // MIGRACION: Usuario pre-registrado, migrar UID
-        const uidViejo = porEmail.rows[0].usuario_id;
+        // Usuario PRE-REGISTRADO encontrado por email
+        const usuarioPre = porEmail.rows[0];
         
-        try {
-          await consulta('UPDATE usuarios SET usuario_id = $1, ultimo_login = NOW(), auth_provider = $2 WHERE correo_electronico = $3', [uid, 'firebase', correo]);
-          await consulta('UPDATE membresias SET usuario_id = $1 WHERE usuario_id = $2', [uid, uidViejo]);
-          await consulta('UPDATE instituciones SET superadmin_id = $1 WHERE superadmin_id = $2', [uid, uidViejo]);
-        } catch (err) {
-          console.error('Error en migracion:', err);
-          return res.status(500).json({ error: 'Error al migrar usuario', codigo: 'ERROR_MIGRACION' });
+        // VERIFICAR: Si el pre-registrado esta eliminado o suspendido
+        if (usuarioPre.estado_usuario === 'deleted') {
+          return res.status(403).json({
+            error: 'Usuario eliminado',
+            mensaje: 'Tu cuenta ha sido eliminada. Contacta al administrador para matricularte nuevamente.',
+            codigo: 'USUARIO_ELIMINADO',
+            correo: correo
+          });
         }
         
-        result = await consulta('SELECT * FROM usuarios WHERE usuario_id = $1', [uid]);
-        usuario = result.rows[0];
+        if (usuarioPre.estado_usuario === 'suspended') {
+          return res.status(403).json({
+            error: 'Usuario suspendido',
+            mensaje: 'Tu cuenta esta suspendida. Contacta al administrador para renovar tu matricula.',
+            codigo: 'USUARIO_SUSPENDIDO',
+            correo: correo
+          });
+        }
+
+        // MIGRACION: Crear nuevo usuario con UID real de Firebase
+        // NO actualizamos el usuario_id del bootstrap (FK constraint)
+        // En su lugar, creamos nuevo usuario y actualizamos membresia
+        try {
+          // 1. Crear nuevo usuario con UID real
+          await consulta(
+            `INSERT INTO usuarios (usuario_id, correo_electronico, nombre_completo, telefono, avatar_url, auth_provider, estado_usuario, creado_en, ultimo_login)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
+            [
+              uid,
+              correo,
+              usuarioPre.nombre_completo || nombre,
+              usuarioPre.telefono,
+              usuarioPre.avatar_url,
+              'firebase',
+              'active',
+              usuarioPre.creado_en
+            ]
+          );
+          
+          // 2. Actualizar membresias: cambiar usuario_id del bootstrap al real
+          await consulta(
+            'UPDATE membresias SET usuario_id = $1 WHERE usuario_id = $2',
+            [uid, usuarioPre.usuario_id]
+          );
+          
+          // 3. Actualizar instituciones si es superadmin
+          await consulta(
+            'UPDATE instituciones SET superadmin_id = $1 WHERE superadmin_id = $2',
+            [uid, usuarioPre.usuario_id]
+          );
+          
+          // 4. Marcar usuario bootstrap como migrado (no borrar, solo marcar)
+          await consulta(
+            "UPDATE usuarios SET estado_usuario = 'migrated', correo_electronico = CONCAT(correo_electronico, '.migrated') WHERE usuario_id = $1",
+            [usuarioPre.usuario_id]
+          );
+          
+          // 5. Obtener el nuevo usuario
+          result = await consulta('SELECT * FROM usuarios WHERE usuario_id = $1', [uid]);
+          usuario = result.rows[0];
+          
+        } catch (err) {
+          console.error('Error en migracion:', err);
+          return res.status(500).json({ error: 'Error al migrar usuario', codigo: 'ERROR_MIGRACION', detalle: err.message });
+        }
+        
       } else {
         // NO REGISTRADO
         return res.status(403).json({
@@ -48,6 +103,7 @@ async function login(req, res) {
         });
       }
     } else {
+      // Usuario ya existe con UID real
       usuario = result.rows[0];
     }
 
@@ -70,7 +126,7 @@ async function login(req, res) {
       });
     }
 
-    // Actualizar ultimo login si está activo
+    // Actualizar ultimo login
     await consulta("UPDATE usuarios SET ultimo_login = NOW(), auth_provider = COALESCE(auth_provider, 'firebase') WHERE usuario_id = $1", [uid]);
 
     // PASO 3: Buscar membresias activas
