@@ -46,45 +46,15 @@ async function login(req, res) {
           });
         }
 
-        // MIGRACION: Crear nuevo usuario con UID real de Firebase
-        // NO actualizamos el usuario_id del bootstrap (FK constraint)
-        // En su lugar, creamos nuevo usuario y actualizamos membresia
+        // MIGRACION: Actualizar usuario_id del bootstrap al UID real de Firebase
+        // Gracias a ON UPDATE CASCADE, todas las tablas hijas se actualizan automaticamente
         try {
-          // 1. Crear nuevo usuario con UID real
           await consulta(
-            `INSERT INTO usuarios (usuario_id, correo_electronico, nombre_completo, telefono, avatar_url, auth_provider, estado_usuario, creado_en, ultimo_login)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
-            [
-              uid,
-              correo,
-              usuarioPre.nombre_completo || nombre,
-              usuarioPre.telefono,
-              usuarioPre.avatar_url,
-              'firebase',
-              'active',
-              usuarioPre.creado_en
-            ]
+            'UPDATE usuarios SET usuario_id = $1, auth_provider = $2, ultimo_login = NOW(), estado_usuario = $3 WHERE correo_electronico = $4',
+            [uid, 'firebase', 'active', correo]
           );
           
-          // 2. Actualizar membresias: cambiar usuario_id del bootstrap al real
-          await consulta(
-            'UPDATE membresias SET usuario_id = $1 WHERE usuario_id = $2',
-            [uid, usuarioPre.usuario_id]
-          );
-          
-          // 3. Actualizar instituciones si es superadmin
-          await consulta(
-            'UPDATE instituciones SET superadmin_id = $1 WHERE superadmin_id = $2',
-            [uid, usuarioPre.usuario_id]
-          );
-          
-          // 4. Marcar usuario bootstrap como migrado (no borrar, solo marcar)
-          await consulta(
-            "UPDATE usuarios SET estado_usuario = 'migrated', correo_electronico = CONCAT(correo_electronico, '.migrated') WHERE usuario_id = $1",
-            [usuarioPre.usuario_id]
-          );
-          
-          // 5. Obtener el nuevo usuario
+          // Obtener el usuario actualizado
           result = await consulta('SELECT * FROM usuarios WHERE usuario_id = $1', [uid]);
           usuario = result.rows[0];
           
