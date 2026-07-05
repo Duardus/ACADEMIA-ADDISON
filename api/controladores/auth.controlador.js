@@ -9,8 +9,14 @@ async function login(req, res) {
       return res.status(400).json({ error: 'Token no proporcionado', codigo: 'SIN_TOKEN' });
     }
 
-    const auth = obtenerAuth();
-    const decoded = await auth.verifyIdToken(token_firebase);
+    let decoded;
+    try {
+      const auth = obtenerAuth();
+      decoded = await auth.verifyIdToken(token_firebase);
+    } catch (firebaseError) {
+      console.error("[AUTH] Token Firebase invalido:", firebaseError.message);
+      return res.status(401).json({ error: "Token de Firebase invalido", codigo: "TOKEN_FIREBASE_INVALIDO" });
+    }
     const uid = decoded.uid;
     const correo = decoded.email;
     const nombre = decoded.name || 'Usuario';
