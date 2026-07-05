@@ -5,7 +5,7 @@ class ArbolControlador {
   // GET /api/v1/arbol - Arbol academico completo (grupos, cursos, temas, subtemas)
   async obtenerArbol(req, res) {
     try {
-      const institucion_id = req.institucion_id || req.query.institucion_id || req.contexto_institucion?.institucion_id;
+      const institucion_id = req.usuario_autenticado?.institucion_id || req.query.institucion_id || null;
       
       if (!institucion_id) {
         return res.status(400).json({ error: 'institucion_id requerido', codigo: 'SIN_INSTITUCION' });
