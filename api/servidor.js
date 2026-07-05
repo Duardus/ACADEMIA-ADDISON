@@ -7,7 +7,7 @@ app.use(express.json());
 
 // Salud
 app.get('/api/v1/salud', (req, res) => {
-  res.json({ estado: 'ok', version: '3.0.0', timestamp: new Date().toISOString() });
+  res.json({ estado: 'ok', version: '3.0.1', timestamp: new Date().toISOString() });
 });
 
 // Rutas
@@ -25,8 +25,7 @@ const rutasIntento = require('./rutas/intento.rutas');
 const rutasProgreso = require('./rutas/progreso.rutas');
 const rutasJerarquia = require('./rutas/jerarquia.rutas');
 
-app.use('/api/v1/auth', rutasAuth);
-app.use('/api/auth', rutasAuth);
+// API v1 - Todas las rutas oficiales
 app.use('/api/v1/auth', rutasAuth);
 app.use('/api/v1/usuarios', rutasUsuario);
 app.use('/api/v1/instituciones', rutasInstitucion);
@@ -40,7 +39,6 @@ app.use('/api/v1/examenes', rutasExamen);
 app.use('/api/v1/intentos', rutasIntento);
 app.use('/api/v1/progreso', rutasProgreso);
 app.use('/api/v1/jerarquia', rutasJerarquia);
-app.use('/api/jerarquia', rutasJerarquia);
 
 // Endpoint para verificar sesión (heartbeat)
 const { middlewareAutenticar } = require('./middleware/autenticar');
@@ -60,7 +58,7 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 API Addison v3.0 en puerto ${PORT}`);
+  console.log(`🚀 API Addison v3.0.1 en puerto ${PORT}`);
 });
 
 module.exports = app;
