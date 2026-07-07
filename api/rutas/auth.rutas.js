@@ -1,28 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const { login, seleccionarContexto, switchContext } = require('../controladores/auth.controlador');
-const { verificarToken } = require('../utilidades/jwt');
+const { asyncHandler } = require('../middleware/async_handler');
+const { middlewareAutenticar } = require('../middleware/autenticar');
 
-function autenticar(req, res, next) {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Token no proporcionado' });
-    }
-    const token = authHeader.split(' ')[1];
-    const payload = verificarToken(token);
-    req.usuario_id = payload.usuario_id;
-    req.membresia_id = payload.membresia_id;
-    req.institucion_id = payload.institucion_id;
-    req.tipo_rol = payload.tipo_rol;
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Token inválido o expirado' });
-  }
-}
+// Auth - No requiere autenticación previa
+router.post('/login', asyncHandler(login));
+router.post('/seleccionar-contexto', asyncHandler(seleccionarContexto));
 
-router.post('/login', login);
-router.post('/seleccionar-contexto', seleccionarContexto);
-router.post('/switch-context', autenticar, switchContext);
+// Switch context - Requiere token válido
+router.post('/switch-context', middlewareAutenticar, asyncHandler(switchContext));
 
 module.exports = router;
