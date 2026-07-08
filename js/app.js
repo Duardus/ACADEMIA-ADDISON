@@ -1,6 +1,6 @@
 /* ============================================
-   🧠 APP.JS - Router SPA Principal v3.1
-   Conectado al backend real via api.servicio.js
+   🧠 APP.JS - Router SPA Principal v3.2
+   Conectado al backend real: arbol + progreso
    ============================================ */
 
 class App {
@@ -11,11 +11,12 @@ class App {
     this.rol = null;
     this.nivel = null;
     this.nombreRol = null;
-    this.arbolCache = null; // Cache del arbol academico
+    this.arbolCache = null;
+    this.progresoCache = null;
   }
 
   async iniciar() {
-    console.log('[APP] Iniciando Academia Addison v3.1...');
+    console.log('[APP] Iniciando Academia Addison v3.2...');
 
     const token = localStorage.getItem('token_sesion');
     const institucionRaw = localStorage.getItem('institucion_activa');
@@ -31,9 +32,7 @@ class App {
         this.nombreRol = usuario.nombre_rol || this.rol;
         this.usuario = usuario;
 
-        // Precargar arbol academico
-        await this.cargarArbol();
-
+        await Promise.all([this.cargarArbol(), this.cargarProgreso()]);
         await this.mostrarDashboard();
         return;
       } catch (e) {
@@ -50,6 +49,7 @@ class App {
     localStorage.removeItem('institucion_activa');
     localStorage.removeItem('usuario_activo');
     this.arbolCache = null;
+    this.progresoCache = null;
   }
 
   async cargarArbol() {
@@ -62,7 +62,20 @@ class App {
     }
   }
 
-  // ============ PAGINAS ============
+  async cargarProgreso() {
+    try {
+      this.progresoCache = await api.obtenerProgreso();
+      console.log('[APP] Progreso cargado:', this.progresoCache?.cursos?.length || 0, 'cursos');
+    } catch (error) {
+      console.warn('[APP] Progreso no disponible:', error.message);
+      this.progresoCache = { cursos: [] };
+    }
+  }
+
+  obtenerProgresoCurso(cursoId) {
+    if (!this.progresoCache?.cursos) return null;
+    return this.progresoCache.cursos.find(c => c.curso_id === cursoId);
+  }
 
   mostrarLogin() {
     console.log('[APP] Mostrando login...');
@@ -116,7 +129,7 @@ class App {
         this.nombreRol = datos.usuario.nombre_rol;
         this.usuario = datos.usuario;
 
-        await this.cargarArbol();
+        await Promise.all([this.cargarArbol(), this.cargarProgreso()]);
         await this.mostrarDashboard();
       }
       else if (datos && datos.tipo === 'selector_requerido') {
@@ -181,7 +194,7 @@ class App {
             this.nombreRol = resultado.usuario.nombre_rol;
             this.usuario = resultado.usuario;
 
-            await this.cargarArbol();
+            await Promise.all([this.cargarArbol(), this.cargarProgreso()]);
             await this.mostrarDashboard();
           }
         } catch (error) {
@@ -192,21 +205,12 @@ class App {
     });
   }
 
-  toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const backdrop = document.getElementById('sidebarBackdrop');
-    if (!sidebar || !backdrop) return;
-    sidebar.classList.toggle('abierto');
-    backdrop.classList.toggle('visible');
-  }
-
   async mostrarDashboard() {
     console.log('[APP] Dashboard para rol:', this.rol, 'nivel:', this.nivel);
 
     const app = document.getElementById('app');
     app.innerHTML = '';
 
-    // Header
     const header = document.createElement('header');
     header.className = 'topbar';
     header.innerHTML = `
@@ -225,7 +229,6 @@ class App {
     `;
     app.appendChild(header);
 
-    // Body
     const body = document.createElement('div');
     body.className = 'app-body';
     body.innerHTML = `
@@ -235,13 +238,11 @@ class App {
     `;
     app.appendChild(body);
 
-    // Footer
     const footer = document.createElement('footer');
     footer.className = 'app-footer';
-    footer.innerHTML = `Academia Addison v3.1 • ${this.institucion?.nombre_institucion || ''}`;
+    footer.innerHTML = `Academia Addison v3.2 • ${this.institucion?.nombre_institucion || ''}`;
     app.appendChild(footer);
 
-    // Eventos
     document.getElementById('btnSidebar').addEventListener('click', () => {
       document.getElementById('sidebar').classList.toggle('abierto');
       document.getElementById('sidebarBackdrop').classList.toggle('visible');
@@ -251,7 +252,6 @@ class App {
       document.getElementById('sidebarBackdrop').classList.remove('visible');
     });
 
-    // Renderizar contenido
     await this.renderizarSidebar();
     this.iniciarHeartbeat();
     await this.renderizarMain();
@@ -261,7 +261,6 @@ class App {
     const sidebar = document.getElementById('sidebar');
 
     try {
-      // Usar arbol cacheado o recargar
       const arbol = this.arbolCache || await api.obtenerArbol() || [];
       this.arbolCache = arbol;
 
@@ -283,7 +282,6 @@ class App {
         </div>
       `;
 
-      // Botones de admin
       if (['superadmin', 'director'].includes(this.rol)) {
         html += `<button class="btn btn-sm" style="margin:0 16px 12px;" id="btnCrearCurso">+ Nuevo Curso</button>`;
         html += `<button class="btn btn-sm btn-secundario" style="margin:0 16px 12px;display:flex;align-items:center;gap:6px;" onclick="app.navegar('arbol')">
@@ -291,7 +289,6 @@ class App {
         </button>`;
       }
 
-      // Listar grupos, cursos, temas del arbol REAL
       html += `<div style="padding:0 16px;">`;
       
       if (arbol.length === 0) {
@@ -308,15 +305,17 @@ class App {
         
         const cursos = grupo.hijos || grupo.cursos || [];
         cursos.forEach(curso => {
-          const progreso = Math.floor(Math.random() * 100); // Simulado hasta tener /progreso
+          const progreso = this.obtenerProgresoCurso(curso.curso_id);
+          const porcentaje = progreso ? progreso.porcentaje : 0;
+          
           html += `
             <div class="curso-item" style="padding:8px 12px;border-radius:var(--radio-borde-sm);cursor:pointer;margin-bottom:4px;background:var(--fondo-secundario);">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
                 <span style="font-weight:600;font-size:13px;">${curso.nombre_curso}</span>
-                <span class="badge">${progreso}%</span>
+                <span class="badge">${porcentaje}%</span>
               </div>
               <div style="width:100%;height:3px;background:var(--borde);border-radius:2px;overflow:hidden;">
-                <div style="width:${progreso}%;height:100%;background:var(--color-marca);transition:width .3s;"></div>
+                <div style="width:${porcentaje}%;height:100%;background:var(--color-marca);transition:width .3s;"></div>
               </div>
               <p style="font-size:11px;color:var(--texto-secundario);margin-top:2px;">
                 ${curso.descripcion || 'Sin descripcion'}
@@ -329,7 +328,6 @@ class App {
       });
       
       html += `</div>`;
-
       sidebar.innerHTML = html;
     } catch (error) {
       console.error('[APP] Error renderizando sidebar:', error);
@@ -340,7 +338,6 @@ class App {
   async renderizarMain() {
     const main = document.getElementById('main');
 
-    // Live bar (profesor/director/superadmin)
     if (['superadmin', 'director', 'professor'].includes(this.rol)) {
       main.innerHTML += `
         <div class="live-bar">
@@ -358,7 +355,6 @@ class App {
 
     main.innerHTML += `<div id="contenidoPrincipal"></div>`;
 
-    // Renderizar segun rol
     if (this.rol === 'student') {
       await this.renderizarAlumno();
     } else if (this.rol === 'professor') {
@@ -376,8 +372,8 @@ class App {
   async renderizarAlumno() {
     const contenedor = document.getElementById('contenidoPrincipal');
     const arbol = this.arbolCache || [];
+    const progreso = this.progresoCache?.cursos || [];
     
-    // Contar cursos y temas totales
     let totalCursos = 0;
     let totalTemas = 0;
     arbol.forEach(g => {
@@ -391,7 +387,7 @@ class App {
     let html = `
       <h2 style="margin-bottom:8px;">Mis Cursos</h2>
       <p style="color:var(--texto-secundario);margin-bottom:20px;font-size:13px;">
-        ${totalCursos} cursos • ${totalTemas} temas
+        ${totalCursos} cursos • Progreso real desde el servidor
       </p>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
     `;
@@ -400,23 +396,23 @@ class App {
       html += `<p style="color:var(--texto-secundario);">No estas matriculado en ningun curso</p>`;
     }
 
-    // Mostrar cursos del arbol real
     arbol.forEach(grupo => {
       const cursos = grupo.hijos || [];
       cursos.forEach(curso => {
-        const temas = curso.hijos || [];
-        const temasCompletados = Math.floor(Math.random() * temas.length); // Simulado
-        const progreso = temas.length > 0 ? Math.round((temasCompletados / temas.length) * 100) : 0;
+        const prog = this.obtenerProgresoCurso(curso.curso_id);
+        const porcentaje = prog ? prog.porcentaje : 0;
+        const temasCompletados = prog ? prog.temas_completados : 0;
+        const totalTemasCurso = prog ? prog.total_temas : ((curso.hijos || []).length);
         
         html += `
           <div class="tarjeta" style="cursor:pointer;" onclick="app.navegar('curso-${curso.curso_id}')">
             <div class="tarjeta-cabecera">
               <strong>${curso.nombre_curso}</strong>
-              <span class="badge">${progreso}%</span>
+              <span class="badge">${porcentaje}%</span>
             </div>
-            <div class="barra-progreso"><span style="width:${progreso}%"></span></div>
+            <div class="barra-progreso"><span style="width:${porcentaje}%"></span></div>
             <p style="font-size:13px;color:var(--texto-secundario);">
-              ${temasCompletados} de ${temas.length} temas completados
+              ${temasCompletados} de ${totalTemasCurso} temas completados
             </p>
             <p style="font-size:12px;color:var(--texto-secundario);margin-top:4px;">
               ${curso.descripcion || ''}
@@ -501,8 +497,6 @@ class App {
     `;
   }
 
-  // ============ UTILIDADES ============
-
   mostrarToast(mensaje, tipo = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast toast-${tipo} fade-in`;
@@ -542,8 +536,6 @@ class App {
     auth.signOut();
     window.location.reload();
   }
-
-  // ============ HEARTBEAT DE SESION ============
 
   iniciarHeartbeat() {
     if (this.heartbeatInterval) {
@@ -593,7 +585,6 @@ class App {
   }
 }
 
-// Inicializar app cuando cargue el DOM
 let app;
 document.addEventListener('DOMContentLoaded', () => {
   app = new App();
