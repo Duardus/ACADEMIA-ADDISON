@@ -1,5 +1,6 @@
 /**
- * ÁRBOL ACADÉMICO INTERACTIVO — ACADEMIA ADDISON v3.0
+ * ÁRBOL ACADÉMICO INTERACTIVO — ACADEMIA ADDISON v3.1
+ * Conectado al backend real
  */
 
 const ArbolAcademico = {
@@ -19,7 +20,7 @@ const ArbolAcademico = {
       <div class="layout-app">
         <header class="app-header">
           <div class="header-left">
-            <button class="btn-icono" onclick="window.location.reload()" title="Volver al dashboard" style="font-size:1.2rem;">←</button>
+            <button class="btn-icono" onclick="app.mostrarDashboard()" title="Volver al dashboard" style="font-size:1.2rem;">←</button>
             <span class="app-titulo">Academia Addison</span>
           </div>
           <div class="header-right">
@@ -53,7 +54,7 @@ const ArbolAcademico = {
     const contenedor = document.getElementById('arbol-contenedor');
     try {
       const respuesta = await api.obtenerArbol();
-      this.datos = respuesta?.datos || respuesta?.arbol || [];
+      this.datos = respuesta || [];
       this.renderizar();
     } catch (error) {
       if (contenedor) contenedor.innerHTML = `
@@ -100,251 +101,225 @@ const ArbolAcademico = {
     if (esUltimo) clases.push('nodo-ultimo');
 
     let html = `
-      <div class="${clases.join(' ')}" data-id="${id}" data-tipo="${tipo}" data-nivel="${nivel}">
-        <div class="nodo-conector"></div>
-        <div class="nodo-cabecera" style="border-left-color: ${this.colores[tipo]}">
-          <span class="nodo-toggle ${tieneHijos ? '' : 'nodo-toggle-vacio'}" onclick="ArbolAcademico.toggle('${id}', '${tipo}')">${tieneHijos ? '▼' : '•'}</span>
-          <span class="nodo-icono" style="color: ${this.colores[tipo]}">${this.iconos[tipo]}</span>
-          <span class="nodo-nombre">${this.escaparHtml(nombre)}</span>
-          <span class="nodo-meta"><span class="nodo-orden">#${orden}</span>${estado !== 'active' ? '<span class="nodo-estado-inactivo">borrador</span>' : ''}</span>
-          <div class="nodo-acciones">
-            <button class="btn-icono" onclick="ArbolAcademico.editar('${id}', '${tipo}')" title="Editar">✏️</button>
-            <button class="btn-icono btn-peligro" onclick="ArbolAcademico.mostrarImpacto('${id}', '${tipo}')" title="Eliminar">🗑️</button>
-            ${puedeAgregar ? `<button class="btn-icono btn-agregar" onclick="ArbolAcademico.mostrarModalCrear('${siguienteTipo}', '${id}')" title="Agregar">+</button>` : ''}
+      <div class="${clases.join(' ')}" style="--nivel: ${nivel}; --color: ${this.colores[tipo]}">
+        <div class="arbol-linea-vertical"></div>
+        <div class="arbol-linea-horizontal"></div>
+        
+        <div class="arbol-contenido">
+          <div class="arbol-cabecera" onclick="ArbolAcademico.toggleExpandir(${id}, '${tipo}')">
+            <span class="arbol-icono">${this.iconos[tipo]}</span>
+            <div class="arbol-info">
+              <span class="arbol-nombre">${nombre}</span>
+              <span class="arbol-meta">Orden ${orden} ${estado !== 'active' ? '• Inactivo' : ''}</span>
+            </div>
+            <div class="arbol-acciones">
+              ${puedeAgregar ? `<button class="btn-icono" onclick="event.stopPropagation(); ArbolAcademico.mostrarModalCrear('${siguienteTipo}', ${id})" title="Agregar ${this.nombres[siguienteTipo]}">+</button>` : ''}
+              <button class="btn-icono" onclick="event.stopPropagation(); ArbolAcademico.mostrarModalEditar('${tipo}', ${id})" title="Editar">✏️</button>
+              <button class="btn-icono btn-peligro" onclick="event.stopPropagation(); ArbolAcademico.confirmarEliminar('${tipo}', ${id}, '${nombre.replace(/'/g, "\\'")}')" title="Eliminar">🗑️</button>
+            </div>
           </div>
+          
+          ${tieneHijos ? `
+            <div class="arbol-hijos" id="hijos-${tipo}-${id}">
+              ${hijos.map((hijo, idx) => this.renderizarNodo(hijo, siguienteTipo, nivel + 1, idx === hijos.length - 1)).join('')}
+            </div>
+          ` : ''}
         </div>
-        <div class="nodo-hijos" id="hijos-${tipo}-${id}" style="display: block;">
+      </div>
     `;
 
-    if (tieneHijos && siguienteTipo) {
-      html += `<div class="arbol-nivel">`;
-      hijos.forEach((hijo, idx) => {
-        html += this.renderizarNodo(hijo, siguienteTipo, nivel + 1, idx === hijos.length - 1);
-      });
-      html += `</div>`;
-    }
-    html += `</div></div>`;
     return html;
   },
 
   siguienteTipo(tipo) {
-    const m = { grupo: 'curso', curso: 'tema', tema: 'subtema' };
-    return m[tipo];
+    const mapa = { grupo: 'curso', curso: 'tema', tema: 'subtema', subtema: null };
+    return mapa[tipo];
   },
 
-  toggle(id, tipo) {
-    const hijos = document.getElementById(`hijos-${tipo}-${id}`);
-    const nodo = document.querySelector(`[data-id="${id}"][data-tipo="${tipo}"]`);
-    if (!hijos || !nodo) return;
-    const toggle = nodo.querySelector('.nodo-toggle');
-    const visible = hijos.style.display !== 'none';
-    hijos.style.display = visible ? 'none' : 'block';
-    toggle.textContent = visible ? '▶' : '▼';
+  toggleExpandir(id, tipo) {
+    const contenedor = document.getElementById(`hijos-${tipo}-${id}`);
+    if (contenedor) contenedor.classList.toggle('colapsado');
   },
 
   mostrarModalCrear(tipo, padreId = null) {
-    this.mostrarModal({ titulo: `Crear ${this.nombres[tipo]}`, tipo, padreId, datos: null });
-  },
-
-  editar(id, tipo) {
-    const nodo = this.buscarNodo(this.datos, id, tipo);
-    if (!nodo) return;
-    this.mostrarModal({ titulo: `Editar ${this.nombres[tipo]}`, tipo, padreId: null, datos: nodo });
-  },
-
-  mostrarModal(config) {
-    const { titulo, tipo, padreId, datos } = config;
-    const nombre = datos ? (datos[`nombre_${tipo}`] || datos.nombre || '') : '';
-    const orden = datos ? (datos.orden || 1) : 1;
-    const id = datos ? (datos[`${tipo}_id`] || '') : '';
-
     const modal = document.createElement('div');
-    modal.className = 'modal-overlay activo';
-    modal.id = 'modal-arbol';
+    modal.className = 'modal';
+    modal.id = 'modal-crear';
     modal.innerHTML = `
-      <div class="modal-panel modal-panel-arbol">
-        <div class="modal-header"><h3>${titulo}</h3><button class="btn-cerrar" onclick="ArbolAcademico.cerrarModal()">✕</button></div>
-        <form id="form-arbol" onsubmit="ArbolAcademico.guardar(event)">
-          <input type="hidden" id="arbol-tipo" value="${tipo}">
-          <input type="hidden" id="arbol-id" value="${id}">
-          <input type="hidden" id="arbol-padre-id" value="${padreId || ''}">
-          <div class="campo-formulario">
-            <label>Nombre del ${this.nombres[tipo]}</label>
-            <input type="text" id="arbol-nombre" value="${this.escaparHtml(nombre)}" placeholder="Ej: ${this.ejemploNombre(tipo)}" required maxlength="100">
+      <div class="modal-tarjeta" style="max-width: 500px;">
+        <h3>Crear ${this.nombres[tipo]}</h3>
+        <form id="form-crear" onsubmit="ArbolAcademico.guardar(event)">
+          <input type="hidden" id="tipo-crear" value="${tipo}">
+          <input type="hidden" id="padre-id" value="${padreId || ''}">
+          
+          <div class="campo">
+            <label>Nombre</label>
+            <input type="text" id="nombre-crear" required placeholder="Ej: ${this.nombres[tipo]} de ejemplo">
           </div>
-          <div class="campo-formulario">
+          
+          <div class="campo">
+            <label>Descripción</label>
+            <textarea id="descripcion-crear" rows="3" placeholder="Descripción opcional"></textarea>
+          </div>
+          
+          <div class="campo">
             <label>Orden</label>
-            <input type="number" id="arbol-orden" value="${orden}" min="1" max="999" required>
+            <input type="number" id="orden-crear" value="1" min="1">
           </div>
+          
           <div class="modal-acciones">
-            <button type="button" class="btn-secundario" onclick="ArbolAcademico.cerrarModal()">Cancelar</button>
+            <button type="button" class="btn-secundario" onclick="document.getElementById('modal-crear').remove()">Cancelar</button>
             <button type="submit" class="btn-primario">Guardar</button>
           </div>
         </form>
-      </div>`;
+      </div>
+    `;
     document.body.appendChild(modal);
-    setTimeout(() => document.getElementById('arbol-nombre').focus(), 100);
-  },
-
-  cerrarModal() {
-    const m = document.getElementById('modal-arbol');
-    if (m) m.remove();
   },
 
   async guardar(evento) {
     evento.preventDefault();
-    const tipo = document.getElementById('arbol-tipo').value;
-    const id = document.getElementById('arbol-id').value;
-    const padreId = document.getElementById('arbol-padre-id').value;
-    const nombre = document.getElementById('arbol-nombre').value.trim();
-    const orden = parseInt(document.getElementById('arbol-orden').value);
-
-    if (!nombre) { app.mostrarToast('Nombre obligatorio', 'error'); return; }
-
-    const datos = { [`nombre_${tipo}`]: nombre, orden: orden, estado: 'active' };
-    if (padreId) {
-      const campoPadre = { curso: 'grupo_id', tema: 'curso_id', subtema: 'tema_id' }[tipo];
-      if (campoPadre) datos[campoPadre] = padreId;
-    }
+    const tipo = document.getElementById('tipo-crear').value;
+    const padreId = document.getElementById('padre-id').value;
+    const nombre = document.getElementById('nombre-crear').value;
+    const descripcion = document.getElementById('descripcion-crear').value;
+    const orden = parseInt(document.getElementById('orden-crear').value);
 
     try {
-      const btn = evento.target.querySelector('button[type="submit"]');
-      btn.disabled = true;
-      btn.textContent = 'Guardando...';
-
-      if (id) {
-        await api.actualizarArbol(tipo, id, datos);
-        app.mostrarToast(`${this.nombres[tipo]} actualizado`, 'exito');
+      let datos = { nombre, descripcion, orden };
+      
+      // FIX: Usar endpoint correcto según tipo
+      if (tipo === 'grupo') {
+        // Grupo se crea en /jerarquia/grupos (no en /arbol/grupos)
+        await api.crearGrupo(datos);
+      } else if (tipo === 'curso') {
+        datos.grupo_id = padreId;
+        await api.crearCurso(datos);
       } else {
-        const endpoint = { grupo: 'grupos', curso: 'cursos', tema: 'temas', subtema: 'subtemas' }[tipo];
-        await api._llamar(`/arbol/${endpoint}`, { method: 'POST', body: JSON.stringify(datos) });
-        app.mostrarToast(`${this.nombres[tipo]} creado`, 'exito');
+        // tema y subtema usan actualizarArbol con PUT
+        const padreTipo = tipo === 'tema' ? 'curso' : 'tema';
+        await api.actualizarArbol(padreTipo, padreId, { [`nombre_${tipo}`]: nombre, descripcion, orden });
       }
-      this.cerrarModal();
-      this.cargar();
+
+      document.getElementById('modal-crear').remove();
+      this.mostrarToast('✅ ' + this.nombres[tipo] + ' creado correctamente');
+      await this.cargar();
     } catch (error) {
-      app.mostrarToast(`Error: ${error.message}`, 'error');
-      const btn = evento.target.querySelector('button[type="submit"]');
-      if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
+      this.mostrarToast('❌ Error: ' + error.message, 'error');
     }
   },
 
-  mostrarImpacto(id, tipo) {
-    const nodo = this.buscarNodo(this.datos, id, tipo);
+  mostrarModalEditar(tipo, id) {
+    const nodo = this.encontrarNodo(this.datos, tipo, id);
     if (!nodo) return;
-    this.nodoEliminando = nodo;
-    this.tipoEliminando = tipo;
 
-    const impacto = this.calcularImpacto(nodo, tipo);
-    const nombre = nodo[`nombre_${tipo}`] || nodo.nombre || 'Sin nombre';
-
-    const drawer = document.createElement('div');
-    drawer.className = 'drawer-overlay activo';
-    drawer.id = 'drawer-impacto';
-    drawer.innerHTML = `
-      <div class="drawer-panel drawer-panel-impacto">
-        <div class="drawer-header"><h3>⚠️ Confirmar Eliminación</h3><button class="btn-cerrar" onclick="ArbolAcademico.cerrarDrawer()">✕</button></div>
-        <div class="drawer-contenido">
-          <div class="impacto-resumen">
-            <p>Vas a eliminar: <strong>${this.escaparHtml(nombre)}</strong></p>
-            <p class="impacto-total">Afectará a <strong>${impacto.total} elementos</strong></p>
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'modal-editar';
+    modal.innerHTML = `
+      <div class="modal-tarjeta" style="max-width: 500px;">
+        <h3>Editar ${this.nombres[tipo]}</h3>
+        <form id="form-editar" onsubmit="ArbolAcademico.actualizar(event)">
+          <input type="hidden" id="tipo-editar" value="${tipo}">
+          <input type="hidden" id="id-editar" value="${id}">
+          
+          <div class="campo">
+            <label>Nombre</label>
+            <input type="text" id="nombre-editar" value="${nodo['nombre_' + tipo] || nodo.nombre || ''}" required>
           </div>
-          <div class="arbol-impacto">${this.renderizarImpacto(impacto.detalles)}</div>
-          <div class="confirmacion-eliminacion">
-            <p>Escribe <strong>ELIMINAR</strong> para confirmar:</p>
-            <input type="text" id="confirmar-texto" placeholder="ELIMINAR" autocomplete="off">
-            <select id="motivo-eliminacion">
-              <option value="">Motivo...</option>
-              <option value="error_creacion">Error de creación</option>
-              <option value="contenido_obsoleto">Contenido obsoleto</option>
-              <option value="reestructuracion">Reestructuración</option>
-              <option value="duplicado">Duplicado</option>
-              <option value="otro">Otro</option>
-            </select>
+          
+          <div class="campo">
+            <label>Descripción</label>
+            <textarea id="descripcion-editar" rows="3">${nodo.descripcion || ''}</textarea>
           </div>
-        </div>
-        <div class="drawer-acciones">
-          <button class="btn-secundario" onclick="ArbolAcademico.cerrarDrawer()">Cancelar</button>
-          <button class="btn-peligro" onclick="ArbolAcademico.confirmarEliminar()" id="btn-confirmar-eliminar">Eliminar</button>
-        </div>
-      </div>`;
-    document.body.appendChild(drawer);
+          
+          <div class="campo">
+            <label>Orden</label>
+            <input type="number" id="orden-editar" value="${nodo.orden || 1}" min="1">
+          </div>
+          
+          <div class="modal-acciones">
+            <button type="button" class="btn-secundario" onclick="document.getElementById('modal-editar').remove()">Cancelar</button>
+            <button type="submit" class="btn-primario">Guardar cambios</button>
+          </div>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(modal);
   },
 
-  cerrarDrawer() {
-    const d = document.getElementById('drawer-impacto');
-    if (d) d.remove();
-    this.nodoEliminando = null;
-    this.tipoEliminando = null;
-  },
-
-  calcularImpacto(nodo, tipo) {
-    let total = 0;
-    const detalles = [];
-    const recorrer = (n, t, p = 0) => {
-      const hijos = n.hijos || [];
-      const st = this.siguienteTipo(t);
-      if (!st) return;
-      hijos.forEach(h => {
-        total++;
-        detalles.push({ tipo: st, nombre: h[`nombre_${st}`] || h.nombre || 'Sin nombre', profundidad: p, icono: this.iconos[st], color: this.colores[st] });
-        recorrer(h, st, p + 1);
-      });
-    };
-    recorrer(nodo, tipo);
-    return { total, detalles };
-  },
-
-  renderizarImpacto(detalles) {
-    if (!detalles.length) return '<p class="impacto-vacio">No hay elementos dependientes.</p>';
-    let html = '<ul class="lista-impacto">';
-    detalles.forEach(i => {
-      html += `<li class="item-impacto" style="padding-left:${i.profundidad * 20}px"><span class="item-icono" style="color:${i.color}">${i.icono}</span><span class="item-nombre">${this.escaparHtml(i.nombre)}</span><span class="item-tipo">${this.nombres[i.tipo]}</span></li>`;
-    });
-    html += '</ul>';
-    return html;
-  },
-
-  async confirmarEliminar() {
-    const texto = document.getElementById('confirmar-texto').value.trim();
-    const motivo = document.getElementById('motivo-eliminacion').value;
-    if (texto !== 'ELIMINAR') { app.mostrarToast('Escribe ELIMINAR exactamente', 'error'); return; }
-    if (!motivo) { app.mostrarToast('Selecciona un motivo', 'error'); return; }
-
-    const nodo = this.nodoEliminando;
-    const tipo = this.tipoEliminando;
-    const id = nodo[`${tipo}_id`];
+  async actualizar(evento) {
+    evento.preventDefault();
+    const tipo = document.getElementById('tipo-editar').value;
+    const id = document.getElementById('id-editar').value;
+    const nombre = document.getElementById('nombre-editar').value;
+    const descripcion = document.getElementById('descripcion-editar').value;
+    const orden = parseInt(document.getElementById('orden-editar').value);
 
     try {
-      document.getElementById('btn-confirmar-eliminar').disabled = true;
-      document.getElementById('btn-confirmar-eliminar').textContent = 'Eliminando...';
-      await api.eliminarArbol(tipo, id, motivo);
-      app.mostrarToast(`${this.nombres[tipo]} eliminado`, 'exito');
-      this.cerrarDrawer();
-      this.cargar();
+      await api.actualizarArbol(tipo, id, { nombre, descripcion, orden });
+      document.getElementById('modal-editar').remove();
+      this.mostrarToast('✅ Cambios guardados');
+      await this.cargar();
     } catch (error) {
-      app.mostrarToast(`Error: ${error.message}`, 'error');
-      const btn = document.getElementById('btn-confirmar-eliminar');
-      if (btn) { btn.disabled = false; btn.textContent = 'Eliminar'; }
+      this.mostrarToast('❌ Error: ' + error.message, 'error');
     }
   },
 
-  buscarNodo(arbol, id, tipo) {
-    for (const n of arbol) {
-      if (n[`${tipo}_id`] === id) return n;
-      if (n.hijos) { const e = this.buscarNodo(n.hijos, id, tipo); if (e) return e; }
+  confirmarEliminar(tipo, id, nombre) {
+    this.tipoEliminando = tipo;
+    this.nodoEliminando = id;
+
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'modal-eliminar';
+    modal.innerHTML = `
+      <div class="modal-tarjeta" style="max-width: 400px; text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+        <h3>¿Eliminar ${this.nombres[tipo]}?</h3>
+        <p style="color: var(--texto-secundario); margin: 1rem 0;">
+          "${nombre}" se moverá a la papelera.<br>
+          <strong>Esta acción se puede deshacer.</strong>
+        </p>
+        <div class="modal-acciones" style="justify-content: center;">
+          <button class="btn-secundario" onclick="document.getElementById('modal-eliminar').remove()">Cancelar</button>
+          <button class="btn-peligro" onclick="ArbolAcademico.eliminar()">Sí, eliminar</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  },
+
+  async eliminar() {
+    try {
+      await api.eliminarArbol(this.tipoEliminando, this.nodoEliminando, 'Eliminado desde árbol académico');
+      document.getElementById('modal-eliminar').remove();
+      this.mostrarToast('🗑️ Movido a la papelera');
+      await this.cargar();
+    } catch (error) {
+      this.mostrarToast('❌ Error: ' + error.message, 'error');
+    }
+  },
+
+  encontrarNodo(datos, tipo, id) {
+    for (const nodo of datos) {
+      if (nodo[`${tipo}_id`] === id) return nodo;
+      if (nodo.hijos) {
+        const encontrado = this.encontrarNodo(nodo.hijos, tipo, id);
+        if (encontrado) return encontrado;
+      }
     }
     return null;
   },
 
-  escaparHtml(t) {
-    if (!t) return '';
-    return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  },
-
-  ejemploNombre(tipo) {
-    return { grupo: 'Grupo A - 2026', curso: 'Matemáticas Avanzadas', tema: 'Álgebra Lineal', subtema: 'Matrices y Determinantes' }[tipo];
+  mostrarToast(mensaje, tipo = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${tipo} fade-in`;
+    toast.textContent = mensaje;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.classList.add('saliendo');
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
   }
 };
-
-window.ArbolAcademico = ArbolAcademico;
