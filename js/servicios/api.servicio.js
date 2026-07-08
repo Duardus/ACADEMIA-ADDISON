@@ -1,5 +1,7 @@
 /* ============================================
-   📡 SERVICIO API - TODAS las llamadas al backend
+   📡 SERVICIO API - ACADEMIA ADDISON v3.0
+   Unica capa que conoce el formato del backend.
+   Desempaqueta { exito, datos } automaticamente.
    ============================================ */
 
 class ServicioAPI {
@@ -7,11 +9,31 @@ class ServicioAPI {
     this.baseURL = API_CONFIG.BASE_URL;
   }
 
-  // ============ UTILIDADES ============
+  // Desempaqueta respuesta del backend: { exito, mensaje, datos } -> datos
+  _extraerDatos(json) {
+    if (!json || typeof json !== 'object') return json;
+
+    // Si viene envuelto en { exito, datos }, extraemos datos
+    if (json.exito === true && json.datos !== undefined) {
+      return json.datos;
+    }
+
+    // Si es error del backend, lo propagamos como excepcion
+    if (json.exito === false && json.error) {
+      const error = new Error(json.error);
+      error.codigo = json.codigo || 'ERROR_DESCONOCIDO';
+      error.status = json.status || 400;
+      throw error;
+    }
+
+    // Si ya viene plano (legacy o healthcheck), lo devolvemos tal cual
+    return json;
+  }
+
   async _llamar(ruta, opciones = {}) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
-    
+
     try {
       const respuesta = await fetch(`${this.baseURL}${ruta}`, {
         ...opciones,
@@ -19,29 +41,44 @@ class ServicioAPI {
         signal: controller.signal
       });
       clearTimeout(timeout);
-      
-      if (respuesta.status === 404) {
-        console.log('[API] 404 - Recurso no encontrado o sin permiso');
-        return null;
-      }
+
+      // 401 = sesion invalida/revocada
       if (respuesta.status === 401) {
         localStorage.removeItem('token_sesion');
+        localStorage.removeItem('institucion_activa');
+        localStorage.removeItem('usuario_activo');
         window.location.href = '/';
         return null;
       }
-      
-      return await respuesta.json();
+
+      // 404 = recurso no encontrado
+      if (respuesta.status === 404) {
+        console.log('[API] 404 - Recurso no encontrado');
+        return null;
+      }
+
+      const json = await respuesta.json();
+
+      // Errores HTTP no capturados por el backend
+      if (!respuesta.ok) {
+        const error = new Error(json.error || `HTTP ${respuesta.status}`);
+        error.codigo = json.codigo || `HTTP_${respuesta.status}`;
+        throw error;
+      }
+
+      return this._extraerDatos(json);
+
     } catch (error) {
       if (error.name === 'AbortError') {
         console.error('[API] Timeout');
-        return { error: 'Timeout', codigo: 'TIMEOUT' };
+        throw new Error('La conexion con el servidor tardo demasiado. Intenta de nuevo.');
       }
-      console.error('[API] Error:', error);
-      return { error: error.message, codigo: 'NETWORK_ERROR' };
+      // Si ya es un error nuestro, lo relanzamos
+      throw error;
     }
   }
 
-  // ============ AUTENTICACIÓN ============
+  // ============ AUTENTICACION ============
   async login(tokenFirebase) {
     return await this._llamar('/auth/login', {
       method: 'POST',
@@ -56,14 +93,14 @@ class ServicioAPI {
     });
   }
 
-  async cambiarContexto(institucionId, rol) {
+  async switchContext(membresiaId) {
     return await this._llamar('/auth/switch-context', {
       method: 'POST',
-      body: JSON.stringify({ target_institucion_id: institucionId, target_role_type: rol })
+      body: JSON.stringify({ membresia_id: membresiaId })
     });
   }
 
-  // ============ ÁRBOL ACADÉMICO ============
+  // ============ ARBOL ACADEMICO ============
   async obtenerArbol() {
     return await this._llamar('/arbol');
   }
@@ -114,7 +151,25 @@ class ServicioAPI {
     });
   }
 
-  // ============ TEORÍAS ============
+  // ============ JERARQUIA ============
+  async crearUsuarioHijo(datos) {
+    return await this._llamar('/jerarquia/crear', {
+      method: 'POST',
+      body: JSON.stringify(datos)
+    });
+  }
+
+  async listarMisSubordinados() {
+    return await this._llamar('/jerarquia/mis-subordinados');
+  }
+
+  async desactivarSubordinado(membresiaId) {
+    return await this._llamar(`/jerarquia/subordinado/${membresiaId}`, {
+      method: 'DELETE'
+    });
+  }
+
+  // ============ TEORIAS ============
   async listarTeorias(subtemaId) {
     const query = subtemaId ? `?subtema_id=${subtemaId}` : '';
     return await this._llamar(`/teorias${query}`);
@@ -127,7 +182,7 @@ class ServicioAPI {
     });
   }
 
-  // ============ EXÁMENES ============
+  // ============ EXAMENES ============
   async listarExamenes(subtemaId) {
     const query = subtemaId ? `?subtema_id=${subtemaId}` : '';
     return await this._llamar(`/examenes${query}`);
@@ -223,6 +278,11 @@ class ServicioAPI {
       method: 'POST',
       body: JSON.stringify(datos)
     });
+  }
+
+  // ============ SESION ============
+  async verificarSesion() {
+    return await this._llamar('/sesion/verificar');
   }
 }
 
