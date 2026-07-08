@@ -4,15 +4,33 @@ class ProgresoRepositorio {
 
   async obtenerProgresoPorAlumno(alumnoId) {
     const result = await consulta(
-      `SELECT p.curso_id, c.nombre_curso, 
+      `SELECT p.curso_id, c.nombre_curso, p.alumno_id, u.nombre_completo as nombre_alumno,
               COUNT(*) FILTER (WHERE p.completado = true) as temas_completados,
               COUNT(*) as total_temas,
               SUM(p.xp_ganado) as xp_total
        FROM progreso_alumno p
        JOIN cursos c ON p.curso_id = c.curso_id
+       JOIN usuarios u ON p.alumno_id = u.usuario_id
        WHERE p.alumno_id = $1
-       GROUP BY p.curso_id, c.nombre_curso`,
+       GROUP BY p.curso_id, c.nombre_curso, p.alumno_id, u.nombre_completo`,
       [alumnoId]
+    );
+    return result.rows;
+  }
+
+  async obtenerProgresoPorInstitucion(institucionId) {
+    const result = await consulta(
+      `SELECT p.curso_id, c.nombre_curso, p.alumno_id, u.nombre_completo as nombre_alumno,
+              COUNT(*) FILTER (WHERE p.completado = true) as temas_completados,
+              COUNT(*) as total_temas,
+              SUM(p.xp_ganado) as xp_total
+       FROM progreso_alumno p
+       JOIN cursos c ON p.curso_id = c.curso_id
+       JOIN usuarios u ON p.alumno_id = u.usuario_id
+       WHERE c.institucion_id = $1
+       GROUP BY p.curso_id, c.nombre_curso, p.alumno_id, u.nombre_completo
+       ORDER BY c.nombre_curso, u.nombre_completo`,
+      [institucionId]
     );
     return result.rows;
   }

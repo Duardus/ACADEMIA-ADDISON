@@ -5,12 +5,15 @@ class ProgresoControlador {
 
   async obtenerProgreso(req, res, next) {
     try {
-      const alumnoId = req.usuario_autenticado?.usuario_id;
-      if (!alumnoId) {
+      const usuarioId = req.usuario_autenticado?.usuario_id;
+      const rol = req.contexto_institucion?.tipo_rol || req.usuario_autenticado?.rol;
+      const institucionId = req.contexto_institucion?.institucion_id;
+
+      if (!usuarioId) {
         return respuesta.error(res, 400, 'SIN_USUARIO', 'Usuario no identificado');
       }
 
-      const resultado = await servicio.obtenerProgreso(alumnoId);
+      const resultado = await servicio.obtenerProgreso(usuarioId, rol, institucionId);
       respuesta.exito(res, { cursos: resultado });
     } catch (error) {
       next(error);
