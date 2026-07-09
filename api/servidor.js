@@ -67,6 +67,7 @@ const rutasExamen = require("./rutas/examen.rutas");
 const rutasIntento = require("./rutas/intento.rutas");
 const rutasProgreso = require("./rutas/progreso.rutas");
 const rutasJerarquia = require("./rutas/jerarquia.rutas");
+const rutasDocs = require("./rutas/docs.rutas");
 
 app.use("/api/v1/auth", rutasAuth);
 app.use("/api/v1/usuarios", rutasUsuario);
@@ -81,6 +82,7 @@ app.use("/api/v1/examenes", rutasExamen);
 app.use("/api/v1/intentos", rutasIntento);
 app.use("/api/v1/progreso", rutasProgreso);
 app.use("/api/v1/jerarquia", rutasJerarquia);
+app.use("/api/v1/docs", rutasDocs);
 
 // ============================================
 // 💓 Heartbeat - Verificacion de sesion
