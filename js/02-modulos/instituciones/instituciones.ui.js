@@ -21,6 +21,7 @@ function renderizarInstituciones({ instituciones, onCrear, onEditar, onVer, onEl
   `;
 
   document.getElementById('btnVolver').addEventListener('click', onVolver);
+  document.getElementById('btnVerSalones')?.addEventListener('click', () => onVerSalones(institucion.institucion_id, institucion.nombre_institucion));
   document.getElementById('btnCrearInstitucion').addEventListener('click', onCrear);
 
   const contenedor = document.getElementById('institucionesContenido');
@@ -204,12 +205,13 @@ function renderizarModalEditarInstitucion({ institucion, onGuardar, onCancelar }
   });
 }
 
-function renderizarDetalleInstitucion({ institucion, usuarios, onVolver }) {
+function renderizarDetalleInstitucion({ institucion, usuarios, onVolver, onVerSalones }) {
   const app = document.getElementById('app');
   app.innerHTML = `
     <div style="padding:20px;max-width:1200px;margin:0 auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
         <h2>🏛️ ${institucion.nombre_institucion}</h2>
+        <button class="btn btn-sm" id="btnVerSalones">🏫 Ver Salones</button>
         <button class="btn btn-sm btn-secundario" id="btnVolver">← Volver</button>
       </div>
       
@@ -242,6 +244,7 @@ function renderizarDetalleInstitucion({ institucion, usuarios, onVolver }) {
   `;
 
   document.getElementById('btnVolver').addEventListener('click', onVolver);
+  document.getElementById('btnVerSalones')?.addEventListener('click', () => onVerSalones(institucion.institucion_id, institucion.nombre_institucion));
 
   const contenedor = document.getElementById('usuariosInstitucion');
   if (!usuarios || usuarios.length === 0) {

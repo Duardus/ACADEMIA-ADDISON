@@ -72,7 +72,8 @@ async function manejarVer({ id, onVolver, onError, onToast }) {
     renderizarDetalleInstitucion({
       institucion: datos.institucion || datos,
       usuarios: datos.usuarios || [],
-      onVolver: () => iniciarInstituciones({ onVolver, onError, onToast })
+      onVolver: () => iniciarInstituciones({ onVolver, onError, onToast }),
+      onVerSalones: (instId, instNombre) => iniciarSalones({ institucionId: instId, institucionNombre: instNombre, onVolver: () => manejarVer({ id: instId, onVolver, onError, onToast }), onError, onToast })
     });
   } catch (error) {
     onError(error.message || 'Error cargando detalle');
