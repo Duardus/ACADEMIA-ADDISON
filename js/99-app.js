@@ -106,15 +106,24 @@ class App {
       });
       return;
     }
+    if (vista === 'instituciones') {
+      detenerHeartbeat();
+      iniciarInstituciones({
+        onVolver: () => this.mostrarDashboard(),
+        onError: (msg) => this.mostrarToast(msg, 'error'),
+        onToast: (msg, tipo) => this.mostrarToast(msg, tipo)
+      });
+      return;
+    }
     const pendientes = {
       examenes:'Exámenes', teorias:'Teorías', notas:'Notas',
       finanzas:'Finanzas', calendario:'Calendario',
-      instituciones:'Instituciones', 'finanzas-globales':'Finanzas globales',
-      auditoria:'Auditoría'
+      'finanzas-globales':'Finanzas globales', auditoria:'Auditoría'
     };
     if (pendientes[vista]) {
       this.mostrarToast(`🚧 ${pendientes[vista]} - En construcción`, 'advertencia');
     }
+  }
   }
   async cerrarSesion() {
     detenerHeartbeat();
