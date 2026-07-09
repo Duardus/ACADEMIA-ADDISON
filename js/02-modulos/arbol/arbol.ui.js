@@ -7,7 +7,10 @@
      - Recibe datos planos, NUNCA hace fetch
    ============================================ */
 
-function renderizarArbol({ arbol, onEditar, onEliminar, onClonar, onVolver }) {
+function renderizarArbol({ arbol, onEditar, onEliminar, onClonar, onVolver, onCrearGrupo }) {
+  // Limpiar modales previos
+  document.querySelectorAll('.modal').forEach(m => m.remove());
+
   const app = document.getElementById('app');
   app.innerHTML = `
     <div style="padding:20px;max-width:1200px;margin:0 auto;">
@@ -23,14 +26,17 @@ function renderizarArbol({ arbol, onEditar, onEliminar, onClonar, onVolver }) {
   `;
 
   document.getElementById('btnVolver').addEventListener('click', onVolver);
+  if (onCrearGrupo) {
+    document.getElementById('btnCrearGrupo').addEventListener('click', onCrearGrupo);
+  }
 
   const contenedor = document.getElementById('arbolContenido');
   if (!arbol || arbol.length === 0) {
-    contenedor.innerHTML = '<p style="color:var(--texto-secundario);">No hay grupos creados.</p>';
+    contenedor.innerHTML = '<p style="color:var(--texto-secundario);">No hay grupos creados. Haz click en "+ Grupo" para crear uno.</p>';
     return;
   }
 
-  arbol.forEach((grupo, idx) => {
+  arbol.forEach((grupo) => {
     const divGrupo = document.createElement('div');
     divGrupo.className = 'tarjeta';
     divGrupo.style.marginBottom = '16px';
@@ -77,12 +83,15 @@ function renderizarCursos(cursos) {
 }
 
 function renderizarModalCrear({ tipo, grupoId, onGuardar, onCancelar }) {
+  // Limpiar modales previos
+  document.querySelectorAll('.modal').forEach(m => m.remove());
+
   const modal = document.createElement('div');
   modal.className = 'modal';
   modal.id = 'modalArbol';
   modal.innerHTML = `
-    <div class="modal-tarjeta" style="max-width:400px;">
-      <h3>${tipo === 'grupo' ? 'Nuevo Grupo' : 'Nuevo Curso'}</h3>
+    <div class="modal-tarjeta" style="max-width:400px;background:var(--superficie);border:1px solid var(--borde);border-radius:var(--radio-borde);padding:22px;">
+      <h3 style="margin:0 0 16px;font-size:20px;">${tipo === 'grupo' ? 'Nuevo Grupo' : 'Nuevo Curso'}</h3>
       <div style="margin:16px 0;">
         <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nombre</label>
         <input type="text" id="inputNombre" class="input" placeholder="Nombre..." style="width:100%;">

@@ -17,6 +17,7 @@ async function iniciarArbol({ onVolver, onError, onToast }) {
       onEditar: (tipo, id, grupoId) => manejarEditar({ tipo, id, grupoId, onVolver, onError, onToast }),
       onEliminar: (tipo, id) => manejarEliminar({ tipo, id, onVolver, onError, onToast }),
       onClonar: (tipo, id) => manejarClonar({ tipo, id, onVolver, onError, onToast }),
+      onCrearGrupo: () => manejarEditar({ tipo: 'grupo', id: null, grupoId: null, onVolver, onError, onToast }),
       onVolver
     });
   } catch (error) {
@@ -41,7 +42,6 @@ function manejarEditar({ tipo, id, grupoId, onVolver, onError, onToast }) {
           }
           onToast('Creado correctamente', 'exito');
         }
-        // Recargar
         iniciarArbol({ onVolver, onError, onToast });
       } catch (error) {
         onError(error.message || 'Error guardando');
