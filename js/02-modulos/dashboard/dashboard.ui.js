@@ -159,7 +159,7 @@ function renderizarPanelSuperadmin({ onNavegar }) {
   contenedor.innerHTML = `
     <h2 style="margin-bottom:20px;">Panel Superadmin</h2>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px;">
-      <div class="tarjeta" style="cursor:pointer;" onclick="app.navegar('jerarquia')"><strong>🏛️ Jerarquía</strong><p style="font-size:13px;color:var(--texto-secundario);">Gestión por niveles infinitos</p></div>
+      <div class="tarjeta" style="cursor:pointer;" onclick="app.navegar('usuarios')"><strong>👥 Usuarios</strong><p style="font-size:13px;color:var(--texto-secundario);">Administración de usuarios y permisos</p></div>
       <div class="tarjeta" style="cursor:pointer;" onclick="app.navegar('instituciones')"><strong>🏛️ Instituciones</strong><p style="font-size:13px;color:var(--texto-secundario);">Crear y gestionar academias</p></div>
       <div class="tarjeta" style="cursor:pointer;" onclick="app.navegar('finanzas-globales')"><strong>📈 Finanzas Globales</strong><p style="font-size:13px;color:var(--texto-secundario);">Comparativas</p></div>
       <div class="tarjeta" style="cursor:pointer;" onclick="app.navegar('auditoria')"><strong>🔍 Auditoría</strong><p style="font-size:13px;color:var(--texto-secundario);">Log del sistema</p></div>

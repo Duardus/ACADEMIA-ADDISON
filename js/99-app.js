@@ -99,7 +99,7 @@ class App {
     }
     if (vista === 'jerarquia') {
       detenerHeartbeat();
-      iniciarJerarquia({
+      iniciarUsuarios({
         onVolver: () => this.mostrarDashboard(),
         onError: (msg) => this.mostrarToast(msg, 'error'),
         onToast: (msg, tipo) => this.mostrarToast(msg, tipo)

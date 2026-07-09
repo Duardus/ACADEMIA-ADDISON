@@ -1,33 +1,33 @@
 /* ============================================
-   ARCHIVO: jerarquia.ui.js
-   MODULO: jerarquia
+   ARCHIVO: usuarios.ui.js
+   MODULO: usuarios
    DEPENDENCIAS: utilidades.js (01-nucleo)
    CONTRATO:
      - Solo renderizado, NUNCA hace fetch
      - Recibe datos planos, callbacks
    ============================================ */
 
-function renderizarJerarquia({ subordinados, onCrear, onCambiarEstado, onDesactivar, onCapacidades, onVolver }) {
+function renderizarUsuarios({ subordinados, onCrear, onCambiarEstado, onDesactivar, onCapacidades, onVolver }) {
   const app = document.getElementById('app');
   app.innerHTML = `
     <div style="padding:20px;max-width:1200px;margin:0 auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-        <h2>👥 Jerarquia de Usuarios</h2>
+        <h2>👥 Administración de Usuarios</h2>
         <div style="display:flex;gap:8px;">
-          <button class="btn btn-sm" id="btnCrearSubordinado">+ Nuevo Subordinado</button>
+          <button class="btn btn-sm" id="btnCrearUsuario">+ Nuevo Usuario</button>
           <button class="btn btn-sm btn-secundario" id="btnVolver">← Volver</button>
         </div>
       </div>
-      <div id="jerarquiaContenido"></div>
+      <div id="usuariosContenido"></div>
     </div>
   `;
 
   document.getElementById('btnVolver').addEventListener('click', onVolver);
-  document.getElementById('btnCrearSubordinado').addEventListener('click', onCrear);
+  document.getElementById('btnCrearUsuario').addEventListener('click', onCrear);
 
-  const contenedor = document.getElementById('jerarquiaContenido');
+  const contenedor = document.getElementById('usuariosContenido');
   if (!subordinados || subordinados.length === 0) {
-    contenedor.innerHTML = '<p style="color:var(--texto-secundario);">No tienes subordinados. Haz click en "+ Nuevo Subordinado" para crear uno.</p>';
+    contenedor.innerHTML = '<p style="color:var(--texto-secundario);">No hay usuarios registrados. Haz click en "+ Nuevo Usuario" para crear uno.</p>';
     return;
   }
 
@@ -78,15 +78,15 @@ function renderizarJerarquia({ subordinados, onCrear, onCambiarEstado, onDesacti
   });
 }
 
-function renderizarModalCrearSubordinado({ etiquetas, onGuardar, onCancelar }) {
+function renderizarModalCrearUsuario({ etiquetas, onGuardar, onCancelar }) {
   document.querySelectorAll('.modal').forEach(m => m.remove());
 
   const modal = document.createElement('div');
   modal.className = 'modal';
-  modal.id = 'modalJerarquia';
+  modal.id = 'modalUsuarios';
   modal.innerHTML = `
     <div class="modal-tarjeta" style="max-width:450px;background:var(--superficie);border:1px solid var(--borde);border-radius:var(--radio-borde);padding:22px;">
-      <h3 style="margin:0 0 16px;font-size:20px;">+ Nuevo Subordinado</h3>
+      <h3 style="margin:0 0 16px;font-size:20px;">+ Nuevo Usuario</h3>
       <div style="margin:16px 0;">
         <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nombre Completo</label>
         <input type="text" id="inputNombre" class="input" placeholder="Nombre..." style="width:100%;margin-bottom:12px;">

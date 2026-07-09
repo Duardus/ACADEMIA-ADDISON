@@ -1,6 +1,6 @@
 /* ============================================
-   ARCHIVO: jerarquia.api.js
-   MODULO: jerarquia
+   ARCHIVO: usuarios.api.js
+   MODULO: usuarios
    DEPENDENCIAS: peticiones.js (01-nucleo)
    CONTRATO:
      - Solo HTTP, NUNCA toca DOM

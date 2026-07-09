@@ -1,18 +1,18 @@
 /* ============================================
-   ARCHIVO: jerarquia.eventos.js
-   MODULO: jerarquia
+   ARCHIVO: usuarios.eventos.js
+   MODULO: usuarios
    DEPENDENCIAS:
-     - jerarquia.api.js (HTTP)
-     - jerarquia.ui.js (renderizado)
+     - usuarios.api.js (HTTP)
+     - usuarios.ui.js (renderizado)
    CONTRATO:
-     - Orquesta carga y CRUD de jerarquia
+     - Orquesta carga y CRUD de usuarios
      - Recibe callback onVolver para regresar al dashboard
    ============================================ */
 
-async function iniciarJerarquia({ onVolver, onError, onToast }) {
+async function iniciarUsuarios({ onVolver, onError, onToast }) {
   try {
     const subordinados = await apiObtenerSubordinados();
-    renderizarJerarquia({
+    renderizarUsuarios({
       subordinados: subordinados || [],
       onCrear: () => manejarCrear({ onVolver, onError, onToast }),
       onCambiarEstado: (id) => manejarCambiarEstado({ id, onVolver, onError, onToast }),
@@ -21,22 +21,22 @@ async function iniciarJerarquia({ onVolver, onError, onToast }) {
       onVolver
     });
   } catch (error) {
-    onError(error.message || 'Error cargando jerarquia');
+    onError(error.message || 'Error cargando usuarios');
   }
 }
 
 async function manejarCrear({ onVolver, onError, onToast }) {
   try {
     const etiquetas = await apiObtenerEtiquetas();
-    renderizarModalCrearSubordinado({
+    renderizarModalCrearUsuario({
       etiquetas: etiquetas || [],
       onGuardar: async (datos) => {
         try {
           await apiCrearSubordinado(datos);
-          onToast('Subordinado creado correctamente', 'exito');
-          iniciarJerarquia({ onVolver, onError, onToast });
+          onToast('Usuario creado correctamente', 'exito');
+          iniciarUsuarios({ onVolver, onError, onToast });
         } catch (error) {
-          onError(error.message || 'Error creando subordinado');
+          onError(error.message || 'Error creando usuario');
         }
       },
       onCancelar: () => {}
@@ -47,11 +47,11 @@ async function manejarCrear({ onVolver, onError, onToast }) {
 }
 
 async function manejarCambiarEstado({ id, onVolver, onError, onToast }) {
-  const nuevoEstado = confirm('¿Activar subordinado? (Cancelar = desactivar)') ? 'activo' : 'inactivo';
+  const nuevoEstado = confirm('¿Activar usuario? (Cancelar = desactivar)') ? 'activo' : 'inactivo';
   try {
     await apiCambiarEstadoSubordinado(id, nuevoEstado);
     onToast('Estado actualizado', 'exito');
-    iniciarJerarquia({ onVolver, onError, onToast });
+    iniciarUsuarios({ onVolver, onError, onToast });
   } catch (error) {
     onError(error.message || 'Error cambiando estado');
   }
@@ -62,10 +62,10 @@ async function manejarDesactivar({ id, onVolver, onError, onToast }) {
   if (!motivo) return;
   try {
     await apiDesactivarSubordinado(id);
-    onToast('Subordinado desactivado', 'exito');
-    iniciarJerarquia({ onVolver, onError, onToast });
+    onToast('Usuario desactivado', 'exito');
+    iniciarUsuarios({ onVolver, onError, onToast });
   } catch (error) {
-    onError(error.message || 'Error desactivando subordinado');
+    onError(error.message || 'Error desactivando usuario');
   }
 }
 
@@ -77,7 +77,7 @@ async function manejarCapacidades({ id, onVolver, onError, onToast }) {
     ]);
     const subordinado = (subordinados || []).find(s => s.membresia_id == id);
     if (!subordinado) {
-      onError('Subordinado no encontrado');
+      onError('Usuario no encontrado');
       return;
     }
     renderizarModalCapacidades({
@@ -88,7 +88,7 @@ async function manejarCapacidades({ id, onVolver, onError, onToast }) {
         try {
           await apiModificarCapacidades(id, seleccionadas);
           onToast('Capacidades actualizadas', 'exito');
-          iniciarJerarquia({ onVolver, onError, onToast });
+          iniciarUsuarios({ onVolver, onError, onToast });
         } catch (error) {
           onError(error.message || 'Error actualizando capacidades');
         }
