@@ -1,5 +1,4 @@
-
-const admin = require('../configuracion/firebase');
+const { obtenerAuth } = require('../configuracion/firebase');
 const { consulta } = require('../configuracion/base_de_datos');
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'addison_jwt_secret_cambiar_en_produccion_2026';
@@ -14,7 +13,8 @@ async function login(req, res) {
     const { token_firebase } = req.body;
     if (!token_firebase) return res.status(400).json({ error: 'token_firebase requerido' });
 
-    const decodificado = await admin.auth().verifyIdToken(token_firebase);
+    const auth = obtenerAuth();
+    const decodificado = await auth.verifyIdToken(token_firebase);
     const uid = decodificado.uid;
     const correo = decodificado.email;
     const nombre = decodificado.name || decodificado.email.split('@')[0];

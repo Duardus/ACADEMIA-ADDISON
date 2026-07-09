@@ -3,34 +3,30 @@ const { ErrorValidacion, ErrorAutorizacion, ErrorNoEncontrado, ErrorConflicto } 
 
 class JerarquiaUsuariosServicio {
 
+  // ============================================
+  // CREAR USUARIO HIJO
+  // ============================================
   async crearUsuarioHijo(datosEntrada, contexto) {
     const {
       email, nombre_rol, nombre_completo, nivel_jerarquico,
       superior_inmediato_id, superiores_adicionales,
-      capacidades_ids, puede_crear_hijos,
-      institucion_id, salon_ids
+      capacidades_ids, puede_crear_hijos
     } = datosEntrada;
 
-    const { 
-      membresia_id: creador_membresia_id, 
-      usuario_id: creador_usuario_id, 
-      institucion_id: ctx_institucion_id 
-    } = contexto;
+    const { membresia_id: creador_membresia_id, usuario_id: creador_usuario_id, institucion_id } = contexto;
 
+    // Validaciones de campos
     if (!email || !nombre_rol || nivel_jerarquico === undefined || !superior_inmediato_id) {
       throw new ErrorValidacion('Email, nombre_rol, nivel_jerarquico y superior_inmediato_id son obligatorios', 'CAMPOS_INCOMPLETOS');
     }
 
-    const institucion_final = institucion_id || ctx_institucion_id;
-    if (!institucion_final) {
-      throw new ErrorValidacion('institucion_id requerido', 'SIN_INSTITUCION');
-    }
-
+    // Verificar capacidad de crear usuarios
     const tienePoder = await repositorio.verificarCapacidadCrearUsuarios(creador_membresia_id);
     if (!tienePoder) {
       throw new ErrorAutorizacion('No tienes permiso para crear usuarios', 'SIN_PODER_CREAR');
     }
 
+    // Verificar que puede crear hijos
     const infoCreador = await repositorio.obtenerInfoCreador(creador_membresia_id);
     if (!infoCreador?.puede_crear_hijos) {
       throw new ErrorAutorizacion('Creacion deshabilitada para tu cuenta', 'CREACION_DESHABILITADA');
@@ -38,6 +34,7 @@ class JerarquiaUsuariosServicio {
 
     const creador_nivel = infoCreador.nivel;
 
+    // REGLA: Nuevo usuario debe tener nivel MAYOR que creador
     if (parseInt(nivel_jerarquico) <= creador_nivel) {
       throw new ErrorAutorizacion(
         `El nivel del nuevo usuario (${nivel_jerarquico}) debe ser mayor que el tuyo (${creador_nivel})`,
@@ -45,7 +42,8 @@ class JerarquiaUsuariosServicio {
       );
     }
 
-    const infoSuperior = await repositorio.obtenerInfoSuperior(superior_inmediato_id, institucion_final);
+    // REGLA: Superior inmediato debe existir y tener nivel MENOR
+    const infoSuperior = await repositorio.obtenerInfoSuperior(superior_inmediato_id, institucion_id);
     if (!infoSuperior) {
       throw new ErrorNoEncontrado('Superior inmediato no encontrado', 'SUPERIOR_NO_EXISTE');
     }
@@ -59,6 +57,7 @@ class JerarquiaUsuariosServicio {
       );
     }
 
+    // Pre-registro usuario
     let uid_firebase = `bootstrap_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const usuarioExistente = await repositorio.buscarUsuarioPorCorreo(email);
 
@@ -71,11 +70,13 @@ class JerarquiaUsuariosServicio {
       await repositorio.crearUsuarioBootstrap(uid_firebase, email, nombre_completo);
     }
 
-    const membresiaActiva = await repositorio.buscarMembresiaActiva(uid_firebase, institucion_final);
+    // Verificar membresia activa existente
+    const membresiaActiva = await repositorio.buscarMembresiaActiva(uid_firebase, institucion_id);
     if (membresiaActiva) {
       throw new ErrorConflicto('Ya tiene membresia activa', 'MEMBRESIA_EXISTENTE');
     }
 
+    // Validar capacidades delegables
     if (capacidades_ids && capacidades_ids.length > 0) {
       const idsCreador = await repositorio.obtenerCapacidadesDelegables(creador_membresia_id, capacidades_ids);
       const idsIlegales = capacidades_ids.filter(id => !idsCreador.includes(id));
@@ -84,17 +85,19 @@ class JerarquiaUsuariosServicio {
       }
     }
 
+    // No permitir delegar 'crear_usuarios'
     const capCrearUsuarios = await repositorio.obtenerCapacidadCrearUsuarios();
     if (capacidades_ids?.includes(capCrearUsuarios)) {
       throw new ErrorAutorizacion('crear_usuarios no delegable directamente', 'CREAR_USUARIOS_NO_DELEGABLE');
     }
 
-    const membresiaExistente = await repositorio.buscarMembresiaPorUsuarioInstitucion(uid_firebase, institucion_final);
+    // Crear o reactivar membresia
+    const membresiaExistente = await repositorio.buscarMembresiaPorUsuarioInstitucion(uid_firebase, institucion_id);
     let nueva_membresia_id;
 
     const datosMembresia = {
       usuario_id: uid_firebase,
-      institucion_id: institucion_final,
+      institucion_id,
       tipo_rol: 'miembro',
       nombre_rol,
       nivel: nivel_jerarquico,
@@ -114,15 +117,10 @@ class JerarquiaUsuariosServicio {
       nueva_membresia_id = await repositorio.crearMembresia(datosMembresia);
     }
 
-    // ASIGNAR A SALONES
-    if (salon_ids && salon_ids.length > 0) {
-      for (const salon_id of salon_ids) {
-        await repositorio.asignarSalonUsuario(salon_id, nueva_membresia_id, creador_membresia_id, 'miembro');
-      }
-    }
-
+    // Registrar superior inmediato
     await repositorio.registrarSuperiorInmediato(superior_inmediato_id, nueva_membresia_id, creador_membresia_id);
 
+    // Registrar superiores adicionales
     if (superiores_adicionales && superiores_adicionales.length > 0) {
       for (const sup_id of superiores_adicionales) {
         const nivelSup = await repositorio.obtenerNivelSuperior(sup_id);
@@ -132,6 +130,7 @@ class JerarquiaUsuariosServicio {
       }
     }
 
+    // Asignar capacidades (BUG 08P01 CORREGIDO: protegido en repositorio)
     if (capacidades_ids && capacidades_ids.length > 0) {
       await repositorio.asignarCapacidades(
         nueva_membresia_id, capacidades_ids,
@@ -139,6 +138,7 @@ class JerarquiaUsuariosServicio {
       );
     }
 
+    // Log
     await repositorio.registrarLog(
       'crear_usuario', creador_membresia_id, creador_usuario_id,
       nueva_membresia_id, uid_firebase,
@@ -147,8 +147,7 @@ class JerarquiaUsuariosServicio {
         superiores_adicionales: superiores_adicionales || [],
         capacidades_ids: capacidades_ids || [],
         puede_crear_hijos: puede_crear_hijos || false,
-        institucion_id: institucion_final,
-        salon_ids: salon_ids || []
+        institucion_id
       }
     );
 
@@ -159,11 +158,13 @@ class JerarquiaUsuariosServicio {
       nombre_rol,
       nivel: nivel_jerarquico,
       superior_inmediato_id,
-      puede_crear_hijos: puede_crear_hijos || false,
-      salon_ids: salon_ids || []
+      puede_crear_hijos: puede_crear_hijos || false
     };
   }
 
+  // ============================================
+  // OBTENER SUBORDINADOS
+  // ============================================
   async obtenerMisSubordinados(membresiaId, institucionId) {
     const infoCreador = await repositorio.obtenerInfoCreador(membresiaId);
     const miNivel = infoCreador?.nivel;
@@ -175,22 +176,27 @@ class JerarquiaUsuariosServicio {
       subordinados = await repositorio.obtenerSubordinadosPorMembresia(membresiaId);
     }
 
+    // Enriquecer con capacidades
     const subordinadosConCapacidades = await Promise.all(
       subordinados.map(async (sub) => {
         const capacidades = await repositorio.obtenerCapacidadesSubordinado(sub.sub_membresia_id);
-        const salones = await repositorio.obtenerSalonesSubordinado(sub.sub_usuario_id, institucionId);
-        return { ...sub, capacidades, salones };
+        return { ...sub, capacidades };
       })
     );
 
     return { total: subordinadosConCapacidades.length, subordinados: subordinadosConCapacidades };
   }
 
+  // ============================================
+  // DESACTIVAR SUBORDINADO
+  // ============================================
   async desactivarSubordinado(creadorMembresiaId, creadorUsuarioId, objetivoMembresiaId) {
+    // Proteccion: no auto-desactivacion
     if (objetivoMembresiaId === creadorMembresiaId) {
       throw new ErrorAutorizacion('No puedes desactivarte a ti mismo', 'AUTO_DESACTIVACION');
     }
 
+    // Verificar subordinancia
     const esSubordinado = await repositorio.esSubordinadoDirecto(creadorMembresiaId, objetivoMembresiaId);
     if (!esSubordinado) {
       throw new ErrorAutorizacion('No es tu subordinado', 'NO_ES_SUBORDINADO');
@@ -201,16 +207,19 @@ class JerarquiaUsuariosServicio {
       throw new ErrorNoEncontrado('Membresia objetivo no encontrada', 'MEMBRESIA_NO_ENCONTRADA');
     }
 
+    // Proteccion: no desactivar nivel 0
     if (infoObjetivo.nivel === 0) {
       throw new ErrorAutorizacion('No puedes desactivar nivel 0', 'PROTECCION_NIVEL_CERO');
     }
 
     const objetivoUsuarioId = infoObjetivo.usuario_id;
 
+    // Ejecutar desactivacion
     await repositorio.suspenderMembresia(objetivoMembresiaId);
     await repositorio.limpiarSuperioresSubordinado(objetivoMembresiaId);
     await repositorio.suspenderUsuario(objetivoUsuarioId);
 
+    // Log
     await repositorio.registrarLog(
       'desactivar_usuario', creadorMembresiaId, creadorUsuarioId,
       objetivoMembresiaId, objetivoUsuarioId,
@@ -220,49 +229,9 @@ class JerarquiaUsuariosServicio {
     return { membresia_id: objetivoMembresiaId };
   }
 
-  async eliminarUsuarioCompleto(creadorMembresiaId, creadorUsuarioId, objetivoMembresiaId) {
-    if (objetivoMembresiaId === creadorMembresiaId) {
-      throw new ErrorAutorizacion('No puedes eliminarte a ti mismo', 'AUTO_ELIMINACION');
-    }
-
-    const infoCreador = await repositorio.obtenerInfoCreador(creadorMembresiaId);
-    if (infoCreador?.nivel !== 0) {
-      throw new ErrorAutorizacion('Solo superadmin puede eliminar permanentemente', 'SIN_PERMISO_ELIMINAR');
-    }
-
-    const infoObjetivo = await repositorio.obtenerInfoMembresia(objetivoMembresiaId);
-    if (!infoObjetivo) {
-      throw new ErrorNoEncontrado('Membresia objetivo no encontrada', 'MEMBRESIA_NO_ENCONTRADA');
-    }
-
-    if (infoObjetivo.nivel === 0) {
-      throw new ErrorAutorizacion('No puedes eliminar nivel 0', 'PROTECCION_NIVEL_CERO');
-    }
-
-    const objetivoUsuarioId = infoObjetivo.usuario_id;
-
-    await repositorio.eliminarSalonesUsuario(objetivoUsuarioId);
-    await repositorio.limpiarCapacidadesMembresia(objetivoMembresiaId);
-    await repositorio.limpiarSuperioresSubordinado(objetivoMembresiaId);
-    await repositorio.eliminarMembresia(objetivoMembresiaId);
-    await repositorio.eliminarUsuario(objetivoUsuarioId);
-
-    try {
-      const admin = require('firebase-admin');
-      await admin.auth().deleteUser(objetivoUsuarioId);
-    } catch (firebaseError) {
-      console.warn('[ELIMINAR] No se pudo eliminar de Firebase:', firebaseError.message);
-    }
-
-    await repositorio.registrarLog(
-      'eliminar_usuario', creadorMembresiaId, creadorUsuarioId,
-      objetivoMembresiaId, objetivoUsuarioId,
-      { metodo: 'hard_delete', nivel_previo: infoObjetivo.nivel }
-    );
-
-    return { usuario_id: objetivoUsuarioId, eliminado: true };
-  }
-
+  // ============================================
+  // OBTENER SUPERIORES
+  // ============================================
   async obtenerSuperiores(membresiaId) {
     return await repositorio.obtenerSuperioresMembresia(membresiaId);
   }

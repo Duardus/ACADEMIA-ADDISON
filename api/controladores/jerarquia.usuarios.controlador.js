@@ -1,5 +1,6 @@
 const servicio = require('./jerarquia.usuarios.servicio');
 const respuesta = require('../utilidades/respuesta');
+const { obtenerAuth } = require('../configuracion/firebase');
 
 class JerarquiaUsuariosControlador {
 
@@ -57,9 +58,6 @@ class JerarquiaUsuariosControlador {
     }
   }
 
-  // ============================================
-  // ELIMINAR USUARIO COMPLETAMENTE (NUEVO)
-  // ============================================
   async eliminarUsuarioCompleto(req, res, next) {
     try {
       const creador_membresia_id = req.contexto_institucion?.membresia_id;
@@ -73,6 +71,14 @@ class JerarquiaUsuariosControlador {
       const resultado = await servicio.eliminarUsuarioCompleto(
         creador_membresia_id, creador_usuario_id, objetivo_membresia_id
       );
+
+      try {
+        const auth = obtenerAuth();
+        await auth.deleteUser(resultado.usuario_id);
+      } catch (firebaseError) {
+        console.warn('[ELIMINAR] No se pudo eliminar de Firebase:', firebaseError.message);
+      }
+
       respuesta.exito(res, resultado, 'Usuario eliminado permanentemente');
     } catch (error) {
       next(error);
