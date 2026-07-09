@@ -1,12 +1,7 @@
 const { obtenerAuth } = require('../configuracion/firebase');
 const { consulta } = require('../configuracion/base_de_datos');
-const jwt = require('jsonwebtoken');
-const JWT_SECRET = process.env.JWT_SECRET || 'addison_jwt_secret_cambiar_en_produccion_2026';
+const { generarToken } = require('../utilidades/jwt');
 const JWT_EXPIRA = '8h';
-
-function generarToken(datos) {
-  return jwt.sign(datos, JWT_SECRET, { expiresIn: JWT_EXPIRA });
-}
 
 async function login(req, res) {
   try {
@@ -55,8 +50,35 @@ async function login(req, res) {
 
     if (membresiasRes.rows.length === 1) {
       const mem = membresiasRes.rows[0];
-      const token = generarToken({ usuario_id: uid, correo, institucion_id: mem.institucion_id, tipo_rol: mem.tipo_rol });
-      return res.json({ tipo: 'login_directo', token_sesion: token, usuario, membresia: mem });
+      const token = generarToken({
+        usuario_id: uid,
+        correo,
+        institucion_id: mem.institucion_id,
+        tipo_rol: mem.tipo_rol,
+        membresia_id: mem.membresia_id,
+        nivel: mem.nivel
+      });
+
+      return res.json({
+        tipo: 'login_directo',
+        token_sesion: token,
+        usuario: {
+          usuario_id: uid,
+          correo_electronico: correo,
+          nombre_completo: nombre,
+          rol: mem.tipo_rol,
+          nivel: mem.nivel,
+          membresia_id: mem.membresia_id
+        },
+        institucion: {
+          institucion_id: mem.institucion_id,
+          nombre_institucion: mem.nombre_institucion,
+          institucion_slug: mem.institucion_slug,
+          tipo_rol: mem.tipo_rol,
+          nivel: mem.nivel,
+          membresia_id: mem.membresia_id
+        }
+      });
     } else {
       const token_preliminar = generarToken({ usuario_id: uid, prelogin: true });
       return res.json({ tipo: 'selector_requerido', token_preliminar, membresias: membresiasRes.rows, usuario });
@@ -70,12 +92,38 @@ async function login(req, res) {
 async function seleccionarContexto(req, res) {
   try {
     const { token_preliminar, membresia_id } = req.body;
-    const dec = jwt.verify(token_preliminar, JWT_SECRET);
-    const memRes = await consulta('SELECT * FROM membresias WHERE membresia_id = $1 AND usuario_id = $2', [membresia_id, dec.usuario_id]);
+    const { verificarToken } = require('../utilidades/jwt');
+    const dec = verificarToken(token_preliminar);
+    const memRes = await consulta('SELECT m.*, i.nombre_institucion, i.institucion_slug FROM membresias m JOIN instituciones i ON m.institucion_id = i.institucion_id WHERE m.membresia_id = $1 AND m.usuario_id = $2', [membresia_id, dec.usuario_id]);
     if (memRes.rows.length === 0) return res.status(404).json({ error: 'Membresia no encontrada' });
     const mem = memRes.rows[0];
-    const token = generarToken({ usuario_id: dec.usuario_id, institucion_id: mem.institucion_id, tipo_rol: mem.tipo_rol });
-    return res.json({ token_sesion: token, membresia: mem });
+    const token = generarToken({
+      usuario_id: dec.usuario_id,
+      institucion_id: mem.institucion_id,
+      tipo_rol: mem.tipo_rol,
+      membresia_id: mem.membresia_id,
+      nivel: mem.nivel
+    });
+    return res.json({
+      tipo: 'login_directo',
+      token_sesion: token,
+      usuario: {
+        usuario_id: dec.usuario_id,
+        correo_electronico: mem.correo || '',
+        nombre_completo: mem.nombre_completo || '',
+        rol: mem.tipo_rol,
+        nivel: mem.nivel,
+        membresia_id: mem.membresia_id
+      },
+      institucion: {
+        institucion_id: mem.institucion_id,
+        nombre_institucion: mem.nombre_institucion,
+        institucion_slug: mem.institucion_slug,
+        tipo_rol: mem.tipo_rol,
+        nivel: mem.nivel,
+        membresia_id: mem.membresia_id
+      }
+    });
   } catch (e) {
     return res.status(401).json({ error: 'Token preliminar invalido' });
   }
