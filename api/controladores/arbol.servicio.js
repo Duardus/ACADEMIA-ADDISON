@@ -9,18 +9,30 @@ class ArbolServicio {
     }
   }
 
-  construirArbolJerarquico(grupos, cursos, temas, subtemas) {
-    return grupos.map(g => ({
-      ...g,
-      hijos: cursos
-        .filter(c => c.grupo_id === g.grupo_id)
-        .map(c => ({
-          ...c,
-          hijos: temas
-            .filter(t => t.curso_id === c.curso_id)
-            .map(t => ({
-              ...t,
-              hijos: subtemas.filter(s => s.tema_id === t.tema_id)
+  construirArbolCursos(cursos, temas, subtemas) {
+    return cursos.map(c => ({
+      curso_id: c.curso_id,
+      nombre: c.nombre_curso,
+      descripcion: c.descripcion,
+      orden: c.orden,
+      estado: c.estado,
+      tipo: 'curso',
+      hijos: temas
+        .filter(t => t.curso_id === c.curso_id)
+        .map(t => ({
+          tema_id: t.tema_id,
+          nombre: t.nombre_tema,
+          orden: t.orden,
+          estado: t.estado,
+          tipo: 'tema',
+          hijos: subtemas
+            .filter(s => s.tema_id === t.tema_id)
+            .map(s => ({
+              subtema_id: s.subtema_id,
+              nombre: s.nombre_subtema,
+              orden: s.orden,
+              estado: s.estado,
+              tipo: 'subtema'
             }))
         }))
     }));
@@ -29,19 +41,17 @@ class ArbolServicio {
   async obtenerArbol(institucionId) {
     this.validarInstitucionId(institucionId);
 
-    const [grupos, cursos, temas, subtemas] = await Promise.all([
-      arbolRepositorio.obtenerGrupos(institucionId),
+    const [cursos, temas, subtemas] = await Promise.all([
       arbolRepositorio.obtenerCursos(institucionId),
       arbolRepositorio.obtenerTemas(institucionId),
       arbolRepositorio.obtenerSubtemas(institucionId)
     ]);
 
-    const arbol = this.construirArbolJerarquico(grupos, cursos, temas, subtemas);
+    const arbol = this.construirArbolCursos(cursos, temas, subtemas);
 
     return {
       datos: arbol,
       totales: {
-        grupos: grupos.length,
         cursos: cursos.length,
         temas: temas.length,
         subtemas: subtemas.length

@@ -193,7 +193,8 @@ async function eliminarSalon(req, res) {
 async function asignarUsuario(req, res) {
   try {
     const { salon_id } = req.params;
-    const { membresia_id, rol_en_salon = 'alumno' } = req.body;
+    const membresia_id = parseInt(req.body.membresia_id);
+    const rol_en_salon = req.body.rol_en_salon || 'alumno';
     const asignadoPor = req.contexto_institucion?.membresia_id;
 
     await consulta(
@@ -230,7 +231,8 @@ async function quitarUsuario(req, res) {
 async function asignarCurso(req, res) {
   try {
     const { salon_id } = req.params;
-    const { curso_id, fecha_inicio, fecha_fin } = req.body;
+    const curso_id = parseInt(req.body.curso_id);
+    const { fecha_inicio, fecha_fin } = req.body;
     const asignadoPor = req.contexto_institucion?.membresia_id;
 
     await consulta(

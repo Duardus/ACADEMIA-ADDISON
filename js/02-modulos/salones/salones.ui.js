@@ -46,12 +46,10 @@ function renderizarSalones({ salones, institucionId, institucionNombre, onCrear,
   `).join('');
   cont.appendChild(grid);
 
-  // Click en el nombre del salón = ver detalle
   grid.querySelectorAll('.salon-nombre').forEach(el => {
     el.addEventListener('click', (e) => onVer(e.target.dataset.id));
   });
 
-  // Click en botones editar/eliminar
   grid.querySelectorAll('[data-accion]').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -144,17 +142,27 @@ function renderizarDetalleSalon({ salon, usuarios, cursos, usuariosDisponibles, 
   
   document.getElementById('btnAddUsuario')?.addEventListener('click', () => {
     if (!usuariosDisponibles || usuariosDisponibles.length === 0) {
-      alert('No hay usuarios disponibles en esta institución');
+      alert('No hay usuarios disponibles. Primero crea usuarios en el módulo de Usuarios.');
       return;
     }
-    const opciones = usuariosDisponibles.map(u => `${u.sub_membresia_id}: ${u.sub_nombre_completo} (${u.sub_correo})`).join('\n');
-    const seleccion = prompt(`Selecciona membresia_id:\n${opciones}`);
-    if (seleccion) onAsignarUsuario(seleccion);
+    const opciones = usuariosDisponibles.map((u, i) => `${i + 1}. ${u.sub_nombre_completo} (${u.sub_correo}) [ID: ${u.sub_membresia_id}]`).join('\n');
+    const seleccion = prompt(`Selecciona el número del usuario:\n${opciones}\n\nEscribe el número:`);
+    if (!seleccion) return;
+    const idx = parseInt(seleccion) - 1;
+    if (idx >= 0 && idx < usuariosDisponibles.length) {
+      onAsignarUsuario(usuariosDisponibles[idx].sub_membresia_id);
+    } else {
+      alert('Número inválido');
+    }
   });
 
   document.getElementById('btnAddCurso')?.addEventListener('click', () => {
-    const cursoId = prompt('ID del curso a asignar:');
-    if (cursoId) onAsignarCurso(cursoId);
+    const cursoId = prompt('ID del curso a asignar (número):');
+    if (cursoId && !isNaN(parseInt(cursoId))) {
+      onAsignarCurso(parseInt(cursoId));
+    } else if (cursoId) {
+      alert('ID inválido');
+    }
   });
 
   document.getElementById('listaUsuarios')?.addEventListener('click', (e) => {

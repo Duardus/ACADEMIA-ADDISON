@@ -1,23 +1,20 @@
 /* ============================================
-   📁 ARCHIVO: arbol.eventos.js
-   📂 MÓDULO: arbol
-   🔗 DEPENDENCIAS:
-     - arbol.api.js (HTTP)
-     - arbol.ui.js (renderizado)
-   📝 CONTRATO:
+   ARCHIVO: arbol.eventos.js
+   MODULO: arbol
+   CONTRATO:
      - Orquesta carga y CRUD del árbol
-     - Recibe callback onVolver para regresar al dashboard
    ============================================ */
 
 async function iniciarArbol({ onVolver, onError, onToast }) {
   try {
-    const arbol = await apiObtenerArbolCompleto();
+    const respuesta = await apiObtenerArbolCompleto();
+    const arbol = respuesta.datos || respuesta;
     renderizarArbol({
       arbol,
-      onEditar: (tipo, id, grupoId) => manejarEditar({ tipo, id, grupoId, onVolver, onError, onToast }),
+      onEditar: (tipo, id, parentId) => manejarEditar({ tipo, id, parentId, onVolver, onError, onToast }),
       onEliminar: (tipo, id) => manejarEliminar({ tipo, id, onVolver, onError, onToast }),
       onClonar: (tipo, id) => manejarClonar({ tipo, id, onVolver, onError, onToast }),
-      onCrearGrupo: () => manejarEditar({ tipo: 'grupo', id: null, grupoId: null, onVolver, onError, onToast }),
+      onCrearCurso: () => manejarEditar({ tipo: 'curso', id: null, parentId: null, onVolver, onError, onToast }),
       onVolver
     });
   } catch (error) {
@@ -25,20 +22,23 @@ async function iniciarArbol({ onVolver, onError, onToast }) {
   }
 }
 
-function manejarEditar({ tipo, id, grupoId, onVolver, onError, onToast }) {
+function manejarEditar({ tipo, id, parentId, onVolver, onError, onToast }) {
   renderizarModalCrear({
-    tipo: id ? tipo : (grupoId ? 'curso' : 'grupo'),
-    grupoId,
+    tipo: id ? tipo : tipo,
+    cursoId: tipo === 'tema' ? parentId : null,
+    temaId: tipo === 'subtema' ? parentId : null,
     onGuardar: async (datos) => {
       try {
         if (id) {
           await apiActualizarNodo(tipo, id, datos);
           onToast('Actualizado correctamente', 'exito');
         } else {
-          if (grupoId) {
-            await apiCrearCurso({ ...datos, grupo_id: grupoId });
-          } else {
-            await apiCrearGrupo(datos);
+          if (tipo === 'curso') {
+            await apiCrearCurso(datos);
+          } else if (tipo === 'tema') {
+            await post('/arbol/temas', datos);
+          } else if (tipo === 'subtema') {
+            await post('/arbol/subtemas', datos);
           }
           onToast('Creado correctamente', 'exito');
         }

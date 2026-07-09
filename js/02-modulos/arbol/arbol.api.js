@@ -1,18 +1,13 @@
 /* ============================================
-   📁 ARCHIVO: arbol.api.js
-   📂 MÓDULO: arbol
-   🔗 DEPENDENCIAS: peticiones.js (01-nucleo)
-   📝 CONTRATO:
+   ARCHIVO: arbol.api.js
+   MODULO: arbol
+   CONTRATO:
      - CRUD del árbol académico
      - NO toca DOM, NO toca localStorage
    ============================================ */
 
 async function apiObtenerArbolCompleto() {
   return get('/arbol');
-}
-
-async function apiCrearGrupo(datos) {
-  return post('/arbol/grupos', datos);
 }
 
 async function apiCrearCurso(datos) {
