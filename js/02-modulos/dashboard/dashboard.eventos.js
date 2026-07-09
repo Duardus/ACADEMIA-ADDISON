@@ -1,17 +1,11 @@
 /* ============================================
-   📁 ARCHIVO: dashboard.eventos.js
-   📂 MÓDULO: dashboard
-   🔗 DEPENDENCIAS:
-     - dashboard.api.js (HTTP)
-     - dashboard.ui.js (renderizado)
-     - sesion.js (localStorage)
-   📝 CONTRATO:
-     - Orquesta carga de datos + renderizado
-     - Maneja heartbeat cada 30s
-     - Recibe callbacks: onLogout, onNavegar
+   ARCHIVO: dashboard.eventos.js
+   MODULO: dashboard
    ============================================ */
 
 let heartbeatTimer = null;
+let arbolCache = [];
+let progresoCache = {};
 
 async function iniciarDashboard({ onLogout, onNavegar, onError }) {
   try {
@@ -36,22 +30,36 @@ async function iniciarDashboard({ onLogout, onNavegar, onError }) {
     });
 
     // Cargar datos en paralelo
-    const [arbol, progreso] = await Promise.all([
-      apiObtenerArbol().catch(() => []),
-      apiObtenerProgreso().catch(() => ({ cursos: [] }))
+    const [arbolResp, progresoResp] = await Promise.all([
+      apiObtenerArbol().catch(() => ({ datos: [] })),
+      apiObtenerProgreso().catch(() => ({ datos: { cursos: [] } }))
     ]);
 
-    renderizarSidebar({ arbol, progreso, rol, onNavegar });
-    renderizarPanel({ rol, onNavegar });
+    arbolCache = arbolResp.datos || arbolResp || [];
+    progresoCache = progresoResp.datos || progresoResp || { cursos: [] };
+
+    // Renderizar sidebar con cursos
+    renderizarSidebar({
+      arbol: arbolCache,
+      cursoActivoId: null,
+      progreso: progresoCache,
+      rol,
+      onSeleccionarCurso: (cursoId) => seleccionarCurso(cursoId),
+      onNavegar
+    });
 
     // Panel según rol
     if (rol === 'student' || rol === 'alumno' || rol === 'estudiante') {
-      renderizarPanelAlumno({ arbol, progreso });
+      renderizarPanel({ rol, onNavegar });
+      renderizarPanelAlumno({ arbol: arbolCache, progreso: progresoCache, onSeleccionarCurso: (id) => seleccionarCurso(id) });
     } else if (rol === 'profesor' || rol === 'professor') {
+      renderizarPanel({ rol, onNavegar });
       renderizarPanelProfesor({ onNavegar });
     } else if (rol === 'director') {
+      renderizarPanel({ rol, onNavegar });
       renderizarPanelDirector({ onNavegar });
     } else if (rol === 'superadmin') {
+      renderizarPanel({ rol, onNavegar });
       renderizarPanelSuperadmin({ onNavegar });
     }
 
@@ -61,6 +69,27 @@ async function iniciarDashboard({ onLogout, onNavegar, onError }) {
   } catch (error) {
     onError(error.message || 'Error cargando dashboard');
   }
+}
+
+function seleccionarCurso(cursoId) {
+  const curso = arbolCache.find(c => c.curso_id === cursoId);
+  if (!curso) return;
+
+  // Actualizar sidebar con curso activo resaltado
+  const datosSesion = obtenerUsuario();
+  const rol = datosSesion?.rol || 'estudiante';
+  
+  renderizarSidebar({
+    arbol: arbolCache,
+    cursoActivoId: cursoId,
+    progreso: progresoCache,
+    rol,
+    onSeleccionarCurso: (id) => seleccionarCurso(id),
+    onNavegar: (vista) => app.navegar(vista)
+  });
+
+  // Renderizar panel con temas/subtemas del curso
+  renderizarPanelCurso({ curso, progreso: progresoCache });
 }
 
 function iniciarHeartbeat({ onLogout }) {

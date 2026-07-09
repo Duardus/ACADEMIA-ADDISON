@@ -1,12 +1,6 @@
 /* ============================================
-   📁 ARCHIVO: 99-app.js
-   📂 CAPA: Orquestador
-   🔗 DEPENDENCIAS: TODAS las capas anteriores
-   📝 CONTRATO:
-     - ÚNICO archivo que conoce todos los módulos
-     - Delega TODO a los módulos específicos
-     - NUNCA hace fetch, NUNCA renderiza HTML directo
-   🚫 NO TOCAR: Lógica de negocio, UI, API calls
+   ARCHIVO: 99-app.js
+   CAPA: Orquestador
    ============================================ */
 
 class App {
@@ -87,6 +81,10 @@ class App {
     });
   }
 
+  seleccionarCurso(cursoId) {
+    seleccionarCurso(cursoId);
+  }
+
   navegar(vista) {
     if (vista === 'arbol') {
       detenerHeartbeat();
@@ -125,6 +123,7 @@ class App {
       this.mostrarToast(`🚧 ${pendientes[vista]} - En construcción`, 'advertencia');
     }
   }
+
   async cerrarSesion() {
     detenerHeartbeat();
     limpiarSesion();
