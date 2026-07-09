@@ -8,21 +8,21 @@
    ============================================ */
 
 async function apiListarInstituciones(pagina = 1, limite = 50) {
-  return await get(`/institucion?pagina=${pagina}&limite=${limite}`);
+  return await get(`/instituciones?pagina=${pagina}&limite=${limite}`);
 }
 
 async function apiObtenerInstitucion(institucionId) {
-  return await get(`/institucion/${institucionId}`);
+  return await get(`/instituciones/${institucionId}`);
 }
 
 async function apiCrearInstitucion(datos) {
-  return await post('/institucion', datos);
+  return await post('/instituciones', datos);
 }
 
 async function apiEditarInstitucion(institucionId, datos) {
-  return await put(`/institucion/${institucionId}`, datos);
+  return await put(`/instituciones/${institucionId}`, datos);
 }
 
 async function apiEliminarInstitucion(institucionId) {
-  return await del(`/institucion/${institucionId}`);
+  return await del(`/instituciones/${institucionId}`);
 }
