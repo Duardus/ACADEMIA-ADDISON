@@ -17,27 +17,41 @@
   <link rel="stylesheet" href="css/4-clases-vivo.css">
   <link rel="stylesheet" href="css/5-animaciones.css">
   <link rel="stylesheet" href="css/arbol.academico.css">
-  
-  <!-- Favicon -->
-  <link rel="icon" href="assets/favicon.ico">
 </head>
 <body>
   <div id="app"></div>
   
-  <!-- Configuración -->
-  <script src="js/config/api.config.js"></script>
-  <script src="js/config/firebase.config.js"></script>
-  <script src="js/config/permisos.config.js"></script>
+  <!-- 00-CONFIG: Constantes puras -->
+  <script src="js/00-config/api.config.js"></script>
+  <script src="js/00-config/firebase.config.js"></script>
+  <script src="js/00-config/permisos.config.js"></script>
   
-  <!-- Servicios -->
-  <script src="js/servicios/api.servicio.js"></script>
+  <!-- 01-NUCLEO: Utilidades genéricas -->
+  <script src="js/01-nucleo/utilidades.js"></script>
+  <script src="js/01-nucleo/sesion.js"></script>
+  <script src="js/01-nucleo/peticiones.js"></script>
   
-  <!-- Módulos -->
+  <!-- 02-MODULOS: Login -->
+  <script src="js/02-modulos/login/login.api.js"></script>
+  <script src="js/02-modulos/login/login.ui.js"></script>
+  <script src="js/02-modulos/login/login.eventos.js"></script>
+  
+  <!-- 02-MODULOS: Dashboard -->
+  <script src="js/02-modulos/dashboard/dashboard.api.js"></script>
+  <script src="js/02-modulos/dashboard/dashboard.ui.js"></script>
+  <script src="js/02-modulos/dashboard/dashboard.eventos.js"></script>
+  
+  <!-- 02-MODULOS: Arbol -->
+  <script src="js/02-modulos/arbol/arbol.api.js"></script>
+  <script src="js/02-modulos/arbol/arbol.ui.js"></script>
+  <script src="js/02-modulos/arbol/arbol.eventos.js"></script>
+  
+  <!-- Módulos legacy (compatibilidad) -->
   <script src="js/arbol.academico.js"></script>
   <script src="js/jerarquia.gestion.js"></script>
   <script src="js/gestion.usuarios.js"></script>
   
-  <!-- App Principal -->
-  <script src="js/app.js"></script>
+  <!-- 99-ORQUESTADOR -->
+  <script src="js/99-app.js"></script>
 </body>
 </html>

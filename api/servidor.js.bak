@@ -5,34 +5,12 @@ app.set("trust proxy", 1);
 
 app.use(express.json());
 
-// ============================================
-// 🌐 CORS - Cross-Origin Resource Sharing
-// ============================================
-const cors = require("cors");
-const opcionesCORS = {
-  origin: function (origin, callback) {
-    const permitidos = [
-      "https://academia-addison.pages.dev",
-      "http://localhost:3000",
-      "http://localhost:5500",
-      "http://localhost:8080"
-    ];
-    if (!origin || permitidos.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error("Origen no permitido por CORS: " + origin));
-    }
-  },
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-  credentials: true,
-  maxAge: 86400
-};
-app.use(cors(opcionesCORS));
+// CORS
+const corsMiddleware = require("./middleware/cors");
+app.use(corsMiddleware);
+app.options("*", corsMiddleware);
 
-// ============================================
-// 📝 Middleware de logging
-// ============================================
+// Middleware de logging
 const { logger } = require("./utilidades/logger");
 app.use((req, res, next) => {
   const inicio = Date.now();
@@ -44,16 +22,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// ============================================
-// 💓 Salud
-// ============================================
+// Salud
 app.get("/api/v1/salud", (req, res) => {
   res.json({ estado: "ok", version: "3.0.2", timestamp: new Date().toISOString() });
 });
 
-// ============================================
-// 🔀 Rutas
-// ============================================
+// Rutas
 const rutasAuth = require("./rutas/auth.rutas");
 const rutasUsuario = require("./rutas/usuario.rutas");
 const rutasInstitucion = require("./rutas/institucion.rutas");
@@ -82,34 +56,23 @@ app.use("/api/v1/intentos", rutasIntento);
 app.use("/api/v1/progreso", rutasProgreso);
 app.use("/api/v1/jerarquia", rutasJerarquia);
 
-// ============================================
-// 💓 Heartbeat - Verificacion de sesion
-// ============================================
+// Heartbeat
 const { middlewareAutenticar } = require("./middleware/autenticar");
 app.get("/api/v1/sesion/verificar", middlewareAutenticar, (req, res) => {
   res.json({
     estado: "ok",
     usuario_id: req.usuario_autenticado.usuario_id,
     correo: req.usuario_autenticado.correo,
-    rol: req.usuario_autenticado.tipo_rol || req.usuario_autenticado.rol || "estudiante",
-    nombre: req.usuario_autenticado.nombre || req.usuario_autenticado.nombre_completo || "Usuario",
-    membresia_id: req.usuario_autenticado.membresia_id,
-    institucion_id: req.usuario_autenticado.institucion_id,
-    nivel: req.usuario_autenticado.nivel || 99,
     timestamp: new Date().toISOString()
   });
 });
 
-// ============================================
-// ❌ 404
-// ============================================
+// 404
 app.use((req, res) => {
   res.status(404).json({ error: "Ruta no encontrada", ruta: req.path });
 });
 
-// ============================================
-// 🚨 Manejadores de error (SIEMPRE AL FINAL)
-// ============================================
+// Manejadores de error (SIEMPRE AL FINAL)
 const {
   manejarErroresOperacionales,
   manejarErroresPostgres,

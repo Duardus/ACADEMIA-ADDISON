@@ -2,7 +2,7 @@
    🔥 CONFIGURACIÓN FIREBASE - Solo Auth
    ============================================ */
 
-const FIREBASE_CONFIG = {
+var FIREBASE_CONFIG = {
   apiKey: "AIzaSyBbp3kZtxiluZTI7xC_UDcUUyYF9Jb0yBQ",
   authDomain: "academia-adison.firebaseapp.com",
   projectId: "academia-adison",
@@ -14,7 +14,7 @@ const FIREBASE_CONFIG = {
 
 // Inicializar Firebase
 firebase.initializeApp(FIREBASE_CONFIG);
-const auth = firebase.auth();
-const db = firebase.firestore();
-const googleProvider = new firebase.auth.GoogleAuthProvider();
+var auth = firebase.auth();
+var db = firebase.firestore();
+var googleProvider = new firebase.auth.GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
