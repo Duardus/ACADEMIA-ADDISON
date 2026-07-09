@@ -57,6 +57,7 @@ app.get("/api/v1/salud", (req, res) => {
 const rutasAuth = require("./rutas/auth.rutas");
 const rutasUsuario = require("./rutas/usuario.rutas");
 const rutasInstitucion = require("./rutas/institucion.rutas");
+const rutasSalones = require("./rutas/salones.rutas");
 const rutasArbol = require("./rutas/arbol.rutas");
 const rutasLivekit = require("./rutas/livekit.rutas");
 const rutasGrabacion = require("./rutas/grabacion.rutas");
@@ -72,6 +73,7 @@ const rutasDocs = require("./rutas/docs.rutas");
 app.use("/api/v1/auth", rutasAuth);
 app.use("/api/v1/usuarios", rutasUsuario);
 app.use("/api/v1/instituciones", rutasInstitucion);
+app.use("/api/v1/salones", rutasSalones);
 app.use("/api/v1/arbol", rutasArbol);
 app.use("/api/v1/livekit", rutasLivekit);
 app.use("/api/v1/grabaciones", rutasGrabacion);
