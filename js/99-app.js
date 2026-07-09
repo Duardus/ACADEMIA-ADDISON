@@ -107,7 +107,7 @@ class App {
       return;
     }
     if (vista === 'usuarios') {
-      GestionUsuarios?.iniciar?.();
+      this.mostrarToast('🚧 Usuarios - En construcción', 'advertencia');
       return;
     }
     const pendientes = {
