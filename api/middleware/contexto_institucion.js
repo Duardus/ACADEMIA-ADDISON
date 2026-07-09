@@ -8,7 +8,7 @@ async function middlewareContexto(req, res, next) {
     }
 
     const membresia = await consulta(
-      'SELECT membresia_id, institucion_id, tipo_rol, estado_membresia, metadata_rol FROM membresias WHERE usuario_id = $1 AND estado_membresia = $2 LIMIT 1',
+      'SELECT membresia_id, institucion_id, tipo_rol, estado_membresia, metadata_rol, nivel, nombre_rol, puede_crear_hijos FROM membresias WHERE usuario_id = $1 AND estado_membresia = $2 LIMIT 1',
       [usuario.usuario_id, 'active']
     );
 
@@ -17,7 +17,6 @@ async function middlewareContexto(req, res, next) {
     }
 
     const m = membresia.rows[0];
-    // metadata_rol es jsonb en PostgreSQL, ya es objeto o null
     let metadata = m.metadata_rol || {};
 
     req.contexto_institucion = {
@@ -26,7 +25,10 @@ async function middlewareContexto(req, res, next) {
       institucion_id: m.institucion_id,
       tipo_rol: m.tipo_rol,
       estado_membresia: m.estado_membresia,
-      metadata_rol: metadata
+      metadata_rol: metadata,
+      nivel: m.nivel,                    // ✅ AGREGADO
+      nombre_rol: m.nombre_rol,          // ✅ AGREGADO
+      puede_crear_hijos: m.puede_crear_hijos  // ✅ AGREGADO
     };
     next();
   } catch (error) {
