@@ -10,7 +10,21 @@ async function generarDocumentacionViva(req, res) {
         superadmin: 'Eduardo Flores (flores.eduardo.666@gmail.com)',
         repositorio: 'https://github.com/Duardus/ACADEMIA-ADDISON',
         timestamp: new Date().toISOString(),
-        entorno: process.env.NODE_ENV || 'produccion'
+        entorno: process.env.NODE_ENV || 'production'
+      },
+      
+      que_es: {
+        descripcion: 'Plataforma educativa modular tipo escuela en la nube',
+        funcionalidades: [
+          'Gestion jerarquica: Grupos > Cursos > Temas > Subtemas > Teorias > Materiales > Preguntas > Examenes',
+          'Auth segura: Login Google Firebase (OAuth 2.0) + tokens JWT propios',
+          'Multi-institucion: Un usuario puede pertenecer a multiples instituciones con roles diferentes',
+          'Video-clases en vivo: Integracion con LiveKit para streaming WebRTC',
+          'Grabaciones persistentes: Clases grabadas en el arbol academico',
+          'Examenes auto-calificados: Sistema de preguntas con intentos y progreso',
+          'Modo Fantasma: Usuarios recv-only (solo ver, sin interactuar)',
+          'Jerarquia de usuarios: Subordinados con capacidades delegables'
+        ]
       },
       
       infraestructura: {
@@ -63,7 +77,60 @@ async function generarDocumentacionViva(req, res) {
         proveedor: 'Firebase Auth v8.10.1',
         metodo: 'Google OAuth 2.0',
         tokens: 'JWT propios (7 dias)',
-        roles: ['superadmin', 'administrador', 'docente', 'estudiante', 'invitado']
+        roles: ['superadmin', 'administrador', 'docente', 'estudiante', 'invitado'],
+        flujo: [
+          'Usuario hace clic en Entrar con Google',
+          'Firebase Auth verifica la cuenta Google',
+          'Frontend envia token Firebase al backend (POST /api/v1/auth/login)',
+          'Backend verifica token con Firebase Admin',
+          'Backend busca usuario en PostgreSQL',
+          'Si existe -> login_directo. Si no existe -> crea usuario automaticamente',
+          'Backend devuelve: token_sesion, usuario, institucion',
+          'Frontend guarda en localStorage y muestra dashboard'
+        ],
+        respuestas: {
+          login_directo: 'Usuario tiene 1 membresia -> Guardar token -> Dashboard',
+          selector_requerido: 'Usuario tiene multiples membresias -> Mostrar selector',
+          AUTENTICACION_FALLIDA: 'Token invalido -> Error',
+          USUARIO_NO_ENCONTRADO: 'Auto-registro automatico'
+        }
+      },
+      
+      jerarquia_usuarios: {
+        descripcion: 'Sistema de subordinados con capacidades delegables',
+        endpoints: [
+          'POST /api/v1/jerarquia/crear -> Crear usuario hijo',
+          'GET /api/v1/jerarquia/mis-subordinados -> Listar subordinados',
+          'POST /api/v1/jerarquia/cambiar-estado/:id -> Cambiar estado',
+          'DELETE /api/v1/jerarquia/subordinado/:id -> Desactivar subordinado',
+          'GET /api/v1/jerarquia/superiores/:id -> Ver superiores',
+          'GET /api/v1/jerarquia/mis-capacidades -> Capacidades delegables',
+          'PUT /api/v1/jerarquia/subordinado/:id/capacidades -> Modificar capacidades',
+          'GET /api/v1/jerarquia/etiquetas -> Etiquetas frecuentes',
+          'GET /api/v1/jerarquia/arbol-completo -> Arbol de institucion',
+          'POST /api/v1/jerarquia/grupos -> Crear grupo colaborativo'
+        ]
+      },
+      
+      arbol_academico: {
+        descripcion: 'Gestion jerarquica de contenido educativo',
+        endpoints: [
+          'GET /api/v1/arbol -> Obtener arbol completo',
+          'POST /api/v1/arbol/grupos -> Crear grupo',
+          'PUT /api/v1/arbol/grupos/:id -> Actualizar grupo',
+          'DELETE /api/v1/arbol/grupos/:id -> Eliminar grupo',
+          'POST /api/v1/arbol/cursos -> Crear curso',
+          'PUT /api/v1/arbol/cursos/:id -> Actualizar curso',
+          'DELETE /api/v1/arbol/cursos/:id -> Eliminar curso'
+        ]
+      },
+      
+      livekit: {
+        descripcion: 'Video-clases en vivo via WebRTC',
+        endpoints: [
+          'POST /api/v1/livekit/token -> Generar token para sala',
+          'GET /api/v1/livekit/rooms -> Listar salas activas'
+        ]
       },
       
       git: {
@@ -73,16 +140,16 @@ async function generarDocumentacionViva(req, res) {
       },
       
       reglas_oro: [
-        'Variables en espanol descriptivo',
-        'Asignacion directa sin invitaciones (auto-registro)',
-        '404 para no autorizado',
-        'Modo fantasma recv-only',
-        'CORS solo en Express, nunca en nginx',
-        'Frontend modular: api/ui/eventos',
-        'Auth solo Firebase, datos en PostgreSQL'
+        'Variables en espanol descriptivo: nombre_completo, tipo_rol, token_sesion',
+        'Asignacion directa sin invitaciones: Auto-registro al login',
+        '404 para no autorizado: Sin mensajes de acceso denegado',
+        'Modo fantasma recv-only: Solo ver sin interactuar',
+        'CORS solo en Express: Nunca en nginx ni Caddy',
+        'Frontend modular: Un archivo por responsabilidad (api/ui/eventos)',
+        'Auth solo Firebase: Datos persistentes en PostgreSQL, no en Firestore'
       ],
       
-      nota_para_ia: 'Plataforma educativa en produccion. Eduardo Flores es superadmin. Usar espanol descriptivo para variables. Respetar Reglas de Oro. Revisar js/02-modulos/ y api/rutas/ para dudas tecnicas.'
+      nota_para_ia: 'Plataforma educativa en produccion. Eduardo Flores es superadmin. Usar espanol descriptivo para variables. Respetar Reglas de Oro. Revisar js/02-modulos/ y api/rutas/ para dudas tecnicas. El endpoint /api/v1/docs genera esta documentacion en tiempo real.'
     };
 
     res.json(doc);
@@ -152,17 +219,27 @@ async function obtenerConexiones() {
 }
 
 function obtenerRutas() {
-  const rutas = [
+  return [
     '/api/v1/auth/login',
     '/api/v1/auth/seleccionar-contexto',
     '/api/v1/auth/switch-context',
     '/api/v1/sesion/verificar',
     '/api/v1/arbol',
+    '/api/v1/jerarquia/crear',
+    '/api/v1/jerarquia/mis-subordinados',
+    '/api/v1/jerarquia/cambiar-estado/:id',
+    '/api/v1/jerarquia/subordinado/:id',
+    '/api/v1/jerarquia/superiores/:id',
+    '/api/v1/jerarquia/mis-capacidades',
+    '/api/v1/jerarquia/subordinado/:id/capacidades',
+    '/api/v1/jerarquia/etiquetas',
+    '/api/v1/jerarquia/arbol-completo',
+    '/api/v1/jerarquia/grupos',
     '/api/v1/livekit/token',
+    '/api/v1/livekit/rooms',
     '/api/v1/salud',
     '/api/v1/docs'
   ];
-  return rutas;
 }
 
 module.exports = { generarDocumentacionViva };
