@@ -97,17 +97,13 @@ class App {
       });
       return;
     }
-    if (vista === 'jerarquia') {
+    if (vista === 'usuarios') {
       detenerHeartbeat();
       iniciarUsuarios({
         onVolver: () => this.mostrarDashboard(),
         onError: (msg) => this.mostrarToast(msg, 'error'),
         onToast: (msg, tipo) => this.mostrarToast(msg, tipo)
       });
-      return;
-    }
-    if (vista === 'usuarios') {
-      this.mostrarToast('🚧 Usuarios - En construcción', 'advertencia');
       return;
     }
     const pendientes = {
@@ -120,7 +116,6 @@ class App {
       this.mostrarToast(`🚧 ${pendientes[vista]} - En construcción`, 'advertencia');
     }
   }
-
   async cerrarSesion() {
     detenerHeartbeat();
     limpiarSesion();
