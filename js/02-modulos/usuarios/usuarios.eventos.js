@@ -11,9 +11,17 @@
 
 async function iniciarUsuarios({ onVolver, onError, onToast }) {
   try {
-    const subordinados = await apiObtenerSubordinados();
+    const respuesta = await apiObtenerSubordinados();
+    
+    // El backend devuelve { exito, mensaje, datos: { total, subordinados: [...] } }
+    const datos = respuesta.datos || respuesta;
+    const subordinados = datos.subordinados || datos || [];
+    
+    // Filtrar: no mostrar al propio usuario (nivel 0) en la lista de subordinados
+    const subordinadosFiltrados = subordinados.filter(s => s.sub_nivel > 0);
+    
     renderizarUsuarios({
-      subordinados: subordinados || [],
+      subordinados: subordinadosFiltrados,
       onCrear: () => manejarCrear({ onVolver, onError, onToast }),
       onCambiarEstado: (id) => manejarCambiarEstado({ id, onVolver, onError, onToast }),
       onDesactivar: (id) => manejarDesactivar({ id, onVolver, onError, onToast }),
@@ -71,19 +79,25 @@ async function manejarDesactivar({ id, onVolver, onError, onToast }) {
 
 async function manejarCapacidades({ id, onVolver, onError, onToast }) {
   try {
-    const [capacidades, subordinados] = await Promise.all([
+    const [respCapacidades, respSubordinados] = await Promise.all([
       apiObtenerCapacidades(),
       apiObtenerSubordinados()
     ]);
-    const subordinado = (subordinados || []).find(s => s.membresia_id == id);
+    
+    const datosSub = respSubordinados.datos || respSubordinados;
+    const subordinados = datosSub.subordinados || datosSub || [];
+    const capacidades = respCapacidades.datos || respCapacidades;
+    
+    const subordinado = subordinados.find(s => s.sub_membresia_id == id);
     if (!subordinado) {
       onError('Usuario no encontrado');
       return;
     }
+    
     renderizarModalCapacidades({
       subordinado,
       capacidadesDisponibles: capacidades || [],
-      capacidadesActuales: subordinado.capacidades || [],
+      capacidadesActuales: (subordinado.capacidades || []).map(c => c.codigo),
       onGuardar: async (seleccionadas) => {
         try {
           await apiModificarCapacidades(id, seleccionadas);
