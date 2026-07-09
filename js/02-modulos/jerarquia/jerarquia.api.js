@@ -8,29 +8,29 @@
    ============================================ */
 
 async function apiObtenerSubordinados() {
-  return await get('/api/v1/jerarquia/mis-subordinados');
+  return await get('/jerarquia/mis-subordinados');
 }
 
 async function apiObtenerCapacidades() {
-  return await get('/api/v1/jerarquia/mis-capacidades');
+  return await get('/jerarquia/mis-capacidades');
 }
 
 async function apiCrearSubordinado(datos) {
-  return await post('/api/v1/jerarquia/crear', datos);
+  return await post('/jerarquia/crear', datos);
 }
 
 async function apiCambiarEstadoSubordinado(membresiaId, estado) {
-  return await post(`/api/v1/jerarquia/cambiar-estado/${membresiaId}`, { estado });
+  return await post(`/jerarquia/cambiar-estado/${membresiaId}`, { estado });
 }
 
 async function apiDesactivarSubordinado(membresiaId) {
-  return await peticion(`/api/v1/jerarquia/subordinado/${membresiaId}`, 'DELETE');
+  return await peticion(`/jerarquia/subordinado/${membresiaId}`, 'DELETE');
 }
 
 async function apiModificarCapacidades(membresiaId, capacidades) {
-  return await put(`/api/v1/jerarquia/subordinado/${membresiaId}/capacidades`, { capacidades });
+  return await put(`/jerarquia/subordinado/${membresiaId}/capacidades`, { capacidades });
 }
 
 async function apiObtenerEtiquetas() {
-  return await get('/api/v1/jerarquia/etiquetas');
+  return await get('/jerarquia/etiquetas');
 }
