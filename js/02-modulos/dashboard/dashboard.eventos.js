@@ -6,6 +6,7 @@
 let heartbeatTimer = null;
 let arbolCache = [];
 let progresoCache = {};
+let grabacionesCache = [];
 
 async function iniciarDashboard({ onLogout, onNavegar, onError }) {
   try {
@@ -13,7 +14,7 @@ async function iniciarDashboard({ onLogout, onNavegar, onError }) {
     const institucion = obtenerInstitucion();
 
     if (!datosSesion || !institucion) {
-      onError('Sesión inválida');
+      onError('Sesion invalida');
       return;
     }
 
@@ -30,13 +31,15 @@ async function iniciarDashboard({ onLogout, onNavegar, onError }) {
     });
 
     // Cargar datos en paralelo
-    const [arbolResp, progresoResp] = await Promise.all([
+    const [arbolResp, progresoResp, grabacionesResp] = await Promise.all([
       apiObtenerArbol().catch(() => ({ datos: [] })),
-      apiObtenerProgreso().catch(() => ({ datos: { cursos: [] } }))
+      apiObtenerProgreso().catch(() => ({ datos: { cursos: [] } })),
+      apiListarGrabaciones().catch(() => ({ grabaciones: [] }))
     ]);
 
     arbolCache = arbolResp.datos || arbolResp || [];
     progresoCache = progresoResp.datos || progresoResp || { cursos: [] };
+    grabacionesCache = grabacionesResp.grabaciones || [];
 
     // Renderizar sidebar con cursos
     renderizarSidebar({
@@ -48,19 +51,15 @@ async function iniciarDashboard({ onLogout, onNavegar, onError }) {
       onNavegar
     });
 
-    // Panel según rol
+    // Panel segun rol
     if (rol === 'student' || rol === 'alumno' || rol === 'estudiante') {
-      renderizarPanel({ rol, onNavegar });
-      renderizarPanelAlumno({ arbol: arbolCache, progreso: progresoCache, onSeleccionarCurso: (id) => seleccionarCurso(id) });
+      renderizarPanelCurso({ curso: null, progreso: progresoCache, grabaciones: grabacionesCache, rol, puedeIniciarClase: false });
     } else if (rol === 'profesor' || rol === 'professor') {
-      renderizarPanel({ rol, onNavegar });
-      renderizarPanelProfesor({ onNavegar });
+      renderizarPanelCurso({ curso: null, progreso: progresoCache, grabaciones: grabacionesCache, rol, puedeIniciarClase: true });
     } else if (rol === 'director') {
-      renderizarPanel({ rol, onNavegar });
-      renderizarPanelDirector({ onNavegar });
+      renderizarPanelCurso({ curso: null, progreso: progresoCache, grabaciones: grabacionesCache, rol, puedeIniciarClase: true });
     } else if (rol === 'superadmin') {
-      renderizarPanel({ rol, onNavegar });
-      renderizarPanelSuperadmin({ onNavegar });
+      renderizarPanelCurso({ curso: null, progreso: progresoCache, grabaciones: grabacionesCache, rol, puedeIniciarClase: true });
     }
 
     // Iniciar heartbeat
@@ -75,10 +74,11 @@ function seleccionarCurso(cursoId) {
   const curso = arbolCache.find(c => c.curso_id === cursoId);
   if (!curso) return;
 
-  // Actualizar sidebar con curso activo resaltado
   const datosSesion = obtenerUsuario();
   const rol = datosSesion?.rol || 'estudiante';
-  
+  const puedeIniciarClase = ['superadmin', 'director', 'profesor', 'professor'].includes(rol);
+
+  // Actualizar sidebar con curso activo resaltado
   renderizarSidebar({
     arbol: arbolCache,
     cursoActivoId: cursoId,
@@ -89,7 +89,45 @@ function seleccionarCurso(cursoId) {
   });
 
   // Renderizar panel con temas/subtemas del curso
-  renderizarPanelCurso({ curso, progreso: progresoCache });
+  renderizarPanelCurso({ curso, progreso: progresoCache, grabaciones: grabacionesCache, rol, puedeIniciarClase });
+}
+
+async function iniciarClaseEnVivo(cursoId, nombreCurso) {
+  try {
+    const datosSesion = obtenerUsuario();
+    const rol = datosSesion?.rol || 'estudiante';
+    
+    // Solo profesores, directores y superadmin pueden iniciar clases
+    if (!['superadmin', 'director', 'profesor', 'professor'].includes(rol)) {
+      app.mostrarToast('No tienes permisos para iniciar clases en vivo', 'error');
+      return;
+    }
+
+    const nombreSala = `curso-${cursoId}-${Date.now()}`;
+    
+    // 1. Obtener token de LiveKit
+    const tokenResp = await apiObtenerTokenLivekit(nombreSala, 'publisher');
+    
+    // 2. Iniciar grabacion
+    const grabacionResp = await apiIniciarGrabacion(nombreSala, nombreCurso);
+    
+    // 3. Abrir sala de LiveKit
+    const url = new URL('/live/room.html', window.location.origin);
+    url.searchParams.set('course', nombreCurso);
+    url.searchParams.set('sala', nombreSala);
+    url.searchParams.set('token', tokenResp.token);
+    url.searchParams.set('url', tokenResp.url);
+    url.searchParams.set('grabacion_id', grabacionResp.grabacion?.grabacion_id);
+    url.searchParams.set('rol', rol);
+    
+    window.open(url.toString(), '_blank');
+    
+    app.mostrarToast('Clase en vivo iniciada', 'exito');
+    
+  } catch (error) {
+    console.error('Error iniciando clase en vivo:', error);
+    app.mostrarToast('Error al iniciar clase en vivo', 'error');
+  }
 }
 
 function iniciarHeartbeat({ onLogout }) {
@@ -106,7 +144,7 @@ function iniciarHeartbeat({ onLogout }) {
 
       if (resp.status === 401) {
         const data = await resp.json().catch(() => ({}));
-        let mensaje = 'Tu sesión ha expirado.';
+        let mensaje = 'Tu sesion ha expirado.';
         if (data.codigo === 'USUARIO_SUSPENDIDO') mensaje = 'Tu cuenta ha sido suspendida.';
         else if (data.codigo === 'USUARIO_ELIMINADO') mensaje = 'Tu cuenta ha sido eliminada.';
         alert(mensaje);

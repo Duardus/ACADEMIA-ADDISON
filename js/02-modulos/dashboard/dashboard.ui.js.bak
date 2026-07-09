@@ -50,17 +50,17 @@ function renderizarSidebar({ arbol, cursoActivoId, progreso, rol, onSeleccionarC
   let html = `
     <div class="sidebar-top">
       <div class="sidebar-title-wrap">
-        <div class="sidebar-header">📚 MIS CURSOS</div>
+        <div class="sidebar-header">📚 Cursos</div>
       </div>
     </div>
   `;
 
-  // Boton de gestion para superadmin/director
+  // Botón de gestión para superadmin/director
   if (['superadmin','director'].includes(rol)) {
-    html += `<button class="btn btn-sm" style="margin:0 16px 12px;" onclick="app.navegar('arbol')">🌳 Gestionar Arbol</button>`;
+    html += `<button class="btn btn-sm" style="margin:0 16px 12px;" onclick="app.navegar('arbol')">🌳 Gestionar Árbol</button>`;
   }
 
-  html += `<div style="padding:0 10px;">`;
+  html += `<div style="padding:0 8px;">`;
   
   if (!arbol || arbol.length === 0) {
     html += `<p style="color:var(--texto-secundario);font-size:13px;padding:0 8px;">No hay cursos disponibles</p>`;
@@ -69,26 +69,17 @@ function renderizarSidebar({ arbol, cursoActivoId, progreso, rol, onSeleccionarC
       const prog = progreso?.cursos?.find(c => c.curso_id === curso.curso_id);
       const pct = formatearPorcentaje(prog?.porcentaje);
       const activo = curso.curso_id == cursoActivoId;
-      const numTemas = (curso.hijos || []).length;
-      const radio = 16;
-      const circunferencia = 2 * Math.PI * radio;
-      const offset = circunferencia - (pct / 100) * circunferencia;
       
       html += `
         <div class="curso-sidebar-item ${activo ? 'activo' : ''}" 
-             data-curso-id="${curso.curso_id}">
-          <div class="curso-sidebar-row">
-            <div class="curso-sidebar-info">
-              <div class="curso-nombre">${curso.nombre}</div>
-              <div class="curso-temas-count">${numTemas} tema${numTemas !== 1 ? 's' : ''}</div>
-            </div>
-            <svg class="progreso-circular" viewBox="0 0 40 40">
-              <circle class="progreso-circular-track" cx="20" cy="20" r="${radio}"/>
-              <circle class="progreso-circular-fill" cx="20" cy="20" r="${radio}" 
-                      stroke-dasharray="${circunferencia}" 
-                      stroke-dashoffset="${offset}"/>
-            </svg>
-            <div class="curso-progreso-texto">${pct}%</div>
+             data-curso-id="${curso.curso_id}"
+             style="padding:10px 12px;border-radius:var(--radio-borde-sm);cursor:pointer;margin-bottom:3px;${activo ? 'background:var(--primario);color:#fff;' : 'background:var(--fondo-secundario);'}transition:all .2s;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:600;font-size:13px;">📘 ${curso.nombre}</span>
+            <span class="badge" style="${activo ? 'background:rgba(255,255,255,0.2);color:#fff;' : ''}">${pct}%</span>
+          </div>
+          <div style="width:100%;height:3px;background:${activo ? 'rgba(255,255,255,0.3)' : 'var(--borde)'};border-radius:2px;overflow:hidden;margin-top:6px;">
+            <div style="width:${pct}%;height:100%;background:${activo ? '#fff' : 'var(--color-marca)'};transition:width .3s;"></div>
           </div>
         </div>`;
     });
@@ -96,21 +87,21 @@ function renderizarSidebar({ arbol, cursoActivoId, progreso, rol, onSeleccionarC
 
   html += `</div>`;
   
-  // Separador y navegacion de modulos
+  // Separador y navegación de módulos
   html += `
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--borde);">
-      <div class="sidebar-header" style="margin-bottom:8px;">⚙️ Modulos</div>
+      <div class="sidebar-header" style="margin-bottom:8px;">⚙️ Módulos</div>
       <div style="padding:0 8px;">
   `;
   
   if (['superadmin','director'].includes(rol)) {
-    html += `<div class="modulo-nav-item" onclick="app.navegar('instituciones')">🏛️ Instituciones</div>`;
-    html += `<div class="modulo-nav-item" onclick="app.navegar('usuarios')">👥 Usuarios</div>`;
+    html += `<div class="modulo-nav-item" onclick="app.navegar('instituciones')" style="padding:8px 12px;border-radius:var(--radio-borde-sm);cursor:pointer;margin-bottom:3px;font-size:13px;">🏛️ Instituciones</div>`;
+    html += `<div class="modulo-nav-item" onclick="app.navegar('usuarios')" style="padding:8px 12px;border-radius:var(--radio-borde-sm);cursor:pointer;margin-bottom:3px;font-size:13px;">👥 Usuarios</div>`;
   }
   
   if (rol === 'superadmin') {
-    html += `<div class="modulo-nav-item" onclick="app.navegar('finanzas-globales')">📈 Finanzas Globales</div>`;
-    html += `<div class="modulo-nav-item" onclick="app.navegar('auditoria')">🔍 Auditoria</div>`;
+    html += `<div class="modulo-nav-item" onclick="app.navegar('finanzas-globales')" style="padding:8px 12px;border-radius:var(--radio-borde-sm);cursor:pointer;margin-bottom:3px;font-size:13px;">📈 Finanzas Globales</div>`;
+    html += `<div class="modulo-nav-item" onclick="app.navegar('auditoria')" style="padding:8px 12px;border-radius:var(--radio-borde-sm);cursor:pointer;margin-bottom:3px;font-size:13px;">🔍 Auditoría</div>`;
   }
   
   html += `</div></div>`;
@@ -125,7 +116,8 @@ function renderizarSidebar({ arbol, cursoActivoId, progreso, rol, onSeleccionarC
     });
   });
 }
-function renderizarPanelCurso({ curso, progreso, grabaciones, rol, puedeIniciarClase }) {
+
+function renderizarPanelCurso({ curso, progreso }) {
   const main = document.getElementById('main');
   if (!main) return;
 
@@ -141,72 +133,45 @@ function renderizarPanelCurso({ curso, progreso, grabaciones, rol, puedeIniciarC
 
   const prog = progreso?.cursos?.find(c => c.curso_id === curso.curso_id);
   const pct = formatearPorcentaje(prog?.porcentaje);
-  const temas = curso.hijos || [];
-  
-  // Filtrar grabaciones de este curso (por nombre_sala que contiene el curso_id)
-  const grabacionesCurso = (grabaciones || []).filter(g => 
-    g.nombre_sala && g.nombre_sala.includes(curso.nombre)
-  );
 
   let html = `
-    <div style="padding:20px;max-width:1000px;">
-      <div class="panel-curso-header">
-        <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:16px;">
-          <div>
-            <h1 class="panel-curso-titulo">📘 ${curso.nombre}</h1>
-            <p class="panel-curso-desc">${curso.descripcion || 'Sin descripcion'}</p>
+    <div style="padding:20px;max-width:900px;">
+      <div style="margin-bottom:24px;">
+        <h1 style="margin:0 0 8px;font-size:28px;">📘 ${curso.nombre}</h1>
+        <p style="color:var(--texto-secundario);margin:0 0 12px;">${curso.descripcion || 'Sin descripción'}</p>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="flex:1;height:8px;background:var(--borde);border-radius:4px;overflow:hidden;">
+            <div style="width:${pct}%;height:100%;background:var(--color-marca);transition:width .3s;"></div>
           </div>
-          ${puedeIniciarClase ? `
-            <button class="btn-clase-vivo" onclick="iniciarClaseEnVivo(${curso.curso_id}, '${curso.nombre.replace(/'/g, "\\'")}')">
-              <span class="live-dot-inline"></span>
-              Iniciar clase en vivo
-            </button>
-          ` : ''}
-        </div>
-        <div class="panel-curso-meta">
-          <div class="panel-curso-progreso">
-            <div class="progreso-barra-grande">
-              <div class="progreso-barra-grande-fill" style="width:${pct}%;"></div>
-            </div>
-            <span class="progreso-porcentaje-grande">${pct}%</span>
-          </div>
+          <span style="font-weight:700;color:var(--color-marca);">${pct}%</span>
         </div>
       </div>
   `;
 
+  const temas = curso.hijos || [];
   if (temas.length === 0) {
-    html += `<p style="color:var(--texto-secundario);">Este curso aun no tiene temas</p>`;
+    html += `<p style="color:var(--texto-secundario);">Este curso aún no tiene temas</p>`;
   } else {
-    html += `<div class="temas-grid">`;
+    html += `<div style="display:flex;flex-direction:column;gap:12px;">`;
     temas.forEach((tema, idx) => {
       const subtemas = tema.hijos || [];
       html += `
-        <div class="tema-card">
-          <div class="tema-header" data-tema-id="${tema.tema_id}">
+        <div class="tema-card" style="background:var(--superficie);border:1px solid var(--borde);border-radius:var(--radio-borde);overflow:hidden;">
+          <div class="tema-header" data-tema-id="${tema.tema_id}" style="padding:16px 20px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
             <div>
-              <div class="tema-nombre">📑 ${idx + 1}. ${tema.nombre}</div>
-              <div class="tema-meta">${subtemas.length} subtema${subtemas.length !== 1 ? 's' : ''}</div>
+              <div style="font-weight:700;font-size:16px;">📑 ${idx + 1}. ${tema.nombre}</div>
+              <div style="font-size:12px;color:var(--texto-secundario);margin-top:2px;">${subtemas.length} subtema${subtemas.length !== 1 ? 's' : ''}</div>
             </div>
-            <span class="tema-flecha">▼</span>
+            <span class="tema-flecha" style="transition:transform .2s;">▼</span>
           </div>
-          <div class="tema-body" id="tema-body-${tema.tema_id}">
+          <div class="tema-body" id="tema-body-${tema.tema_id}" style="display:none;border-top:1px solid var(--borde);">
             ${subtemas.length === 0 ? 
               `<p style="padding:16px 20px;color:var(--texto-secundario);font-size:13px;">Sin subtemas</p>` :
-              `<div>
+              `<div style="padding:12px 20px;">
                 ${subtemas.map((sub, sidx) => `
-                  <div class="subtema-item">
-                    <div class="subtema-numero">${sidx + 1}</div>
-                    <div class="subtema-info">
-                      <div class="subtema-nombre">📄 ${sub.nombre}</div>
-                      <div class="subtema-estado">
-                        <span class="subtema-estado-teoria">Teoria: ✗</span>
-                        <span class="subtema-estado-examen">Examen: --</span>
-                      </div>
-                    </div>
-                    <div class="subtema-acciones">
-                      <button class="btn-subtema" onclick="app.mostrarToast('Teoria - En construccion', 'advertencia')">Teoria</button>
-                      <button class="btn-subtema primario" onclick="app.mostrarToast('Examen - En construccion', 'advertencia')">Examen</button>
-                    </div>
+                  <div style="display:flex;align-items:center;padding:10px 12px;border-radius:var(--radio-borde-sm);margin-bottom:4px;background:var(--fondo-secundario);cursor:pointer;transition:background .2s;" onmouseover="this.style.background='var(--borde)'" onmouseout="this.style.background='var(--fondo-secundario)'">
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--primario);color:#fff;font-size:11px;font-weight:700;margin-right:12px;">${sidx + 1}</span>
+                    <span style="font-size:14px;">📄 ${sub.nombre}</span>
                   </div>
                 `).join('')}
               </div>`
@@ -217,45 +182,22 @@ function renderizarPanelCurso({ curso, progreso, grabaciones, rol, puedeIniciarC
     html += `</div>`;
   }
 
-  // Grabaciones del curso
-  if (grabacionesCurso.length > 0) {
-    html += `
-      <div class="grabaciones-section">
-        <div class="grabaciones-titulo">🎥 Grabaciones de este curso</div>
-        ${grabacionesCurso.map(g => {
-          const duracion = g.duracion_segundos ? `${Math.floor(g.duracion_segundos / 60)}min` : 'En curso';
-          const fecha = new Date(g.creado_en).toLocaleDateString('es-ES');
-          return `
-            <div class="grabacion-item" onclick="window.open('/live/room.html?grabacion=${g.grabacion_id}', '_blank')">
-              <div class="grabacion-icono">▶</div>
-              <div class="grabacion-info">
-                <div class="grabacion-nombre">${g.nombre_sala}</div>
-                <div class="grabacion-fecha">${fecha}</div>
-              </div>
-              <div class="grabacion-duracion">${duracion}</div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    `;
-  }
-
   html += `</div>`;
   main.innerHTML = html;
 
-  // Acordeon de temas
+  // Acordeón de temas
   document.querySelectorAll('.tema-header').forEach(header => {
     header.addEventListener('click', () => {
       const temaId = header.dataset.temaId;
       const body = document.getElementById(`tema-body-${temaId}`);
-      const isOpen = body.classList.contains('visible');
+      const flecha = header.querySelector('.tema-flecha');
       
-      if (isOpen) {
-        body.classList.remove('visible');
-        header.classList.remove('abierto');
+      if (body.style.display === 'none') {
+        body.style.display = 'block';
+        flecha.style.transform = 'rotate(180deg)';
       } else {
-        body.classList.add('visible');
-        header.classList.add('abierto');
+        body.style.display = 'none';
+        flecha.style.transform = 'rotate(0deg)';
       }
     });
   });
