@@ -267,3 +267,65 @@ module.exports = {
   listarSalones, obtenerSalon, crearSalon, editarSalon, eliminarSalon,
   asignarUsuario, quitarUsuario, asignarCurso, quitarCurso
 };
+
+// ============================================
+// LISTAR USUARIOS DISPONIBLES DE UNA INSTITUCION
+// ============================================
+async function listarUsuariosDisponibles(req, res) {
+  try {
+    const { institucion_id } = req.query;
+    if (!institucion_id) {
+      return res.status(400).json({ error: 'institucion_id requerido', codigo: 'FALTAN_DATOS' });
+    }
+
+    const usuarios = await consulta(`
+      SELECT m.membresia_id, m.usuario_id, m.nivel, m.nombre_rol, m.estado_membresia,
+             u.nombre_completo, u.correo_electronico
+      FROM membresias m
+      JOIN usuarios u ON m.usuario_id = u.usuario_id
+      WHERE m.institucion_id = $1 AND m.estado_membresia = 'active'
+      ORDER BY m.nivel, u.nombre_completo
+    `, [institucion_id]);
+
+    res.json({
+      exito: true,
+      datos: { usuarios: usuarios.rows }
+    });
+  } catch (error) {
+    console.error('Listar usuarios disponibles error:', error);
+    res.status(500).json({ error: 'Error listando usuarios', codigo: 'LISTA_ERROR' });
+  }
+}
+
+// ============================================
+// LISTAR CURSOS DISPONIBLES DE UNA INSTITUCION
+// ============================================
+async function listarCursosDisponibles(req, res) {
+  try {
+    const { institucion_id } = req.query;
+    if (!institucion_id) {
+      return res.status(400).json({ error: 'institucion_id requerido', codigo: 'FALTAN_DATOS' });
+    }
+
+    const cursos = await consulta(`
+      SELECT curso_id, nombre_curso, descripcion, estado, orden
+      FROM cursos
+      WHERE institucion_id = $1 AND estado != 'archived'
+      ORDER BY orden, nombre_curso
+    `, [institucion_id]);
+
+    res.json({
+      exito: true,
+      datos: { cursos: cursos.rows }
+    });
+  } catch (error) {
+    console.error('Listar cursos disponibles error:', error);
+    res.status(500).json({ error: 'Error listando cursos', codigo: 'LISTA_ERROR' });
+  }
+}
+
+module.exports = {
+  listarSalones, obtenerSalon, crearSalon, editarSalon, eliminarSalon,
+  asignarUsuario, quitarUsuario, asignarCurso, quitarCurso,
+  listarUsuariosDisponibles, listarCursosDisponibles
+};

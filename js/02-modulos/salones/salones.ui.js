@@ -1,4 +1,4 @@
-function renderizarSalones({ salones, institucionId, institucionNombre, onCrear, onVer, onEditar, onEliminar, onVolver }) {
+function renderizarSalones({ salones, institucionId, institucionNombre, onCrear, onVer, onEditar, onEliminar, onAsignarUsuarios, onAsignarCursos, onVolver }) {
   const app = document.getElementById('app');
   app.innerHTML = `
     <div style="padding:20px;max-width:1200px;margin:0 auto;">
@@ -38,9 +38,13 @@ function renderizarSalones({ salones, institucionId, institucionNombre, onCrear,
         </div>
       </div>
       <p style="color:var(--texto-secundario);font-size:13px;margin:0 0 12px;">${s.descripcion || 'Sin descripción'}</p>
-      <div style="display:flex;gap:16px;font-size:12px;color:var(--texto-secundario);">
-        <span>👥 ${s.total_usuarios || 0} usuarios</span>
-        <span>📚 ${s.total_cursos || 0} cursos</span>
+      <div style="display:flex;gap:16px;font-size:12px;">
+        <span class="salon-stats" data-id="${s.salon_id}" data-tipo="usuarios" style="cursor:pointer;color:var(--primario);">
+          👥 ${s.total_usuarios || 0} usuarios
+        </span>
+        <span class="salon-stats" data-id="${s.salon_id}" data-tipo="cursos" style="cursor:pointer;color:var(--primario);">
+          📚 ${s.total_cursos || 0} cursos
+        </span>
       </div>
     </div>
   `).join('');
@@ -50,6 +54,14 @@ function renderizarSalones({ salones, institucionId, institucionNombre, onCrear,
     el.addEventListener('click', (e) => onVer(e.target.dataset.id));
   });
 
+  grid.querySelectorAll('.salon-stats').forEach(el => {
+    el.addEventListener('click', (e) => {
+      const { id, tipo } = e.target.dataset;
+      if (tipo === 'usuarios') onAsignarUsuarios(id);
+      if (tipo === 'cursos') onAsignarCursos(id);
+    });
+  });
+
   grid.querySelectorAll('[data-accion]').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -57,6 +69,126 @@ function renderizarSalones({ salones, institucionId, institucionNombre, onCrear,
       if (accion === 'editar') onEditar(id);
       if (accion === 'eliminar') onEliminar(id);
     });
+  });
+}
+
+function renderizarModalAsignarUsuarios({ usuarios, usuariosAsignados, onAsignar, onQuitar, onCerrar }) {
+  document.querySelectorAll('.modal').forEach(m => m.remove());
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.id = 'modalAsignarUsuarios';
+  
+  const idsAsignados = new Set(usuariosAsignados.map(u => u.membresia_id));
+  const disponibles = usuarios.filter(u => !idsAsignados.has(u.membresia_id));
+  
+  modal.innerHTML = `
+    <div class="modal-tarjeta" style="max-width:500px;background:var(--superficie);border:1px solid var(--borde);border-radius:var(--radio-borde);padding:22px;max-height:80vh;overflow-y:auto;">
+      <h3 style="margin:0 0 16px;">👥 Asignar Usuarios</h3>
+      
+      <div style="margin-bottom:16px;">
+        <h4 style="margin:0 0 8px;font-size:14px;color:var(--texto-secundario);">Disponibles (${disponibles.length})</h4>
+        ${disponibles.length === 0 ? '<p style="color:var(--texto-secundario);font-size:13px;">No hay usuarios disponibles</p>' : disponibles.map(u => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid var(--borde);">
+            <div>
+              <div style="font-weight:600;font-size:14px;">${u.nombre_completo}</div>
+              <div style="font-size:12px;color:var(--texto-secundario);">${u.correo_electronico} • Nivel ${u.nivel} • ${u.nombre_rol}</div>
+            </div>
+            <button class="btn btn-sm" data-membresia="${u.membresia_id}" data-accion="asignar">+ Agregar</button>
+          </div>
+        `).join('')}
+      </div>
+      
+      <div style="margin-bottom:16px;">
+        <h4 style="margin:0 0 8px;font-size:14px;color:var(--texto-secundario);">Asignados (${usuariosAsignados.length})</h4>
+        ${usuariosAsignados.length === 0 ? '<p style="color:var(--texto-secundario);font-size:13px;">Sin usuarios asignados</p>' : usuariosAsignados.map(u => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid var(--borde);">
+            <div>
+              <div style="font-weight:600;font-size:14px;">${u.nombre_completo}</div>
+              <div style="font-size:12px;color:var(--texto-secundario);">${u.rol_en_salon} • ${u.correo_electronico}</div>
+            </div>
+            <button class="btn btn-sm btn-secundario" data-membresia="${u.membresia_id}" data-accion="quitar">✕ Quitar</button>
+          </div>
+        `).join('')}
+      </div>
+      
+      <div style="display:flex;justify-content:flex-end;">
+        <button class="btn btn-secundario" id="btnCerrarModal">Cerrar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  modal.querySelectorAll('[data-accion="asignar"]').forEach(btn => {
+    btn.addEventListener('click', () => onAsignar(btn.dataset.membresia));
+  });
+  
+  modal.querySelectorAll('[data-accion="quitar"]').forEach(btn => {
+    btn.addEventListener('click', () => onQuitar(btn.dataset.membresia));
+  });
+
+  document.getElementById('btnCerrarModal').addEventListener('click', () => {
+    modal.remove();
+    onCerrar();
+  });
+}
+
+function renderizarModalAsignarCursos({ cursos, cursosAsignados, onAsignar, onQuitar, onCerrar }) {
+  document.querySelectorAll('.modal').forEach(m => m.remove());
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.id = 'modalAsignarCursos';
+  
+  const idsAsignados = new Set(cursosAsignados.map(c => c.curso_id));
+  const disponibles = cursos.filter(c => !idsAsignados.has(c.curso_id));
+  
+  modal.innerHTML = `
+    <div class="modal-tarjeta" style="max-width:500px;background:var(--superficie);border:1px solid var(--borde);border-radius:var(--radio-borde);padding:22px;max-height:80vh;overflow-y:auto;">
+      <h3 style="margin:0 0 16px;">📚 Asignar Cursos</h3>
+      
+      <div style="margin-bottom:16px;">
+        <h4 style="margin:0 0 8px;font-size:14px;color:var(--texto-secundario);">Disponibles (${disponibles.length})</h4>
+        ${disponibles.length === 0 ? '<p style="color:var(--texto-secundario);font-size:13px;">No hay cursos disponibles</p>' : disponibles.map(c => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid var(--borde);">
+            <div>
+              <div style="font-weight:600;font-size:14px;">${c.nombre_curso}</div>
+              <div style="font-size:12px;color:var(--texto-secundario);">${c.descripcion || 'Sin descripción'}</div>
+            </div>
+            <button class="btn btn-sm" data-curso="${c.curso_id}" data-accion="asignar">+ Agregar</button>
+          </div>
+        `).join('')}
+      </div>
+      
+      <div style="margin-bottom:16px;">
+        <h4 style="margin:0 0 8px;font-size:14px;color:var(--texto-secundario);">Asignados (${cursosAsignados.length})</h4>
+        ${cursosAsignados.length === 0 ? '<p style="color:var(--texto-secundario);font-size:13px;">Sin cursos asignados</p>' : cursosAsignados.map(c => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid var(--borde);">
+            <div>
+              <div style="font-weight:600;font-size:14px;">Curso #${c.curso_id}</div>
+              <div style="font-size:12px;color:var(--texto-secundario);">${c.estado_curso_salon}</div>
+            </div>
+            <button class="btn btn-sm btn-secundario" data-curso="${c.curso_id}" data-accion="quitar">✕ Quitar</button>
+          </div>
+        `).join('')}
+      </div>
+      
+      <div style="display:flex;justify-content:flex-end;">
+        <button class="btn btn-secundario" id="btnCerrarModal">Cerrar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  modal.querySelectorAll('[data-accion="asignar"]').forEach(btn => {
+    btn.addEventListener('click', () => onAsignar(btn.dataset.curso));
+  });
+  
+  modal.querySelectorAll('[data-accion="quitar"]').forEach(btn => {
+    btn.addEventListener('click', () => onQuitar(btn.dataset.curso));
+  });
+
+  document.getElementById('btnCerrarModal').addEventListener('click', () => {
+    modal.remove();
+    onCerrar();
   });
 }
 
@@ -87,7 +219,7 @@ function renderizarModalSalon({ salon, onGuardar, onCancelar }) {
   });
 }
 
-function renderizarDetalleSalon({ salon, usuarios, cursos, usuariosDisponibles, cursosDisponibles, onAsignarUsuario, onQuitarUsuario, onAsignarCurso, onQuitarCurso, onVolver }) {
+function renderizarDetalleSalon({ salon, usuarios, cursos, onVolver }) {
   const app = document.getElementById('app');
   app.innerHTML = `
     <div style="padding:20px;max-width:1200px;margin:0 auto;">
@@ -101,36 +233,28 @@ function renderizarDetalleSalon({ salon, usuarios, cursos, usuariosDisponibles, 
       
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
         <div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <h3 style="margin:0;">👥 Usuarios (${usuarios.length})</h3>
-            <button class="btn btn-sm" id="btnAddUsuario">+ Agregar</button>
-          </div>
-          <div id="listaUsuarios" style="background:var(--superficie);border:1px solid var(--borde);border-radius:var(--radio-borde);padding:12px;min-height:100px;">
+          <h3 style="margin:0 0 12px;">👥 Usuarios (${usuarios.length})</h3>
+          <div style="background:var(--superficie);border:1px solid var(--borde);border-radius:var(--radio-borde);padding:12px;min-height:100px;">
             ${usuarios.length === 0 ? '<p style="color:var(--texto-secundario);font-size:13px;">Sin usuarios</p>' : usuarios.map(u => `
               <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid var(--borde);">
                 <div>
                   <div style="font-weight:600;">${u.nombre_completo}</div>
                   <div style="font-size:12px;color:var(--texto-secundario);">${u.rol_en_salon} • ${u.correo_electronico}</div>
                 </div>
-                <button class="btn-icono" data-membresia="${u.membresia_id}" title="Quitar" style="color:var(--error);">✕</button>
               </div>
             `).join('')}
           </div>
         </div>
         
         <div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <h3 style="margin:0;">📚 Cursos (${cursos.length})</h3>
-            <button class="btn btn-sm" id="btnAddCurso">+ Agregar</button>
-          </div>
-          <div id="listaCursos" style="background:var(--superficie);border:1px solid var(--borde);border-radius:var(--radio-borde);padding:12px;min-height:100px;">
+          <h3 style="margin:0 0 12px;">📚 Cursos (${cursos.length})</h3>
+          <div style="background:var(--superficie);border:1px solid var(--borde);border-radius:var(--radio-borde);padding:12px;min-height:100px;">
             ${cursos.length === 0 ? '<p style="color:var(--texto-secundario);font-size:13px;">Sin cursos</p>' : cursos.map(c => `
               <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid var(--borde);">
                 <div>
                   <div style="font-weight:600;">Curso #${c.curso_id}</div>
                   <div style="font-size:12px;color:var(--texto-secundario);">${c.estado_curso_salon}</div>
                 </div>
-                <button class="btn-icono" data-curso="${c.curso_id}" title="Quitar" style="color:var(--error);">✕</button>
               </div>
             `).join('')}
           </div>
@@ -139,37 +263,4 @@ function renderizarDetalleSalon({ salon, usuarios, cursos, usuariosDisponibles, 
     </div>`;
 
   document.getElementById('btnVolver').addEventListener('click', onVolver);
-  
-  document.getElementById('btnAddUsuario')?.addEventListener('click', () => {
-    if (!usuariosDisponibles || usuariosDisponibles.length === 0) {
-      alert('No hay usuarios disponibles. Primero crea usuarios en el módulo de Usuarios.');
-      return;
-    }
-    const opciones = usuariosDisponibles.map((u, i) => `${i + 1}. ${u.sub_nombre_completo} (${u.sub_correo}) [ID: ${u.sub_membresia_id}]`).join('\n');
-    const seleccion = prompt(`Selecciona el número del usuario:\n${opciones}\n\nEscribe el número:`);
-    if (!seleccion) return;
-    const idx = parseInt(seleccion) - 1;
-    if (idx >= 0 && idx < usuariosDisponibles.length) {
-      onAsignarUsuario(usuariosDisponibles[idx].sub_membresia_id);
-    } else {
-      alert('Número inválido');
-    }
-  });
-
-  document.getElementById('btnAddCurso')?.addEventListener('click', () => {
-    const cursoId = prompt('ID del curso a asignar (número):');
-    if (cursoId && !isNaN(parseInt(cursoId))) {
-      onAsignarCurso(parseInt(cursoId));
-    } else if (cursoId) {
-      alert('ID inválido');
-    }
-  });
-
-  document.getElementById('listaUsuarios')?.addEventListener('click', (e) => {
-    if (e.target.dataset.membresia) onQuitarUsuario(e.target.dataset.membresia);
-  });
-  
-  document.getElementById('listaCursos')?.addEventListener('click', (e) => {
-    if (e.target.dataset.curso) onQuitarCurso(e.target.dataset.curso);
-  });
 }

@@ -1,9 +1,6 @@
 /* ============================================
    ARCHIVO: salones.eventos.js
    MODULO: salones
-   DEPENDENCIAS:
-     - salones.api.js (HTTP)
-     - salones.ui.js (renderizado)
    ============================================ */
 
 async function iniciarSalones({ institucionId, institucionNombre, onVolver, onError, onToast }) {
@@ -17,6 +14,8 @@ async function iniciarSalones({ institucionId, institucionNombre, onVolver, onEr
       onVer: (id) => manejarVerSalon({ id, institucionId, onVolver, onError, onToast }),
       onEditar: (id) => manejarEditarSalon({ id, institucionId, institucionNombre, onVolver, onError, onToast }),
       onEliminar: (id) => manejarEliminarSalon({ id, institucionId, institucionNombre, onVolver, onError, onToast }),
+      onAsignarUsuarios: (salonId) => manejarAsignarUsuarios({ salonId, institucionId, onVolver, onError, onToast }),
+      onAsignarCursos: (salonId) => manejarAsignarCursos({ salonId, institucionId, onVolver, onError, onToast }),
       onVolver
     });
   } catch (error) {
@@ -67,53 +66,83 @@ async function manejarEliminarSalon({ id, institucionId, institucionNombre, onVo
 
 async function manejarVerSalon({ id, institucionId, onVolver, onError, onToast }) {
   try {
+    const resp = await apiObtenerSalon(id);
+    const datos = resp.datos || resp;
+    renderizarDetalleSalon({
+      salon: datos.salon,
+      usuarios: datos.usuarios || [],
+      cursos: datos.cursos || [],
+      onVolver: () => iniciarSalones({ institucionId, institucionNombre: datos.salon.nombre_institucion, onVolver, onError, onToast })
+    });
+  } catch (e) { onError(e.message); }
+}
+
+async function manejarAsignarUsuarios({ salonId, institucionId, onVolver, onError, onToast }) {
+  try {
     const [respSalon, respUsuarios] = await Promise.all([
-      apiObtenerSalon(id),
-      get(`/jerarquia/mis-subordinados`)
+      apiObtenerSalon(salonId),
+      apiListarUsuariosDisponibles(institucionId)
     ]);
     
-    const datos = respSalon.datos || respSalon;
-    const salon = datos.salon;
-    const usuariosEnSalon = datos.usuarios || [];
-    const cursosEnSalon = datos.cursos || [];
+    const datosSalon = respSalon.datos || respSalon;
+    const datosUsuarios = respUsuarios.datos || respUsuarios;
     
-    // Usuarios disponibles = subordinados que NO están en el salón
-    const datosSub = respUsuarios.datos || respUsuarios;
-    const todosSubordinados = (datosSub.subordinados || []).filter(s => s.sub_nivel > 0);
-    const idsEnSalon = new Set(usuariosEnSalon.map(u => u.membresia_id));
-    const usuariosDisponibles = todosSubordinados.filter(s => !idsEnSalon.has(s.sub_membresia_id));
-
-    renderizarDetalleSalon({
-      salon, usuarios: usuariosEnSalon, cursos: cursosEnSalon, usuariosDisponibles, cursosDisponibles: [],
-      onAsignarUsuario: async (membresiaId) => {
+    const usuariosAsignados = datosSalon.usuarios || [];
+    const todosUsuarios = datosUsuarios.usuarios || [];
+    
+    renderizarModalAsignarUsuarios({
+      usuarios: todosUsuarios,
+      usuariosAsignados,
+      onAsignar: async (membresiaId) => {
         try {
-          await apiAsignarUsuario(id, { membresia_id: parseInt(membresiaId) });
-          onToast('Usuario agregado', 'exito');
-          manejarVerSalon({ id, institucionId, onVolver, onError, onToast });
+          await apiAsignarUsuario(salonId, { membresia_id: parseInt(membresiaId) });
+          onToast('Usuario asignado', 'exito');
+          manejarAsignarUsuarios({ salonId, institucionId, onVolver, onError, onToast });
         } catch (e) { onError(e.message); }
       },
-      onQuitarUsuario: async (membresiaId) => {
+      onQuitar: async (membresiaId) => {
         try {
-          await apiQuitarUsuario(id, membresiaId);
+          await apiQuitarUsuario(salonId, membresiaId);
           onToast('Usuario removido', 'exito');
-          manejarVerSalon({ id, institucionId, onVolver, onError, onToast });
+          manejarAsignarUsuarios({ salonId, institucionId, onVolver, onError, onToast });
         } catch (e) { onError(e.message); }
       },
-      onAsignarCurso: async (cursoId) => {
+      onCerrar: () => iniciarSalones({ institucionId, institucionNombre: datosSalon.salon.nombre_institucion, onVolver, onError, onToast })
+    });
+  } catch (e) { onError(e.message); }
+}
+
+async function manejarAsignarCursos({ salonId, institucionId, onVolver, onError, onToast }) {
+  try {
+    const [respSalon, respCursos] = await Promise.all([
+      apiObtenerSalon(salonId),
+      apiListarCursosDisponibles(institucionId)
+    ]);
+    
+    const datosSalon = respSalon.datos || respSalon;
+    const datosCursos = respCursos.datos || respCursos;
+    
+    const cursosAsignados = datosSalon.cursos || [];
+    const todosCursos = datosCursos.cursos || [];
+    
+    renderizarModalAsignarCursos({
+      cursos: todosCursos,
+      cursosAsignados,
+      onAsignar: async (cursoId) => {
         try {
-          await apiAsignarCurso(id, { curso_id: parseInt(cursoId) });
+          await apiAsignarCurso(salonId, { curso_id: parseInt(cursoId) });
           onToast('Curso asignado', 'exito');
-          manejarVerSalon({ id, institucionId, onVolver, onError, onToast });
+          manejarAsignarCursos({ salonId, institucionId, onVolver, onError, onToast });
         } catch (e) { onError(e.message); }
       },
-      onQuitarCurso: async (cursoId) => {
+      onQuitar: async (cursoId) => {
         try {
-          await apiQuitarCurso(id, cursoId);
+          await apiQuitarCurso(salonId, cursoId);
           onToast('Curso removido', 'exito');
-          manejarVerSalon({ id, institucionId, onVolver, onError, onToast });
+          manejarAsignarCursos({ salonId, institucionId, onVolver, onError, onToast });
         } catch (e) { onError(e.message); }
       },
-      onVolver: () => iniciarSalones({ institucionId, institucionNombre: salon.nombre_institucion, onVolver, onError, onToast })
+      onCerrar: () => iniciarSalones({ institucionId, institucionNombre: datosSalon.salon.nombre_institucion, onVolver, onError, onToast })
     });
   } catch (e) { onError(e.message); }
 }

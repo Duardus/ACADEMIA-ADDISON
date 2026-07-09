@@ -4,7 +4,8 @@ const { middlewareAutenticar } = require('../middleware/autenticar');
 const { middlewareContexto } = require('../middleware/contexto_institucion');
 const {
   listarSalones, obtenerSalon, crearSalon, editarSalon, eliminarSalon,
-  asignarUsuario, quitarUsuario, asignarCurso, quitarCurso
+  asignarUsuario, quitarUsuario, asignarCurso, quitarCurso,
+  listarUsuariosDisponibles, listarCursosDisponibles
 } = require('../controladores/salones.controlador');
 
 router.use(middlewareAutenticar);
@@ -16,6 +17,10 @@ router.get('/:salon_id', obtenerSalon);
 router.post('/', crearSalon);
 router.put('/:salon_id', editarSalon);
 router.delete('/:salon_id', eliminarSalon);
+
+// Listar disponibles por institucion
+router.get('/usuarios/disponibles', listarUsuariosDisponibles);
+router.get('/cursos/disponibles', listarCursosDisponibles);
 
 // Gestion usuarios en salon
 router.post('/:salon_id/usuarios', asignarUsuario);

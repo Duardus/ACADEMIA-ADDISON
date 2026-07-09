@@ -13,6 +13,12 @@ async function apiEditarSalon(salonId, datos) {
 async function apiEliminarSalon(salonId) {
   return await del(`/salones/${salonId}`);
 }
+async function apiListarUsuariosDisponibles(institucionId) {
+  return await get(`/salones/usuarios/disponibles?institucion_id=${institucionId}`);
+}
+async function apiListarCursosDisponibles(institucionId) {
+  return await get(`/salones/cursos/disponibles?institucion_id=${institucionId}`);
+}
 async function apiAsignarUsuario(salonId, datos) {
   return await post(`/salones/${salonId}/usuarios`, datos);
 }
