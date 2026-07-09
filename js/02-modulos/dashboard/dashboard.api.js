@@ -10,12 +10,30 @@ async function apiVerificarSesion() {
   return get('/sesion/verificar');
 }
 
+// ============================================
+// ARBOL - Con permisos filtrados por nivel
+// ============================================
 async function apiObtenerArbol() {
+  return get('/permisos/arbol');
+}
+
+async function apiObtenerArbolCompleto() {
   return get('/arbol');
 }
 
 async function apiObtenerProgreso() {
   return get('/progreso');
+}
+
+// ============================================
+// PERMISOS - Salones y subordinados
+// ============================================
+async function apiObtenerSalonesUsuario() {
+  return get('/permisos/salones');
+}
+
+async function apiObtenerSubordinados() {
+  return get('/permisos/subordinados');
 }
 
 // ============================================
