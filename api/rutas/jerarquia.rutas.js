@@ -6,53 +6,24 @@ const arbolControlador = require('../controladores/jerarquia.arbol.controlador')
 const { middlewareAutenticar } = require('../middleware/autenticar');
 const { middlewareContexto } = require('../middleware/contexto_institucion');
 
-// Todas las rutas requieren autenticacion y contexto
 router.use(middlewareAutenticar);
 router.use(middlewareContexto);
 
-// ============================================
-// USUARIOS (jerarquia.usuarios.controlador)
-// ============================================
+// USUARIOS
+router.post('/crear', (req, res, next) => usuariosControlador.crearUsuarioHijo(req, res, next));
+router.get('/mis-subordinados', (req, res, next) => usuariosControlador.obtenerMisSubordinados(req, res, next));
+router.post('/cambiar-estado/:membresia_id', (req, res, next) => usuariosControlador.cambiarEstado(req, res, next));
+router.delete('/subordinado/:membresia_id', (req, res, next) => usuariosControlador.desactivarSubordinado(req, res, next));
+router.delete('/subordinado/:membresia_id/eliminar', (req, res, next) => usuariosControlador.eliminarUsuarioCompleto(req, res, next));
+router.get('/superiores/:membresia_id', (req, res, next) => usuariosControlador.obtenerSuperiores(req, res, next));
 
-// Crear usuario hijo
-router.post('/crear', (req, res) => usuariosControlador.crearUsuarioHijo(req, res));
+// CAPACIDADES
+router.get('/mis-capacidades', (req, res, next) => capacidadesControlador.obtenerMisCapacidadesDelegables(req, res, next));
+router.put('/subordinado/:membresia_id/capacidades', (req, res, next) => capacidadesControlador.modificarCapacidadesSubordinado(req, res, next));
+router.get('/etiquetas', (req, res, next) => capacidadesControlador.obtenerEtiquetasFrecuentes(req, res, next));
 
-// Obtener mis subordinados
-router.get('/mis-subordinados', (req, res) => usuariosControlador.obtenerMisSubordinados(req, res));
-
-// Cambiar estado de subordinado
-router.post('/cambiar-estado/:membresia_id', (req, res) => usuariosControlador.cambiarEstado(req, res));
-
-// Desactivar subordinado (soft delete)
-router.delete('/subordinado/:membresia_id', (req, res) => usuariosControlador.desactivarSubordinado(req, res));
-
-// Eliminar usuario completamente (hard delete) - SOLO SUPERADMIN
-router.delete('/subordinado/:membresia_id/eliminar', (req, res) => usuariosControlador.eliminarUsuarioCompleto(req, res));
-
-// Obtener superiores de una membresia
-router.get('/superiores/:membresia_id', (req, res) => usuariosControlador.obtenerSuperiores(req, res));
-
-// ============================================
-// CAPACIDADES (jerarquia.capacidades.controlador)
-// ============================================
-
-// Obtener capacidades que puedo delegar
-router.get('/mis-capacidades', (req, res) => capacidadesControlador.obtenerMisCapacidadesDelegables(req, res));
-
-// Modificar capacidades de subordinado
-router.put('/subordinado/:membresia_id/capacidades', (req, res) => capacidadesControlador.modificarCapacidadesSubordinado(req, res));
-
-// Obtener etiquetas de cargo frecuentes
-router.get('/etiquetas', (req, res) => capacidadesControlador.obtenerEtiquetasFrecuentes(req, res));
-
-// ============================================
-// ARBOL/GRUPOS (jerarquia.arbol.controlador)
-// ============================================
-
-// Arbol completo de la institucion
-router.get('/arbol-completo', (req, res) => arbolControlador.arbolCompletoInstitucion(req, res));
-
-// Crear grupo colaborativo
-router.post('/grupos', (req, res) => arbolControlador.crearGrupoColaborativo(req, res));
+// ARBOL
+router.get('/arbol-completo', (req, res, next) => arbolControlador.arbolCompletoInstitucion(req, res, next));
+router.post('/grupos', (req, res, next) => arbolControlador.crearGrupoColaborativo(req, res, next));
 
 module.exports = router;
