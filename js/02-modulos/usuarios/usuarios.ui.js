@@ -7,12 +7,22 @@
      - Recibe datos planos, callbacks
    ============================================ */
 
-function renderizarUsuarios({ subordinados, onCrear, onCambiarEstado, onDesactivar, onEliminarCompleto, onCapacidades, onVolver, esSuperadmin }) {
+function renderizarUsuarios({ subordinados, onCrear, onReactivar, onDesactivar, onEliminarCompleto, onCapacidades, onVolver, esSuperadmin }) {
   const app = document.getElementById('app');
+  
+  // Contar activos y suspendidos
+  const activos = subordinados.filter(s => s.sub_estado === 'active');
+  const suspendidos = subordinados.filter(s => s.sub_estado !== 'active');
+  
   app.innerHTML = `
-    <div style="padding:20px;max-width:1200px;margin:0 auto;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-        <h2>👥 Administración de Usuarios</h2>
+    <div style="padding:20px;max-width:1400px;margin:0 auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+        <div>
+          <h2>👥 Administración de Usuarios</h2>
+          <p style="color:var(--texto-secundario);font-size:13px;margin:4px 0 0;">
+            ${subordinados.length} total · ${activos.length} activos · ${suspendidos.length} suspendidos
+          </p>
+        </div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-sm" id="btnCrearUsuario">+ Nuevo Usuario</button>
           <button class="btn btn-sm btn-secundario" id="btnVolver">← Volver</button>
@@ -27,60 +37,78 @@ function renderizarUsuarios({ subordinados, onCrear, onCambiarEstado, onDesactiv
 
   const contenedor = document.getElementById('usuariosContenido');
   if (!subordinados || subordinados.length === 0) {
-    contenedor.innerHTML = '<p style="color:var(--texto-secundario);">No hay subordinados registrados. Haz click en "+ Nuevo Usuario" para crear uno.</p>';
+    contenedor.innerHTML = '<p style="color:var(--texto-secundario);">No hay usuarios registrados.</p>';
     return;
   }
 
   const tabla = document.createElement('table');
   tabla.style.width = '100%';
   tabla.style.borderCollapse = 'collapse';
+  tabla.style.fontSize = '14px';
   tabla.innerHTML = `
     <thead>
       <tr style="border-bottom:2px solid var(--borde);text-align:left;">
-        <th style="padding:12px;">Nivel</th>
-        <th style="padding:12px;">Nombre</th>
-        <th style="padding:12px;">Correo</th>
-        <th style="padding:12px;">Rol</th>
-        <th style="padding:12px;">Salones</th>
-        <th style="padding:12px;">Estado</th>
-        <th style="padding:12px;">Puede Crear</th>
-        <th style="padding:12px;text-align:right;">Acciones</th>
+        <th style="padding:10px;">Nivel</th>
+        <th style="padding:10px;">Nombre</th>
+        <th style="padding:10px;">Correo</th>
+        <th style="padding:10px;">Rol</th>
+        <th style="padding:10px;">Salones</th>
+        <th style="padding:10px;">Estado</th>
+        <th style="padding:10px;">Crear</th>
+        <th style="padding:10px;text-align:right;">Acciones</th>
       </tr>
     </thead>
     <tbody>
       ${subordinados.map(s => {
         const salones = s.salones || [];
         const salonesTexto = salones.length > 0 
-          ? salones.map(sal => sal.nombre_salon).join(', ')
-          : '<span style="color:var(--texto-secundario);">Sin salón</span>';
+          ? salones.map(sal => `<span style="display:inline-block;padding:2px 8px;background:var(--primario);color:#fff;border-radius:4px;font-size:11px;margin-right:4px;">${sal.nombre_salon}</span>`).join('')
+          : '<span style="color:var(--texto-secundario);font-size:12px;">Sin salón</span>';
+        
+        const estadoClass = s.sub_estado === 'active' ? 'background:var(--exito);' : 'background:var(--advertencia);';
+        const estadoTexto = s.sub_estado === 'active' ? 'Activo' : 'Suspendido';
+        
+        const puedeCrear = s.sub_puede_crear_hijos ? '✅' : '❌';
+        
+        // Botones según estado
+        let botonesAccion = '';
+        if (s.sub_estado === 'active') {
+          botonesAccion = `
+            <button class="btn-icono" data-accion="capacidades" data-id="${s.sub_membresia_id}" title="Capacidades">🔑</button>
+            <button class="btn-icono" data-accion="desactivar" data-id="${s.sub_membresia_id}" title="Desactivar">🛑</button>
+            ${esSuperadmin ? `<button class="btn-icono" data-accion="eliminar" data-id="${s.sub_membresia_id}" title="Eliminar Permanentemente" style="color:var(--error);">❌</button>` : ''}
+          `;
+        } else {
+          // Usuario suspendido - mostrar reactivar
+          botonesAccion = `
+            <button class="btn-icono" data-accion="reactivar" data-id="${s.sub_membresia_id}" title="Reactivar" style="color:var(--exito);">✅</button>
+            ${esSuperadmin ? `<button class="btn-icono" data-accion="eliminar" data-id="${s.sub_membresia_id}" title="Eliminar Permanentemente" style="color:var(--error);">❌</button>` : ''}
+          `;
+        }
         
         return `
-        <tr style="border-bottom:1px solid var(--borde);">
-          <td style="padding:12px;">
+        <tr style="border-bottom:1px solid var(--borde);opacity:${s.sub_estado === 'active' ? '1' : '0.6'};">
+          <td style="padding:10px;">
             <span style="display:inline-block;padding:4px 10px;border-radius:50%;background:var(--primario);color:#fff;font-size:12px;font-weight:700;">
               ${s.sub_nivel}
             </span>
           </td>
-          <td style="padding:12px;">${s.sub_nombre_completo || s.sub_nombre}</td>
-          <td style="padding:12px;">${s.sub_correo || s.correo}</td>
-          <td style="padding:12px;">${s.sub_nombre_rol || s.nombre_rol || 'Sin rol'}</td>
-          <td style="padding:12px;font-size:12px;">${salonesTexto}</td>
-          <td style="padding:12px;">
-            <span style="display:inline-block;padding:4px 8px;border-radius:var(--radio-borde-xs);background:${s.sub_estado === 'active' ? 'var(--exito)' : 'var(--error)'};color:#fff;font-size:12px;">
-              ${s.sub_estado === 'active' ? 'Activo' : 'Inactivo'}
+          <td style="padding:10px;font-weight:500;">${s.sub_nombre_completo || s.sub_nombre || 'Sin nombre'}</td>
+          <td style="padding:10px;font-size:12px;color:var(--texto-secundario);">${s.sub_correo || s.correo || '-'}</td>
+          <td style="padding:10px;">${s.sub_nombre_rol || s.nombre_rol || 'Sin rol'}</td>
+          <td style="padding:10px;">${salonesTexto}</td>
+          <td style="padding:10px;">
+            <span style="display:inline-block;padding:4px 10px;border-radius:var(--radio-borde-xs);${estadoClass}color:#fff;font-size:11px;font-weight:600;">
+              ${estadoTexto}
             </span>
           </td>
-          <td style="padding:12px;">
-            ${s.sub_puede_crear_hijos ? '✅ Sí' : '❌ No'}
-          </td>
-          <td style="padding:12px;text-align:right;">
-            <button class="btn-icono" data-accion="capacidades" data-id="${s.sub_membresia_id}" title="Capacidades">🔑</button>
-            <button class="btn-icono" data-accion="estado" data-id="${s.sub_membresia_id}" title="Cambiar Estado">🔄</button>
-            <button class="btn-icono" data-accion="desactivar" data-id="${s.sub_membresia_id}" title="Desactivar">🗑️</button>
-            ${esSuperadmin ? `<button class="btn-icono" data-accion="eliminar" data-id="${s.sub_membresia_id}" title="Eliminar Permanentemente" style="color:var(--error);">❌</button>` : ''}
+          <td style="padding:10px;text-align:center;">${puedeCrear}</td>
+          <td style="padding:10px;text-align:right;white-space:nowrap;">
+            ${botonesAccion}
           </td>
         </tr>
-      `}).join('')}
+      `;
+      }).join('')}
     </tbody>
   `;
   contenedor.appendChild(tabla);
@@ -90,14 +118,14 @@ function renderizarUsuarios({ subordinados, onCrear, onCambiarEstado, onDesactiv
     if (!btn) return;
     const { accion, id } = btn.dataset;
     if (accion === 'capacidades') onCapacidades(id);
-    if (accion === 'estado') onCambiarEstado(id);
     if (accion === 'desactivar') onDesactivar(id);
+    if (accion === 'reactivar') onReactivar(id);
     if (accion === 'eliminar') onEliminarCompleto(id);
   });
 }
 
 // ============================================
-// MODAL CREAR USUARIO - CON INSTITUCION Y SALON
+// MODAL CREAR USUARIO
 // ============================================
 function renderizarModalCrearUsuario({ instituciones, salones, onGuardar, onCancelar }) {
   document.querySelectorAll('.modal').forEach(m => m.remove());
@@ -124,33 +152,33 @@ function renderizarModalCrearUsuario({ instituciones, salones, onGuardar, onCanc
           `).join('')}
         </select>
         
-        <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Salón / Grupo / Aula (puedes seleccionar varios)</label>
-        <select id="selectSalon" class="input" multiple style="width:100%;margin-bottom:12px;height:80px;">
+        <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Salón / Grupo / Aula (Ctrl+Click para varios)</label>
+        <select id="selectSalon" class="input" multiple style="width:100%;margin-bottom:8px;height:80px;">
           <option value="">-- Primero selecciona institución --</option>
         </select>
-        <p style="font-size:11px;color:var(--texto-secundario);margin:-8px 0 12px;">Mantén presionado Ctrl/Cmd para seleccionar varios</p>
+        <p style="font-size:11px;color:var(--texto-secundario);margin:0 0 12px;">Mantén presionado Ctrl/Cmd para seleccionar varios</p>
         
-        <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nombre del Nivel / Rol (personalizable)</label>
-        <input type="text" id="inputNombreRol" class="input" placeholder="Ej: Profesor, Coordinador, Director..." style="width:100%;margin-bottom:12px;">
+        <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nombre del Rol (personalizable)</label>
+        <input type="text" id="inputNombreRol" class="input" placeholder="Ej: Profesor, Alumno, Director..." style="width:100%;margin-bottom:12px;">
         
-        <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nivel Jerarquico *</label>
+        <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nivel Jerárquico *</label>
         <select id="selectNivel" class="input" style="width:100%;margin-bottom:12px;">
-          <option value="1">Nivel 1</option>
-          <option value="2">Nivel 2</option>
-          <option value="3">Nivel 3</option>
-          <option value="4">Nivel 4</option>
-          <option value="5">Nivel 5</option>
+          <option value="1">Nivel 1 - Director/Admin</option>
+          <option value="2">Nivel 2 - Coordinador</option>
+          <option value="3">Nivel 3 - Profesor</option>
+          <option value="4">Nivel 4 - Auxiliar</option>
+          <option value="5">Nivel 5 - Alumno</option>
         </select>
         
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:12px;">
           <input type="checkbox" id="checkCrearHijos" style="width:18px;height:18px;">
-          <span>Puede crear subordinados (heredar poder)</span>
+          <span>Puede crear subordinados</span>
         </label>
       </div>
       
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button class="btn btn-secundario" id="btnCancelar">Cancelar</button>
-        <button class="btn" id="btnGuardar">Crear</button>
+        <button class="btn" id="btnGuardar">Crear Usuario</button>
       </div>
     </div>
   `;
@@ -196,7 +224,6 @@ function renderizarModalCrearUsuario({ instituciones, salones, onGuardar, onCanc
     const nivel = parseInt(document.getElementById('selectNivel').value);
     const puedeCrearHijos = document.getElementById('checkCrearHijos').checked;
     
-    // Obtener salones seleccionados
     const salonSelect = document.getElementById('selectSalon');
     const salonIds = Array.from(salonSelect.selectedOptions)
       .map(opt => parseInt(opt.value))
@@ -210,13 +237,13 @@ function renderizarModalCrearUsuario({ instituciones, salones, onGuardar, onCanc
     modal.remove();
     onGuardar({ 
       nombre_completo: nombre, 
-      correo_electronico: correo, 
+      email: correo, 
       institucion_id: parseInt(institucionId),
       nombre_rol: nombreRol || 'Miembro',
       nivel_jerarquico: nivel,
       puede_crear_hijos: puedeCrearHijos,
       salon_ids: salonIds,
-      superior_inmediato_id: 1 // El creador (superadmin) es el superior
+      superior_inmediato_id: 1
     });
   });
 }
@@ -240,7 +267,7 @@ function renderizarModalCapacidades({ subordinado, capacidadesDisponibles, capac
               <div style="font-size:12px;color:var(--texto-secundario);">${cap.descripcion || cap.categoria || ''}</div>
             </div>
           </label>
-        `).join('') || '<p style="color:var(--texto-secundario);">No hay capacidades disponibles para delegar.</p>'}
+        `).join('') || '<p style="color:var(--texto-secundario);">No hay capacidades disponibles.</p>'}
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button class="btn btn-secundario" id="btnCancelar">Cancelar</button>

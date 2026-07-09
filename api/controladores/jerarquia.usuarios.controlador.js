@@ -58,6 +58,33 @@ class JerarquiaUsuariosControlador {
     }
   }
 
+  // ============================================
+  // CAMBIAR ESTADO (ACTIVAR/REACTIVAR/SUSPENDER)
+  // ============================================
+  async cambiarEstado(req, res, next) {
+    try {
+      const creador_membresia_id = req.contexto_institucion?.membresia_id;
+      const creador_usuario_id = req.usuario_autenticado?.usuario_id;
+      const objetivo_membresia_id = parseInt(req.params.membresia_id);
+      const { estado } = req.body;
+
+      if (!creador_membresia_id) {
+        return respuesta.error(res, 400, 'SIN_MEMBRESIA', 'Sin membresia');
+      }
+
+      if (!estado || !['active', 'suspended'].includes(estado)) {
+        return respuesta.error(res, 400, 'ESTADO_INVALIDO', "Estado debe ser 'active' o 'suspended'");
+      }
+
+      const resultado = await servicio.cambiarEstadoSubordinado(
+        creador_membresia_id, creador_usuario_id, objetivo_membresia_id, estado
+      );
+      respuesta.exito(res, resultado, `Usuario ${estado === 'active' ? 'reactivado' : 'suspendido'} correctamente`);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async eliminarUsuarioCompleto(req, res, next) {
     try {
       const creador_membresia_id = req.contexto_institucion?.membresia_id;
@@ -90,14 +117,6 @@ class JerarquiaUsuariosControlador {
       const membresia_id = req.params.membresia_id;
       const resultado = await servicio.obtenerSuperiores(membresia_id);
       respuesta.exito(res, { superiores: resultado });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  async cambiarEstado(req, res, next) {
-    try {
-      return respuesta.error(res, 501, 'NO_IMPLEMENTADO', 'Endpoint cambiarEstado aun no implementado en nueva arquitectura');
     } catch (error) {
       next(error);
     }

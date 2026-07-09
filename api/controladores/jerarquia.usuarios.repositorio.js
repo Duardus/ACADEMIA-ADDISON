@@ -54,8 +54,11 @@ class JerarquiaUsuariosRepositorio {
     );
   }
 
-  async eliminarUsuario(usuarioId) {
-    await consulta('DELETE FROM usuarios WHERE usuario_id = $1', [usuarioId]);
+  async reactivarUsuarioPorId(usuarioId) {
+    await consulta(
+      "UPDATE usuarios SET estado_usuario = 'active' WHERE usuario_id = $1",
+      [usuarioId]
+    );
   }
 
   // --- Gestión de membresías ---
@@ -111,47 +114,12 @@ class JerarquiaUsuariosRepositorio {
     );
   }
 
-  async eliminarMembresia(membresiaId) {
-    await consulta('DELETE FROM membresias WHERE membresia_id = $1', [membresiaId]);
-  }
-
   async limpiarCapacidadesMembresia(membresiaId) {
     await consulta('DELETE FROM membresia_capacidades WHERE membresia_id = $1', [membresiaId]);
   }
 
   async limpiarSuperioresSubordinado(membresiaId) {
     await consulta('DELETE FROM superiores_membresia WHERE subordinado_membresia_id = $1', [membresiaId]);
-  }
-
-  // --- Salones (NUEVO) ---
-  async asignarSalonUsuario(salonId, membresiaId, asignadoPorId, rolEnSalon) {
-    await consulta(
-      `INSERT INTO salon_usuarios (salon_id, membresia_id, asignado_por_membresia_id, rol_en_salon)
-       VALUES ($1, $2, $3, $4)
-       ON CONFLICT (salon_id, membresia_id) DO UPDATE SET rol_en_salon = $4, asignado_por_membresia_id = $3`,
-      [salonId, membresiaId, asignadoPorId, rolEnSalon]
-    );
-  }
-
-  async obtenerSalonesSubordinado(usuarioId, institucionId) {
-    const result = await consulta(
-      `SELECT s.salon_id, s.nombre_salon, su.rol_en_salon
-       FROM salones s
-       JOIN salon_usuarios su ON s.salon_id = su.salon_id
-       JOIN membresias m ON su.membresia_id = m.membresia_id
-       WHERE m.usuario_id = $1 AND s.institucion_id = $2 AND s.estado_salon != 'archived'`,
-      [usuarioId, institucionId]
-    );
-    return result.rows;
-  }
-
-  async eliminarSalonesUsuario(usuarioId) {
-    await consulta(
-      `DELETE FROM salon_usuarios WHERE membresia_id IN (
-         SELECT membresia_id FROM membresias WHERE usuario_id = $1
-       )`,
-      [usuarioId]
-    );
   }
 
   // --- Capacidades ---

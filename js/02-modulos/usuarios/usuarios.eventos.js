@@ -18,14 +18,12 @@ async function iniciarUsuarios({ onVolver, onError, onToast }) {
     const datos = respuesta.datos || respuesta;
     const subordinados = datos.subordinados || datos || [];
     
-    // Filtrar: no mostrar al propio usuario (nivel 0) en la lista de subordinados
-    const subordinadosFiltrados = subordinados.filter(s => s.sub_nivel > 0);
-    
+    // Mostrar TODOS los usuarios (no filtrar)
     renderizarUsuarios({
-      subordinados: subordinadosFiltrados,
+      subordinados,
       esSuperadmin,
       onCrear: () => manejarCrear({ onVolver, onError, onToast }),
-      onCambiarEstado: (id) => manejarCambiarEstado({ id, onVolver, onError, onToast }),
+      onReactivar: (id) => manejarReactivar({ id, onVolver, onError, onToast }),
       onDesactivar: (id) => manejarDesactivar({ id, onVolver, onError, onToast }),
       onEliminarCompleto: (id) => manejarEliminarCompleto({ id, onVolver, onError, onToast }),
       onCapacidades: (id) => manejarCapacidades({ id, onVolver, onError, onToast }),
@@ -38,7 +36,6 @@ async function iniciarUsuarios({ onVolver, onError, onToast }) {
 
 async function manejarCrear({ onVolver, onError, onToast }) {
   try {
-    // Cargar instituciones y salones en paralelo
     const [respInstituciones, respSalones] = await Promise.all([
       apiObtenerInstituciones().catch(() => ({ datos: [] })),
       apiObtenerSalones().catch(() => ({ datos: [] }))
@@ -66,20 +63,23 @@ async function manejarCrear({ onVolver, onError, onToast }) {
   }
 }
 
-async function manejarCambiarEstado({ id, onVolver, onError, onToast }) {
-  const nuevoEstado = confirm('¿Activar usuario? (Cancelar = desactivar)') ? 'activo' : 'inactivo';
+async function manejarReactivar({ id, onVolver, onError, onToast }) {
+  const confirmacion = confirm('¿Reactivar este usuario?');
+  if (!confirmacion) return;
+  
   try {
-    await apiCambiarEstadoSubordinado(id, nuevoEstado);
-    onToast('Estado actualizado', 'exito');
+    await apiCambiarEstadoSubordinado(id, 'active');
+    onToast('Usuario reactivado', 'exito');
     iniciarUsuarios({ onVolver, onError, onToast });
   } catch (error) {
-    onError(error.message || 'Error cambiando estado');
+    onError(error.message || 'Error reactivando usuario');
   }
 }
 
 async function manejarDesactivar({ id, onVolver, onError, onToast }) {
-  const motivo = prompt('Motivo de desactivacion:');
-  if (!motivo) return;
+  const confirmacion = confirm('¿Desactivar este usuario?');
+  if (!confirmacion) return;
+  
   try {
     await apiDesactivarSubordinado(id);
     onToast('Usuario desactivado', 'exito');
@@ -90,8 +90,7 @@ async function manejarDesactivar({ id, onVolver, onError, onToast }) {
 }
 
 async function manejarEliminarCompleto({ id, onVolver, onError, onToast }) {
-  const confirmacion = confirm('⚠️ ¿ELIMINAR PERMANENTEMENTE?\n\nEsta acción NO se puede deshacer. El usuario se borrará de:\n- Firebase Authentication\n- Base de datos PostgreSQL\n- Todos los salones y grupos\n\n¿Estás seguro?');
-  
+  const confirmacion = confirm('⚠️ ¿ELIMINAR PERMANENTEMENTE?\n\nEsta acción NO se puede deshacer.\n\n¿Estás seguro?');
   if (!confirmacion) return;
   
   const segundaConfirmacion = prompt('Escribe ELIMINAR para confirmar:');
