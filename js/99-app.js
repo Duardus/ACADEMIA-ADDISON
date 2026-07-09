@@ -98,7 +98,12 @@ class App {
       return;
     }
     if (vista === 'jerarquia') {
-      GestionJerarquia?.iniciar?.();
+      detenerHeartbeat();
+      iniciarJerarquia({
+        onVolver: () => this.mostrarDashboard(),
+        onError: (msg) => this.mostrarToast(msg, 'error'),
+        onToast: (msg, tipo) => this.mostrarToast(msg, tipo)
+      });
       return;
     }
     if (vista === 'usuarios') {
