@@ -63,18 +63,18 @@ function renderizarModalSalon({ salon, onGuardar, onCancelar }) {
   modal.innerHTML = `
     <div class="modal-tarjeta" style="max-width:450px;background:var(--superficie);border:1px solid var(--borde);border-radius:var(--radio-borde);padding:22px;">
       <h3 style="margin:0 0 16px;">${salon ? '✏️ Editar' : '+ Nuevo'} Salón</h3>
-      <input type="text" id="inputNombre" class="input" placeholder="Nombre del salón..." value="${salon ? salon.nombre_salon : ''}" style="width:100%;margin-bottom:12px;">
+      <input type="text" id="inputNombreSalon" class="input" placeholder="Nombre del salón..." value="${salon ? salon.nombre_salon : ''}" style="width:100%;margin-bottom:12px;">
       <textarea id="inputDesc" class="input" placeholder="Descripción..." style="width:100%;height:80px;margin-bottom:12px;">${salon ? salon.descripcion || '' : ''}</textarea>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
-        <button class="btn btn-secundario" id="btnCancelar">Cancelar</button>
-        <button class="btn" id="btnGuardar">Guardar</button>
+        <button class="btn btn-secundario" id="btnCancelarSalon">Cancelar</button>
+        <button class="btn" id="btnGuardarSalon">Guardar</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
 
-  document.getElementById('btnCancelar').addEventListener('click', () => { modal.remove(); onCancelar(); });
-  document.getElementById('btnGuardar').addEventListener('click', () => {
-    const nombre = document.getElementById('inputNombre').value.trim();
+  document.getElementById('btnCancelarSalon').addEventListener('click', () => { modal.remove(); onCancelar(); });
+  document.getElementById('btnGuardarSalon').addEventListener('click', () => {
+    const nombre = document.getElementById('inputNombreSalon').value.trim();
     const desc = document.getElementById('inputDesc').value.trim();
     if (!nombre) { alert('Nombre obligatorio'); return; }
     modal.remove();
