@@ -27,28 +27,10 @@ async function apiDesactivarSubordinado(membresiaId) {
   return await peticion(`/jerarquia/subordinado/${membresiaId}`, 'DELETE');
 }
 
-// ============================================
-// ELIMINAR USUARIO COMPLETAMENTE (NUEVO)
-// ============================================
-async function apiEliminarSubordinadoCompleto(membresiaId) {
-  return await peticion(`/jerarquia/subordinado/${membresiaId}/eliminar`, 'DELETE');
-}
-
 async function apiModificarCapacidades(membresiaId, capacidades) {
   return await put(`/jerarquia/subordinado/${membresiaId}/capacidades`, { capacidades });
 }
 
 async function apiObtenerEtiquetas() {
   return await get('/jerarquia/etiquetas');
-}
-
-// ============================================
-// INSTITUCIONES Y SALONES PARA SELECTS (NUEVO)
-// ============================================
-async function apiObtenerInstituciones() {
-  return await get('/instituciones');
-}
-
-async function apiObtenerSalones(institucionId) {
-  return await get(`/salones?institucion_id=${institucionId}`);
 }

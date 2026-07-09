@@ -57,28 +57,6 @@ class JerarquiaUsuariosControlador {
     }
   }
 
-  // ============================================
-  // ELIMINAR USUARIO COMPLETAMENTE (NUEVO)
-  // ============================================
-  async eliminarUsuarioCompleto(req, res, next) {
-    try {
-      const creador_membresia_id = req.contexto_institucion?.membresia_id;
-      const creador_usuario_id = req.usuario_autenticado?.usuario_id;
-      const objetivo_membresia_id = parseInt(req.params.membresia_id);
-
-      if (!creador_membresia_id) {
-        return respuesta.error(res, 400, 'SIN_MEMBRESIA', 'Sin membresia');
-      }
-
-      const resultado = await servicio.eliminarUsuarioCompleto(
-        creador_membresia_id, creador_usuario_id, objetivo_membresia_id
-      );
-      respuesta.exito(res, resultado, 'Usuario eliminado permanentemente');
-    } catch (error) {
-      next(error);
-    }
-  }
-
   async obtenerSuperiores(req, res, next) {
     try {
       const membresia_id = req.params.membresia_id;
@@ -89,6 +67,7 @@ class JerarquiaUsuariosControlador {
     }
   }
 
+  // Endpoint muerto en rutas — stub para evitar crash
   async cambiarEstado(req, res, next) {
     try {
       return respuesta.error(res, 501, 'NO_IMPLEMENTADO', 'Endpoint cambiarEstado aun no implementado en nueva arquitectura');

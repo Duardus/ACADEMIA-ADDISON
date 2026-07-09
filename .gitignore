@@ -12,3 +12,6 @@ npm-debug.log
 backup-*
 *.tar.gz
 config/serviceAccountKey.json
+config/serviceAccountKey.json
+**/serviceAccountKey.json
+api/configuracion/serviceAccountKey.json

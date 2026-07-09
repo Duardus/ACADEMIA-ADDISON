@@ -23,11 +23,8 @@ router.get('/mis-subordinados', (req, res) => usuariosControlador.obtenerMisSubo
 // Cambiar estado de subordinado
 router.post('/cambiar-estado/:membresia_id', (req, res) => usuariosControlador.cambiarEstado(req, res));
 
-// Desactivar subordinado (soft delete)
+// Desactivar subordinado
 router.delete('/subordinado/:membresia_id', (req, res) => usuariosControlador.desactivarSubordinado(req, res));
-
-// Eliminar usuario completamente (hard delete) - SOLO SUPERADMIN
-router.delete('/subordinado/:membresia_id/eliminar', (req, res) => usuariosControlador.eliminarUsuarioCompleto(req, res));
 
 // Obtener superiores de una membresia
 router.get('/superiores/:membresia_id', (req, res) => usuariosControlador.obtenerSuperiores(req, res));

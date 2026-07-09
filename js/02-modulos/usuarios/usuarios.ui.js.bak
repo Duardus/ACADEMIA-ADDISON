@@ -7,7 +7,7 @@
      - Recibe datos planos, callbacks
    ============================================ */
 
-function renderizarUsuarios({ subordinados, onCrear, onCambiarEstado, onDesactivar, onEliminarCompleto, onCapacidades, onVolver, esSuperadmin }) {
+function renderizarUsuarios({ subordinados, onCrear, onCambiarEstado, onDesactivar, onCapacidades, onVolver }) {
   const app = document.getElementById('app');
   app.innerHTML = `
     <div style="padding:20px;max-width:1200px;margin:0 auto;">
@@ -41,20 +41,14 @@ function renderizarUsuarios({ subordinados, onCrear, onCambiarEstado, onDesactiv
         <th style="padding:12px;">Nombre</th>
         <th style="padding:12px;">Correo</th>
         <th style="padding:12px;">Rol</th>
-        <th style="padding:12px;">Salones</th>
         <th style="padding:12px;">Estado</th>
         <th style="padding:12px;">Puede Crear</th>
+        <th style="padding:12px;">Capacidades</th>
         <th style="padding:12px;text-align:right;">Acciones</th>
       </tr>
     </thead>
     <tbody>
-      ${subordinados.map(s => {
-        const salones = s.salones || [];
-        const salonesTexto = salones.length > 0 
-          ? salones.map(sal => sal.nombre_salon).join(', ')
-          : '<span style="color:var(--texto-secundario);">Sin salón</span>';
-        
-        return `
+      ${subordinados.map(s => `
         <tr style="border-bottom:1px solid var(--borde);">
           <td style="padding:12px;">
             <span style="display:inline-block;padding:4px 10px;border-radius:50%;background:var(--primario);color:#fff;font-size:12px;font-weight:700;">
@@ -64,7 +58,6 @@ function renderizarUsuarios({ subordinados, onCrear, onCambiarEstado, onDesactiv
           <td style="padding:12px;">${s.sub_nombre_completo || s.sub_nombre}</td>
           <td style="padding:12px;">${s.sub_correo || s.correo}</td>
           <td style="padding:12px;">${s.sub_nombre_rol || s.nombre_rol || 'Sin rol'}</td>
-          <td style="padding:12px;font-size:12px;">${salonesTexto}</td>
           <td style="padding:12px;">
             <span style="display:inline-block;padding:4px 8px;border-radius:var(--radio-borde-xs);background:${s.sub_estado === 'active' ? 'var(--exito)' : 'var(--error)'};color:#fff;font-size:12px;">
               ${s.sub_estado === 'active' ? 'Activo' : 'Inactivo'}
@@ -73,14 +66,14 @@ function renderizarUsuarios({ subordinados, onCrear, onCambiarEstado, onDesactiv
           <td style="padding:12px;">
             ${s.sub_puede_crear_hijos ? '✅ Sí' : '❌ No'}
           </td>
+          <td style="padding:12px;">${(s.capacidades || []).length} permisos</td>
           <td style="padding:12px;text-align:right;">
             <button class="btn-icono" data-accion="capacidades" data-id="${s.sub_membresia_id}" title="Capacidades">🔑</button>
             <button class="btn-icono" data-accion="estado" data-id="${s.sub_membresia_id}" title="Cambiar Estado">🔄</button>
-            <button class="btn-icono" data-accion="desactivar" data-id="${s.sub_membresia_id}" title="Desactivar">🗑️</button>
-            ${esSuperadmin ? `<button class="btn-icono" data-accion="eliminar" data-id="${s.sub_membresia_id}" title="Eliminar Permanentemente" style="color:var(--error);">❌</button>` : ''}
+            <button class="btn-icono" data-accion="desactivar" data-id="${s.sub_membresia_id}" title="Desactivar" style="color:var(--error);">🗑️</button>
           </td>
         </tr>
-      `}).join('')}
+      `).join('')}
     </tbody>
   `;
   contenedor.appendChild(tabla);
@@ -92,23 +85,18 @@ function renderizarUsuarios({ subordinados, onCrear, onCambiarEstado, onDesactiv
     if (accion === 'capacidades') onCapacidades(id);
     if (accion === 'estado') onCambiarEstado(id);
     if (accion === 'desactivar') onDesactivar(id);
-    if (accion === 'eliminar') onEliminarCompleto(id);
   });
 }
 
-// ============================================
-// MODAL CREAR USUARIO - CON INSTITUCION Y SALON
-// ============================================
-function renderizarModalCrearUsuario({ instituciones, salones, onGuardar, onCancelar }) {
+function renderizarModalCrearUsuario({ etiquetas, onGuardar, onCancelar }) {
   document.querySelectorAll('.modal').forEach(m => m.remove());
 
   const modal = document.createElement('div');
   modal.className = 'modal';
   modal.id = 'modalUsuarios';
   modal.innerHTML = `
-    <div class="modal-tarjeta" style="max-width:550px;background:var(--superficie);border:1px solid var(--borde);border-radius:var(--radio-borde);padding:22px;max-height:90vh;overflow-y:auto;">
+    <div class="modal-tarjeta" style="max-width:500px;background:var(--superficie);border:1px solid var(--borde);border-radius:var(--radio-borde);padding:22px;">
       <h3 style="margin:0 0 16px;font-size:20px;">+ Nuevo Usuario</h3>
-      
       <div style="margin:16px 0;">
         <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nombre Completo *</label>
         <input type="text" id="inputNombre" class="input" placeholder="Nombre del usuario..." style="width:100%;margin-bottom:12px;">
@@ -116,38 +104,27 @@ function renderizarModalCrearUsuario({ instituciones, salones, onGuardar, onCanc
         <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Correo Electronico *</label>
         <input type="email" id="inputCorreo" class="input" placeholder="correo@ejemplo.com" style="width:100%;margin-bottom:12px;">
         
-        <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Institución *</label>
-        <select id="selectInstitucion" class="input" style="width:100%;margin-bottom:12px;">
-          <option value="">-- Seleccionar institución --</option>
-          ${(instituciones || []).map(inst => `
-            <option value="${inst.institucion_id}">${inst.nombre_institucion}</option>
-          `).join('')}
-        </select>
-        
-        <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Salón / Grupo / Aula (puedes seleccionar varios)</label>
-        <select id="selectSalon" class="input" multiple style="width:100%;margin-bottom:12px;height:80px;">
-          <option value="">-- Primero selecciona institución --</option>
-        </select>
-        <p style="font-size:11px;color:var(--texto-secundario);margin:-8px 0 12px;">Mantén presionado Ctrl/Cmd para seleccionar varios</p>
-        
-        <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nombre del Nivel / Rol (personalizable)</label>
+        <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nombre del Rol (personalizable)</label>
         <input type="text" id="inputNombreRol" class="input" placeholder="Ej: Profesor, Coordinador, Director..." style="width:100%;margin-bottom:12px;">
         
-        <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nivel Jerarquico *</label>
+        <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nivel Jerarquico</label>
         <select id="selectNivel" class="input" style="width:100%;margin-bottom:12px;">
-          <option value="1">Nivel 1</option>
-          <option value="2">Nivel 2</option>
-          <option value="3">Nivel 3</option>
-          <option value="4">Nivel 4</option>
-          <option value="5">Nivel 5</option>
+          <option value="1">Nivel 1 - Creador de Institucion</option>
+          <option value="2">Nivel 2 - Subordinado</option>
+          <option value="3">Nivel 3 - Subordinado</option>
+          <option value="4">Nivel 4 - Subordinado</option>
         </select>
         
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:12px;">
           <input type="checkbox" id="checkCrearHijos" style="width:18px;height:18px;">
           <span>Puede crear subordinados (heredar poder)</span>
         </label>
+        
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:12px;">
+          <input type="checkbox" id="checkControlTotal" style="width:18px;height:18px;">
+          <span>Control sobre TODOS los niveles inferiores (no solo sus herederos)</span>
+        </label>
       </div>
-      
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button class="btn btn-secundario" id="btnCancelar">Cancelar</button>
         <button class="btn" id="btnGuardar">Crear</button>
@@ -156,67 +133,30 @@ function renderizarModalCrearUsuario({ instituciones, salones, onGuardar, onCanc
   `;
   document.body.appendChild(modal);
 
-  // Evento para cargar salones cuando cambia institución
-  const selectInstitucion = document.getElementById('selectInstitucion');
-  const selectSalon = document.getElementById('selectSalon');
-  
-  selectInstitucion.addEventListener('change', () => {
-    const instId = selectInstitucion.value;
-    selectSalon.innerHTML = '';
-    
-    if (!instId) {
-      selectSalon.innerHTML = '<option value="">-- Primero selecciona institución --</option>';
-      return;
-    }
-    
-    const salonesFiltrados = (salones || []).filter(s => s.institucion_id == instId);
-    
-    if (salonesFiltrados.length === 0) {
-      selectSalon.innerHTML = '<option value="">No hay salones en esta institución</option>';
-    } else {
-      salonesFiltrados.forEach(salon => {
-        const option = document.createElement('option');
-        option.value = salon.salon_id;
-        option.textContent = salon.nombre_salon;
-        selectSalon.appendChild(option);
-      });
-    }
-  });
-
   document.getElementById('btnCancelar').addEventListener('click', () => {
     modal.remove();
     onCancelar();
   });
-  
   document.getElementById('btnGuardar').addEventListener('click', () => {
     const nombre = document.getElementById('inputNombre').value.trim();
     const correo = document.getElementById('inputCorreo').value.trim();
-    const institucionId = document.getElementById('selectInstitucion').value;
     const nombreRol = document.getElementById('inputNombreRol').value.trim();
     const nivel = parseInt(document.getElementById('selectNivel').value);
     const puedeCrearHijos = document.getElementById('checkCrearHijos').checked;
+    const controlTotal = document.getElementById('checkControlTotal').checked;
     
-    // Obtener salones seleccionados
-    const salonSelect = document.getElementById('selectSalon');
-    const salonIds = Array.from(salonSelect.selectedOptions)
-      .map(opt => parseInt(opt.value))
-      .filter(id => !isNaN(id));
-    
-    if (!nombre || !correo || !institucionId) {
-      alert('Nombre, correo e institución son obligatorios');
+    if (!nombre || !correo) {
+      alert('Nombre y correo son obligatorios');
       return;
     }
-    
     modal.remove();
     onGuardar({ 
       nombre_completo: nombre, 
       correo_electronico: correo, 
-      institucion_id: parseInt(institucionId),
       nombre_rol: nombreRol || 'Miembro',
-      nivel_jerarquico: nivel,
+      nivel: nivel,
       puede_crear_hijos: puedeCrearHijos,
-      salon_ids: salonIds,
-      superior_inmediato_id: 1 // El creador (superadmin) es el superior
+      control_total: controlTotal
     });
   });
 }

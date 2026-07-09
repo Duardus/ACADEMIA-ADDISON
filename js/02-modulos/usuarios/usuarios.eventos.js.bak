@@ -11,10 +11,9 @@
 
 async function iniciarUsuarios({ onVolver, onError, onToast }) {
   try {
-    const datosSesion = obtenerUsuario();
-    const esSuperadmin = datosSesion?.rol === 'superadmin' || datosSesion?.nivel === 0;
-    
     const respuesta = await apiObtenerSubordinados();
+    
+    // El backend devuelve { exito, mensaje, datos: { total, subordinados: [...] } }
     const datos = respuesta.datos || respuesta;
     const subordinados = datos.subordinados || datos || [];
     
@@ -23,11 +22,9 @@ async function iniciarUsuarios({ onVolver, onError, onToast }) {
     
     renderizarUsuarios({
       subordinados: subordinadosFiltrados,
-      esSuperadmin,
       onCrear: () => manejarCrear({ onVolver, onError, onToast }),
       onCambiarEstado: (id) => manejarCambiarEstado({ id, onVolver, onError, onToast }),
       onDesactivar: (id) => manejarDesactivar({ id, onVolver, onError, onToast }),
-      onEliminarCompleto: (id) => manejarEliminarCompleto({ id, onVolver, onError, onToast }),
       onCapacidades: (id) => manejarCapacidades({ id, onVolver, onError, onToast }),
       onVolver
     });
@@ -38,18 +35,9 @@ async function iniciarUsuarios({ onVolver, onError, onToast }) {
 
 async function manejarCrear({ onVolver, onError, onToast }) {
   try {
-    // Cargar instituciones y salones en paralelo
-    const [respInstituciones, respSalones] = await Promise.all([
-      apiObtenerInstituciones().catch(() => ({ datos: [] })),
-      apiObtenerSalones().catch(() => ({ datos: [] }))
-    ]);
-    
-    const instituciones = respInstituciones.datos || respInstituciones || [];
-    const salones = respSalones.datos || respSalones || [];
-    
+    const etiquetas = await apiObtenerEtiquetas();
     renderizarModalCrearUsuario({
-      instituciones,
-      salones,
+      etiquetas: etiquetas || [],
       onGuardar: async (datos) => {
         try {
           await apiCrearSubordinado(datos);
@@ -62,7 +50,7 @@ async function manejarCrear({ onVolver, onError, onToast }) {
       onCancelar: () => {}
     });
   } catch (error) {
-    onError(error.message || 'Error cargando datos');
+    onError(error.message || 'Error cargando etiquetas');
   }
 }
 
@@ -86,26 +74,6 @@ async function manejarDesactivar({ id, onVolver, onError, onToast }) {
     iniciarUsuarios({ onVolver, onError, onToast });
   } catch (error) {
     onError(error.message || 'Error desactivando usuario');
-  }
-}
-
-async function manejarEliminarCompleto({ id, onVolver, onError, onToast }) {
-  const confirmacion = confirm('⚠️ ¿ELIMINAR PERMANENTEMENTE?\n\nEsta acción NO se puede deshacer. El usuario se borrará de:\n- Firebase Authentication\n- Base de datos PostgreSQL\n- Todos los salones y grupos\n\n¿Estás seguro?');
-  
-  if (!confirmacion) return;
-  
-  const segundaConfirmacion = prompt('Escribe ELIMINAR para confirmar:');
-  if (segundaConfirmacion !== 'ELIMINAR') {
-    onToast('Eliminación cancelada', 'advertencia');
-    return;
-  }
-  
-  try {
-    await apiEliminarSubordinadoCompleto(id);
-    onToast('Usuario eliminado permanentemente', 'exito');
-    iniciarUsuarios({ onVolver, onError, onToast });
-  } catch (error) {
-    onError(error.message || 'Error eliminando usuario');
   }
 }
 
