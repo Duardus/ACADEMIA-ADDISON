@@ -1,3 +1,11 @@
+/* ============================================
+   ARCHIVO: salones.eventos.js
+   MODULO: salones
+   DEPENDENCIAS:
+     - salones.api.js (HTTP)
+     - salones.ui.js (renderizado)
+   ============================================ */
+
 async function iniciarSalones({ institucionId, institucionNombre, onVolver, onError, onToast }) {
   try {
     const resp = await apiListarSalones(institucionId);
@@ -5,10 +13,10 @@ async function iniciarSalones({ institucionId, institucionNombre, onVolver, onEr
     renderizarSalones({
       salones: datos.salones || [],
       institucionId, institucionNombre,
-      onCrear: () => manejarCrear({ institucionId, institucionNombre, onVolver, onError, onToast }),
-      onVer: (id) => manejarVer({ id, institucionId, onVolver, onError, onToast }),
-      onEditar: (id) => manejarEditar({ id, institucionId, institucionNombre, onVolver, onError, onToast }),
-      onEliminar: (id) => manejarEliminar({ id, institucionId, institucionNombre, onVolver, onError, onToast }),
+      onCrear: () => manejarCrearSalon({ institucionId, institucionNombre, onVolver, onError, onToast }),
+      onVer: (id) => manejarVerSalon({ id, institucionId, onVolver, onError, onToast }),
+      onEditar: (id) => manejarEditarSalon({ id, institucionId, institucionNombre, onVolver, onError, onToast }),
+      onEliminar: (id) => manejarEliminarSalon({ id, institucionId, institucionNombre, onVolver, onError, onToast }),
       onVolver
     });
   } catch (error) {
@@ -16,7 +24,7 @@ async function iniciarSalones({ institucionId, institucionNombre, onVolver, onEr
   }
 }
 
-async function manejarCrear({ institucionId, institucionNombre, onVolver, onError, onToast }) {
+async function manejarCrearSalon({ institucionId, institucionNombre, onVolver, onError, onToast }) {
   renderizarModalSalon({
     salon: null,
     onGuardar: async (datos) => {
@@ -30,7 +38,7 @@ async function manejarCrear({ institucionId, institucionNombre, onVolver, onErro
   });
 }
 
-async function manejarEditar({ id, institucionId, institucionNombre, onVolver, onError, onToast }) {
+async function manejarEditarSalon({ id, institucionId, institucionNombre, onVolver, onError, onToast }) {
   try {
     const resp = await apiObtenerSalon(id);
     const datos = resp.datos || resp;
@@ -48,7 +56,7 @@ async function manejarEditar({ id, institucionId, institucionNombre, onVolver, o
   } catch (e) { onError(e.message); }
 }
 
-async function manejarEliminar({ id, institucionId, institucionNombre, onVolver, onError, onToast }) {
+async function manejarEliminarSalon({ id, institucionId, institucionNombre, onVolver, onError, onToast }) {
   if (!confirm('¿Archivar este salón?')) return;
   try {
     await apiEliminarSalon(id);
@@ -57,7 +65,7 @@ async function manejarEliminar({ id, institucionId, institucionNombre, onVolver,
   } catch (e) { onError(e.message); }
 }
 
-async function manejarVer({ id, institucionId, onVolver, onError, onToast }) {
+async function manejarVerSalon({ id, institucionId, onVolver, onError, onToast }) {
   try {
     const [respSalon, respUsuarios] = await Promise.all([
       apiObtenerSalon(id),
@@ -81,28 +89,28 @@ async function manejarVer({ id, institucionId, onVolver, onError, onToast }) {
         try {
           await apiAsignarUsuario(id, { membresia_id: parseInt(membresiaId) });
           onToast('Usuario agregado', 'exito');
-          manejarVer({ id, institucionId, onVolver, onError, onToast });
+          manejarVerSalon({ id, institucionId, onVolver, onError, onToast });
         } catch (e) { onError(e.message); }
       },
       onQuitarUsuario: async (membresiaId) => {
         try {
           await apiQuitarUsuario(id, membresiaId);
           onToast('Usuario removido', 'exito');
-          manejarVer({ id, institucionId, onVolver, onError, onToast });
+          manejarVerSalon({ id, institucionId, onVolver, onError, onToast });
         } catch (e) { onError(e.message); }
       },
       onAsignarCurso: async (cursoId) => {
         try {
           await apiAsignarCurso(id, { curso_id: parseInt(cursoId) });
           onToast('Curso asignado', 'exito');
-          manejarVer({ id, institucionId, onVolver, onError, onToast });
+          manejarVerSalon({ id, institucionId, onVolver, onError, onToast });
         } catch (e) { onError(e.message); }
       },
       onQuitarCurso: async (cursoId) => {
         try {
           await apiQuitarCurso(id, cursoId);
           onToast('Curso removido', 'exito');
-          manejarVer({ id, institucionId, onVolver, onError, onToast });
+          manejarVerSalon({ id, institucionId, onVolver, onError, onToast });
         } catch (e) { onError(e.message); }
       },
       onVolver: () => iniciarSalones({ institucionId, institucionNombre: salon.nombre_institucion, onVolver, onError, onToast })

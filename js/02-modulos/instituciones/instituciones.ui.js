@@ -5,7 +5,7 @@
      - Solo renderizado, NUNCA hace fetch
    ============================================ */
 
-function renderizarInstituciones({ instituciones, onCrear, onEditar, onVer, onEliminar, onVolver }) {
+function renderizarInstituciones({ instituciones, onCrear, onEditar, onVer, onVerSalones, onEliminar, onVolver }) {
   const app = document.getElementById('app');
   app.innerHTML = `
     <div style="padding:20px;max-width:1200px;margin:0 auto;">
@@ -21,7 +21,6 @@ function renderizarInstituciones({ instituciones, onCrear, onEditar, onVer, onEl
   `;
 
   document.getElementById('btnVolver').addEventListener('click', onVolver);
-  document.getElementById('btnVerSalones')?.addEventListener('click', () => onVerSalones(institucion.institucion_id, institucion.nombre_institucion));
   document.getElementById('btnCrearInstitucion').addEventListener('click', onCrear);
 
   const contenedor = document.getElementById('institucionesContenido');
@@ -60,6 +59,7 @@ function renderizarInstituciones({ instituciones, onCrear, onEditar, onVer, onEl
           <td style="padding:12px;">${inst.total_usuarios || 0}</td>
           <td style="padding:12px;text-align:right;">
             <button class="btn-icono" data-accion="ver" data-id="${inst.institucion_id}" title="Ver detalle">👁️</button>
+            <button class="btn-icono" data-accion="salones" data-id="${inst.institucion_id}" data-nombre="${inst.nombre_institucion}" title="Ver Salones">🏫</button>
             <button class="btn-icono" data-accion="editar" data-id="${inst.institucion_id}" title="Editar">✏️</button>
             <button class="btn-icono" data-accion="eliminar" data-id="${inst.institucion_id}" title="Cerrar" style="color:var(--error);">🗑️</button>
           </td>
@@ -72,8 +72,9 @@ function renderizarInstituciones({ instituciones, onCrear, onEditar, onVer, onEl
   tabla.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-accion]');
     if (!btn) return;
-    const { accion, id } = btn.dataset;
+    const { accion, id, nombre } = btn.dataset;
     if (accion === 'ver') onVer(id);
+    if (accion === 'salones') onVerSalones(id, nombre);
     if (accion === 'editar') onEditar(id);
     if (accion === 'eliminar') onEliminar(id);
   });
@@ -90,10 +91,10 @@ function renderizarModalCrearInstitucion({ onGuardar, onCancelar }) {
       <h3 style="margin:0 0 16px;font-size:20px;">+ Nueva Institución</h3>
       <div style="margin:16px 0;">
         <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nombre de la Institución *</label>
-        <input type="text" id="inputNombre" class="input" placeholder="Ej: Academia Addison Lima" style="width:100%;margin-bottom:12px;">
+        <input type="text" id="inputNombreInst" class="input" placeholder="Ej: Academia Addison Lima" style="width:100%;margin-bottom:12px;">
         
         <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">País</label>
-        <select id="selectPais" class="input" style="width:100%;margin-bottom:12px;">
+        <select id="selectPaisInst" class="input" style="width:100%;margin-bottom:12px;">
           <option value="PE">Perú</option>
           <option value="MX">México</option>
           <option value="CO">Colombia</option>
@@ -113,20 +114,20 @@ function renderizarModalCrearInstitucion({ onGuardar, onCancelar }) {
         <input type="email" id="inputDirectorCorreo" class="input" placeholder="director@institucion.edu" style="width:100%;">
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
-        <button class="btn btn-secundario" id="btnCancelar">Cancelar</button>
-        <button class="btn" id="btnGuardar">Crear Institución</button>
+        <button class="btn btn-secundario" id="btnCancelarInst">Cancelar</button>
+        <button class="btn" id="btnGuardarInst">Crear Institución</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
 
-  document.getElementById('btnCancelar').addEventListener('click', () => {
+  document.getElementById('btnCancelarInst').addEventListener('click', () => {
     modal.remove();
     onCancelar();
   });
-  document.getElementById('btnGuardar').addEventListener('click', () => {
-    const nombre = document.getElementById('inputNombre').value.trim();
-    const pais = document.getElementById('selectPais').value;
+  document.getElementById('btnGuardarInst').addEventListener('click', () => {
+    const nombre = document.getElementById('inputNombreInst').value.trim();
+    const pais = document.getElementById('selectPaisInst').value;
     const dirNombre = document.getElementById('inputDirectorNombre').value.trim();
     const dirCorreo = document.getElementById('inputDirectorCorreo').value.trim();
     
@@ -155,10 +156,10 @@ function renderizarModalEditarInstitucion({ institucion, onGuardar, onCancelar }
       <h3 style="margin:0 0 16px;font-size:20px;">✏️ Editar Institución</h3>
       <div style="margin:16px 0;">
         <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nombre</label>
-        <input type="text" id="inputNombre" class="input" value="${institucion.nombre_institucion}" style="width:100%;margin-bottom:12px;">
+        <input type="text" id="inputNombreInst" class="input" value="${institucion.nombre_institucion}" style="width:100%;margin-bottom:12px;">
         
         <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">País</label>
-        <select id="selectPais" class="input" style="width:100%;margin-bottom:12px;">
+        <select id="selectPaisInst" class="input" style="width:100%;margin-bottom:12px;">
           <option value="PE" ${institucion.pais_codigo === 'PE' ? 'selected' : ''}>Perú</option>
           <option value="MX" ${institucion.pais_codigo === 'MX' ? 'selected' : ''}>México</option>
           <option value="CO" ${institucion.pais_codigo === 'CO' ? 'selected' : ''}>Colombia</option>
@@ -169,28 +170,28 @@ function renderizarModalEditarInstitucion({ institucion, onGuardar, onCancelar }
         </select>
         
         <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Estado</label>
-        <select id="selectEstado" class="input" style="width:100%;">
+        <select id="selectEstadoInst" class="input" style="width:100%;">
           <option value="active" ${institucion.institucion_status === 'active' ? 'selected' : ''}>Activa</option>
           <option value="suspended" ${institucion.institucion_status === 'suspended' ? 'selected' : ''}>Suspendida</option>
           <option value="trial" ${institucion.institucion_status === 'trial' ? 'selected' : ''}>Prueba</option>
         </select>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
-        <button class="btn btn-secundario" id="btnCancelar">Cancelar</button>
-        <button class="btn" id="btnGuardar">Guardar Cambios</button>
+        <button class="btn btn-secundario" id="btnCancelarInst">Cancelar</button>
+        <button class="btn" id="btnGuardarInst">Guardar Cambios</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
 
-  document.getElementById('btnCancelar').addEventListener('click', () => {
+  document.getElementById('btnCancelarInst').addEventListener('click', () => {
     modal.remove();
     onCancelar();
   });
-  document.getElementById('btnGuardar').addEventListener('click', () => {
-    const nombre = document.getElementById('inputNombre').value.trim();
-    const pais = document.getElementById('selectPais').value;
-    const estado = document.getElementById('selectEstado').value;
+  document.getElementById('btnGuardarInst').addEventListener('click', () => {
+    const nombre = document.getElementById('inputNombreInst').value.trim();
+    const pais = document.getElementById('selectPaisInst').value;
+    const estado = document.getElementById('selectEstadoInst').value;
     
     if (!nombre) {
       alert('El nombre es obligatorio');
@@ -211,8 +212,10 @@ function renderizarDetalleInstitucion({ institucion, usuarios, onVolver, onVerSa
     <div style="padding:20px;max-width:1200px;margin:0 auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
         <h2>🏛️ ${institucion.nombre_institucion}</h2>
-        <button class="btn btn-sm" id="btnVerSalones">🏫 Ver Salones</button>
-        <button class="btn btn-sm btn-secundario" id="btnVolver">← Volver</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm" id="btnVerSalones">🏫 Ver Salones</button>
+          <button class="btn btn-sm btn-secundario" id="btnVolver">← Volver</button>
+        </div>
       </div>
       
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin-bottom:24px;">
@@ -244,7 +247,7 @@ function renderizarDetalleInstitucion({ institucion, usuarios, onVolver, onVerSa
   `;
 
   document.getElementById('btnVolver').addEventListener('click', onVolver);
-  document.getElementById('btnVerSalones')?.addEventListener('click', () => onVerSalones(institucion.institucion_id, institucion.nombre_institucion));
+  document.getElementById('btnVerSalones').addEventListener('click', () => onVerSalones(institucion.institucion_id, institucion.nombre_institucion));
 
   const contenedor = document.getElementById('usuariosInstitucion');
   if (!usuarios || usuarios.length === 0) {

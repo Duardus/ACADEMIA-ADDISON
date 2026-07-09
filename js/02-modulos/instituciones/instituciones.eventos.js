@@ -14,10 +14,11 @@ async function iniciarInstituciones({ onVolver, onError, onToast }) {
     
     renderizarInstituciones({
       instituciones,
-      onCrear: () => manejarCrear({ onVolver, onError, onToast }),
-      onEditar: (id) => manejarEditar({ id, onVolver, onError, onToast }),
-      onVer: (id) => manejarVer({ id, onVolver, onError, onToast }),
-      onEliminar: (id) => manejarEliminar({ id, onVolver, onError, onToast }),
+      onCrear: () => manejarCrearInstitucion({ onVolver, onError, onToast }),
+      onEditar: (id) => manejarEditarInstitucion({ id, onVolver, onError, onToast }),
+      onVer: (id) => manejarVerInstitucion({ id, onVolver, onError, onToast }),
+      onVerSalones: (instId, instNombre) => iniciarSalones({ institucionId: instId, institucionNombre: instNombre, onVolver: () => iniciarInstituciones({ onVolver, onError, onToast }), onError, onToast }),
+      onEliminar: (id) => manejarEliminarInstitucion({ id, onVolver, onError, onToast }),
       onVolver
     });
   } catch (error) {
@@ -25,7 +26,7 @@ async function iniciarInstituciones({ onVolver, onError, onToast }) {
   }
 }
 
-async function manejarCrear({ onVolver, onError, onToast }) {
+async function manejarCrearInstitucion({ onVolver, onError, onToast }) {
   renderizarModalCrearInstitucion({
     onGuardar: async (datos) => {
       try {
@@ -40,7 +41,7 @@ async function manejarCrear({ onVolver, onError, onToast }) {
   });
 }
 
-async function manejarEditar({ id, onVolver, onError, onToast }) {
+async function manejarEditarInstitucion({ id, onVolver, onError, onToast }) {
   try {
     const respuesta = await apiObtenerInstitucion(id);
     const datos = respuesta.datos || respuesta;
@@ -64,7 +65,7 @@ async function manejarEditar({ id, onVolver, onError, onToast }) {
   }
 }
 
-async function manejarVer({ id, onVolver, onError, onToast }) {
+async function manejarVerInstitucion({ id, onVolver, onError, onToast }) {
   try {
     const respuesta = await apiObtenerInstitucion(id);
     const datos = respuesta.datos || respuesta;
@@ -73,14 +74,14 @@ async function manejarVer({ id, onVolver, onError, onToast }) {
       institucion: datos.institucion || datos,
       usuarios: datos.usuarios || [],
       onVolver: () => iniciarInstituciones({ onVolver, onError, onToast }),
-      onVerSalones: (instId, instNombre) => iniciarSalones({ institucionId: instId, institucionNombre: instNombre, onVolver: () => manejarVer({ id: instId, onVolver, onError, onToast }), onError, onToast })
+      onVerSalones: (instId, instNombre) => iniciarSalones({ institucionId: instId, institucionNombre: instNombre, onVolver: () => manejarVerInstitucion({ id: instId, onVolver, onError, onToast }), onError, onToast })
     });
   } catch (error) {
     onError(error.message || 'Error cargando detalle');
   }
 }
 
-async function manejarEliminar({ id, onVolver, onError, onToast }) {
+async function manejarEliminarInstitucion({ id, onVolver, onError, onToast }) {
   if (!confirm('¿Estás seguro de cerrar esta institución? Los usuarios perderán acceso.')) return;
   try {
     await apiEliminarInstitucion(id);
