@@ -15,7 +15,6 @@ async function iniciarJerarquia({ onVolver, onError, onToast }) {
     renderizarJerarquia({
       subordinados: subordinados || [],
       onCrear: () => manejarCrear({ onVolver, onError, onToast }),
-      onEditar: (id) => console.log('Editar', id),
       onCambiarEstado: (id) => manejarCambiarEstado({ id, onVolver, onError, onToast }),
       onDesactivar: (id) => manejarDesactivar({ id, onVolver, onError, onToast }),
       onCapacidades: (id) => manejarCapacidades({ id, onVolver, onError, onToast }),
@@ -48,7 +47,7 @@ async function manejarCrear({ onVolver, onError, onToast }) {
 }
 
 async function manejarCambiarEstado({ id, onVolver, onError, onToast }) {
-  const nuevoEstado = confirm('¿Cambiar estado del subordinado?') ? 'activo' : 'inactivo';
+  const nuevoEstado = confirm('¿Activar subordinado? (Cancelar = desactivar)') ? 'activo' : 'inactivo';
   try {
     await apiCambiarEstadoSubordinado(id, nuevoEstado);
     onToast('Estado actualizado', 'exito');

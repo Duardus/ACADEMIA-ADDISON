@@ -6,7 +6,7 @@ async function generarDocumentacionViva(req, res) {
     const doc = {
       meta: {
         nombre: 'ACADEMIA-ADDISON',
-        version: '3.3.1',
+        version: '3.4.0',
         superadmin: 'Eduardo Flores (flores.eduardo.666@gmail.com)',
         repositorio: 'https://github.com/Duardus/ACADEMIA-ADDISON',
         timestamp: new Date().toISOString(),
@@ -25,6 +25,23 @@ async function generarDocumentacionViva(req, res) {
           'Modo Fantasma: Usuarios recv-only (solo ver, sin interactuar)',
           'Jerarquia de usuarios: Subordinados con capacidades delegables'
         ]
+      },
+      
+      arquitectura: {
+        principio: 'Frontend modular - Un archivo por responsabilidad (api/ui/eventos)',
+        estructura: {
+          '00-config': 'Configuracion global (api.config.js, firebase.config.js, permisos.config.js)',
+          '01-nucleo': 'Core compartido (utilidades.js, sesion.js, peticiones.js)',
+          '02-modulos': 'Modulos por dominio - cada uno con api.js, ui.js, eventos.js',
+          '99-app.js': 'Entry point, router, onAuthStateChanged'
+        },
+        modulos_actuales: [
+          'login (login.api.js, login.ui.js, login.eventos.js)',
+          'dashboard (dashboard.api.js, dashboard.ui.js, dashboard.eventos.js)',
+          'arbol (arbol.api.js, arbol.ui.js, arbol.eventos.js)',
+          'jerarquia (jerarquia.api.js, jerarquia.ui.js, jerarquia.eventos.js)'
+        ],
+        regla_oro: 'NUNCA archivos monoliticos grandes. Cada archivo < 300 lineas.'
       },
       
       infraestructura: {
@@ -62,17 +79,6 @@ async function generarDocumentacionViva(req, res) {
         middleware: ['cors', 'json', 'autenticar', 'manejar_errores']
       },
       
-      frontend: {
-        arquitectura: 'SPA Vanilla JS modular v3.3',
-        hosting: 'Cloudflare Pages',
-        modulos: [
-          'login (login.api.js, login.ui.js, login.eventos.js)',
-          'dashboard (dashboard.api.js, dashboard.ui.js, dashboard.eventos.js)',
-          'arbol (arbol.api.js, arbol.ui.js, arbol.eventos.js)'
-        ],
-        entry_point: '99-app.js'
-      },
-      
       autenticacion: {
         proveedor: 'Firebase Auth v8.10.1',
         metodo: 'Google OAuth 2.0',
@@ -87,13 +93,7 @@ async function generarDocumentacionViva(req, res) {
           'Si existe -> login_directo. Si no existe -> crea usuario automaticamente',
           'Backend devuelve: token_sesion, usuario, institucion',
           'Frontend guarda en localStorage y muestra dashboard'
-        ],
-        respuestas: {
-          login_directo: 'Usuario tiene 1 membresia -> Guardar token -> Dashboard',
-          selector_requerido: 'Usuario tiene multiples membresias -> Mostrar selector',
-          AUTENTICACION_FALLIDA: 'Token invalido -> Error',
-          USUARIO_NO_ENCONTRADO: 'Auto-registro automatico'
-        }
+        ]
       },
       
       jerarquia_usuarios: {
@@ -109,7 +109,13 @@ async function generarDocumentacionViva(req, res) {
           'GET /api/v1/jerarquia/etiquetas -> Etiquetas frecuentes',
           'GET /api/v1/jerarquia/arbol-completo -> Arbol de institucion',
           'POST /api/v1/jerarquia/grupos -> Crear grupo colaborativo'
-        ]
+        ],
+        frontend: {
+          tabla: 'Lista de subordinados con nombre, correo, rol, estado, capacidades',
+          crear: 'Modal para crear nuevo subordinado (nombre, correo, rol, etiqueta)',
+          capacidades: 'Modal con checkboxes para delegar permisos',
+          acciones: 'Cambiar estado, desactivar, gestionar capacidades'
+        }
       },
       
       arbol_academico: {
@@ -146,10 +152,11 @@ async function generarDocumentacionViva(req, res) {
         'Modo fantasma recv-only: Solo ver sin interactuar',
         'CORS solo en Express: Nunca en nginx ni Caddy',
         'Frontend modular: Un archivo por responsabilidad (api/ui/eventos)',
-        'Auth solo Firebase: Datos persistentes en PostgreSQL, no en Firestore'
+        'Auth solo Firebase: Datos persistentes en PostgreSQL, no en Firestore',
+        'NUNCA archivos monoliticos: Cada archivo < 300 lineas'
       ],
       
-      nota_para_ia: 'Plataforma educativa en produccion. Eduardo Flores es superadmin. Usar espanol descriptivo para variables. Respetar Reglas de Oro. Revisar js/02-modulos/ y api/rutas/ para dudas tecnicas. El endpoint /api/v1/docs genera esta documentacion en tiempo real.'
+      nota_para_ia: 'Plataforma educativa en produccion. Eduardo Flores es superadmin. Usar espanol descriptivo para variables. Respetar Reglas de Oro. Frontend modular: cada modulo tiene api.js (HTTP), ui.js (renderizado), eventos.js (orquestacion). NUNCA crear archivos monoliticos grandes. Revisar js/02-modulos/ y api/rutas/ para dudas tecnicas.'
     };
 
     res.json(doc);

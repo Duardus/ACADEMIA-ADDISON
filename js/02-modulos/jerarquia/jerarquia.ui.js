@@ -7,7 +7,7 @@
      - Recibe datos planos, callbacks
    ============================================ */
 
-function renderizarJerarquia({ subordinados, onCrear, onEditar, onCambiarEstado, onDesactivar, onCapacidades, onVolver }) {
+function renderizarJerarquia({ subordinados, onCrear, onCambiarEstado, onDesactivar, onCapacidades, onVolver }) {
   const app = document.getElementById('app');
   app.innerHTML = `
     <div style="padding:20px;max-width:1200px;margin:0 auto;">
@@ -68,7 +68,6 @@ function renderizarJerarquia({ subordinados, onCrear, onEditar, onCambiarEstado,
   `;
   contenedor.appendChild(tabla);
 
-  // Event delegation
   tabla.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-accion]');
     if (!btn) return;
@@ -103,10 +102,7 @@ function renderizarModalCrearSubordinado({ etiquetas, onGuardar, onCancelar }) {
         </select>
         
         <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Etiqueta de Cargo</label>
-        <input type="text" id="inputEtiqueta" class="input" placeholder="Ej: Profesor de Matematicas" style="width:100%;margin-bottom:12px;">
-        <datalist id="listaEtiquetas">
-          ${(etiquetas || []).map(e => `<option value="${e}">`).join('')}
-        </datalist>
+        <input type="text" id="inputEtiqueta" class="input" placeholder="Ej: Profesor de Matematicas" style="width:100%;">
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button class="btn btn-secundario" id="btnCancelar">Cancelar</button>
