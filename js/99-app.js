@@ -118,12 +118,12 @@ class App {
     const pendientes = {
       examenes:'Exámenes', teorias:'Teorías', notas:'Notas',
       finanzas:'Finanzas', calendario:'Calendario',
-      'finanzas-globales':'Finanzas globales', auditoria:'Auditoría'
+      'finanzas-globales':'Finanzas globales',
+      auditoria:'Auditoría'
     };
     if (pendientes[vista]) {
       this.mostrarToast(`🚧 ${pendientes[vista]} - En construcción`, 'advertencia');
     }
-  }
   }
   async cerrarSesion() {
     detenerHeartbeat();
