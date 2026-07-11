@@ -112,7 +112,7 @@ async function crearInstitucion(req, res) {
       .replace(/[^a-z0-9-]/g, '')
       .substring(0, 100);
     
-    const correo = director_correo.toLowerCase().trim();
+    const correo = (director_correo||"").toLowerCase().trim(); if(!correo){ /* sin director */ } else ().trim();
     const uid = req.usuario_autenticado.usuario_id;
 
     // Verificar que el slug no exista
@@ -158,12 +158,7 @@ async function crearInstitucion(req, res) {
       );
     }
 
-    // Crear membresia nivel 1 para el director
-    await consulta(
-      `INSERT INTO membresias (usuario_id, institucion_id, tipo_rol, nombre_rol, nivel, puede_crear_hijos, estado_membresia, invitado_por, creado_en) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
-      [dir_id, institucion_id, 'director', 'Director', 1, true, 'active', uid]
-    );
+    if(correo){ await consulta(`INSERT INTO membresias (usuario_id, institucion_id, tipo_rol, nombre_rol, nivel, puede_crear_hijos, estado_membresia, invitado_por, creado_en) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())`,[dir_id,institucion_id,'director','Director',1,true,'active',uid]); }
 
     res.json({ 
       exito: true,
