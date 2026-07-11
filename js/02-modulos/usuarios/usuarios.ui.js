@@ -279,6 +279,34 @@ function renderizarModalCrearUsuario({ instituciones, salones, onGuardar, onCanc
   `;
   document.body.appendChild(modal);
 
+  // Cargar salones al cambiar institucion
+  document.getElementById('selectInstitucion').addEventListener('change', async (e) => {
+    const institucionId = e.target.value;
+    const salonSelect = document.getElementById('selectSalon');
+    if (!institucionId) {
+      salonSelect.innerHTML = '<option value="">-- Primero selecciona institucion --</option>';
+      salonSelect.disabled = true;
+      return;
+    }
+    try {
+      salonSelect.innerHTML = '<option value="">Cargando aulas...</option>';
+      salonSelect.disabled = true;
+      const resp = await apiObtenerSalones(institucionId);
+      const salones = resp?.salones || resp?.datos?.salones || [];
+      if (salones.length === 0) {
+        salonSelect.innerHTML = '<option value="">Sin aulas en esta institucion</option>';
+        salonSelect.disabled = false;
+      } else {
+        salonSelect.innerHTML = '<option value="">-- Seleccionar aula --</option>' +
+          salones.map(s => '<option value="' + s.salon_id + '">' + s.nombre_salon + '</option>').join('');
+        salonSelect.disabled = false;
+      }
+    } catch (err) {
+      salonSelect.innerHTML = '<option value="">Error cargando aulas</option>';
+      salonSelect.disabled = true;
+    }
+  });
+
   document.getElementById('btnCancelar').addEventListener('click', () => {
     modal.remove();
     onCancelar();
