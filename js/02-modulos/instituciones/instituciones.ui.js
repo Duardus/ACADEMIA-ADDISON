@@ -132,7 +132,7 @@ function renderizarModalCrearInstitucion({ onGuardar, onCancelar }) {
     const dirCorreo = document.getElementById('inputDirectorCorreo').value.trim();
     
     if (!nombre || !dirNombre || !dirCorreo) {
-      alert('Nombre de institución, nombre y correo del director son obligatorios');
+      alert('Nombre de institución obligatorio');
       return;
     }
     modal.remove();
