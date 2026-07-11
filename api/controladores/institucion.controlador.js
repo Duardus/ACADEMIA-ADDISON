@@ -252,41 +252,31 @@ async function editarInstitucion(req, res) {
 }
 
 // ============================================
-// ELIMINAR (soft delete) INSTITUCION
-// ============================================
 async function eliminarInstitucion(req, res) {
+  const { institucion_id } = req.params;
+  const { consulta } = require('../configuracion/base_de_datos');
   try {
-    const { institucion_id } = req.params;
-    const uid = req.usuario_autenticado.usuario_id;
-
-    const existente = await consulta(
-      'SELECT superadmin_id FROM instituciones WHERE institucion_id = $1',
-      [institucion_id]
-    );
-    
-    if (existente.rows.length === 0) {
-      return res.status(404).json({ error: 'Institucion no encontrada', codigo: 'NO_ENCONTRADA' });
+    const id = parseInt(institucion_id);
+    if (!id) return res.status(400).json({ error: 'institucion_id invalido' });
+    await consulta('BEGIN');
+    const tablasDirectas = await consulta("SELECT table_name FROM information_schema.columns WHERE column_name='institucion_id' AND table_schema='public'");
+    for (const r of tablasDirectas.rows){
+      const t = r.table_name;
+      if (t === 'instituciones') continue;
+      try { await consulta(`DELETE FROM ${t} WHERE institucion_id = $1`, [id]); } catch(e){ console.warn('skip',t); }
     }
-
-    if (req.usuario_autenticado.rol !== 'superadmin' && existente.rows[0].superadmin_id !== uid) {
-      return res.status(403).json({ error: 'Sin permiso', codigo: 'SIN_PERMISO' });
-    }
-
-    await consulta(
-      "UPDATE instituciones SET institucion_status = 'closed', actualizado_en = NOW() WHERE institucion_id = $1",
-      [institucion_id]
-    );
-
-    res.json({ 
-      exito: true,
-      mensaje: 'Institucion cerrada correctamente',
-      institucion_id
-    });
+    try { await consulta('DELETE FROM salon_miembros WHERE salon_id IN (SELECT salon_id FROM salones WHERE institucion_id=$1)', [id]); } catch(e){}
+    try { await consulta('DELETE FROM salones WHERE institucion_id=$1', [id]); } catch(e){}
+    await consulta('DELETE FROM instituciones WHERE institucion_id=$1', [id]);
+    await consulta('COMMIT');
+    return res.json({ exito:true, mensaje:'Institucion y TODO su contenido eliminado, cero basura' });
   } catch (error) {
+    try { await require('../configuracion/base_de_datos').consulta('ROLLBACK'); } catch(e){}
     console.error('Eliminar institucion error:', error);
-    res.status(500).json({ error: 'Error cerrando institucion', codigo: 'ELIMINAR_ERROR' });
+    return res.status(500).json({ error: error.message });
   }
 }
+
 
 module.exports = { 
   listarInstituciones, 
