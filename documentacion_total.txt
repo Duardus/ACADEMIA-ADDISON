@@ -1,0 +1,599 @@
+----------------------------------------------------
+REPORTE TOTAL DE DOCUMENTACIÓN DEL SERVIDOR
+Fecha de escaneo: Sat Jul 11 16:25:44 UTC 2026
+----------------------------------------------------
+
+=== CARPETAS DE DOCUMENTACIÓN ENCONTRADAS ===
+
+=== CONTENIDO ÍNTEGRO DE ARCHIVOS DE DOCUMENTACIÓN ===
+-e 
+
+****************************************************
+ARCHIVO: ./documentacion_total.txt
+****************************************************
+
+-e 
+
+****************************************************
+ARCHIVO: ./api/CONTRATO_API.md
+****************************************************
+
+# 📋 CONTRATO API - ACADEMIA ADDISON v3.0
+
+## Formato de respuesta estandar
+
+TODOS los endpoints devuelven:
+```json
+{
+  "exito": true|false,
+  "mensaje": "string",
+  "datos": { ... },
+  "error": "string",
+  "codigo": "CODIGO_ERROR",
+  "timestamp": "ISO8601"
+}
+```
+
+## Autenticacion
+
+Header obligatorio en endpoints protegidos:
+```
+Authorization: Bearer <token_sesion>
+```
+
+## Endpoints
+
+### POST /auth/login
+Entrada: `{ token_firebase: string }`
+Salida OK: `{ tipo, token_sesion, usuario: { rol, nivel, nombre_rol, ... }, institucion }`
+Salida selector: `{ tipo: "selector_requerido", token_preliminar, membresias: [...] }`
+
+### POST /auth/seleccionar-contexto
+Entrada: `{ token_preliminar, membresia_id }`
+Salida: `{ token_sesion, usuario, institucion }`
+
+### POST /auth/switch-context
+Entrada: `{ membresia_id }`
+Salida: `{ token_sesion, rol, nivel, institucion }`
+
+### GET /arbol
+Salida: `{ datos: [ { grupo_id, nombre_grupo, hijos: [cursos...] } ] }`
+
+### GET /jerarquia/mis-subordinados
+Salida: `{ datos: { total, subordinados: [...] } }`
+
+### POST /jerarquia/crear
+Entrada: `{ email, nombre_rol, nivel_jerarquico, superior_inmediato_id, ... }`
+Salida: `{ datos: { membresia_id, usuario_id, email, ... } }`
+
+### DELETE /jerarquia/subordinado/:membresia_id
+Salida: `{ datos: { membresia_id } }`
+
+## Roles validos
+superadmin, director, professor, auxiliary, student, miembro
+
+## Codigos de error comunes
+AUTENTICACION_FALLIDA, SIN_MEMBRESIA, MEMBRESIA_EXISTENTE
+NIVEL_INVALIDO, SIN_PODER_CREAR, DELEGACION_ILEGAL
+
+=== ARCHIVOS DE TEXTO RASTREADOS POR GIT ===
+
+-- Repositorio en: . --
+100644 blob 60c276393b20a64384291244a875278990489067	api/CONTRATO_API.md
+100644 blob 768067ec01f9f5e306f7f7ffc679365d0a85378e	api/node_modules/@bufbuild/protobuf/README.md
+100644 blob 7334f6fc8b18f869cd4d2c5fcb01438434be67ca	api/node_modules/@fastify/busboy/README.md
+100644 blob c54a18385bf282db1e00fc0f1eb9fd6b321af81b	api/node_modules/@firebase/app-check-interop-types/README.md
+100644 blob 931932c28d7672f8081cb41972d553baa106189d	api/node_modules/@firebase/app-types/README.md
+100644 blob 67ed6389e0481811405c08d4ab7629979dccb666	api/node_modules/@firebase/auth-interop-types/README.md
+100644 blob 242dacbf959e8961299606a5b88b1dce8d668239	api/node_modules/@firebase/component/README.md
+100644 blob 656ab8397b956287c04081802764825611f4f4a0	api/node_modules/@firebase/database-compat/README.md
+100644 blob 681f6b3b09bd244dcef2b09f758c510d3c13fdc0	api/node_modules/@firebase/database-types/README.md
+100644 blob 5fc92ccc42ba848cd91802c832378c95ffb78f5b	api/node_modules/@firebase/database/README.md
+100644 blob 69c1642e2ae4740faba90d6bacdd6a5d52072985	api/node_modules/@firebase/logger/README.md
+100644 blob b79aeb6034b3e7eb9bcf143f27bf0e016ca24e81	api/node_modules/@firebase/util/README.md
+100644 blob e4a568405d5b95103ba26194a654431fd36e7d79	api/node_modules/@google-cloud/firestore/README.md
+100644 blob 3b16722df8c182207066d6a07c6660692f21d2ef	api/node_modules/@google-cloud/paginator/CHANGELOG.md
+100644 blob e85b650d493dd0fcf63dde4dc3ec09fd36bb655b	api/node_modules/@google-cloud/paginator/README.md
+100644 blob 328e4f36d9abb338ecec545f26ffb4f5c625dc87	api/node_modules/@google-cloud/projectify/CHANGELOG.md
+100644 blob 736e96a5900ee3abce8c5e8a4aba08ed643d671c	api/node_modules/@google-cloud/projectify/README.md
+100644 blob 0393f3e76f7a80de19fec5781a89bf2556513383	api/node_modules/@google-cloud/promisify/CHANGELOG.md
+100644 blob 57024381e98692397adbf8193dd85b807f692898	api/node_modules/@google-cloud/promisify/README.md
+100644 blob ea2c8dc0d8a9c45b8d445778c8dc9a5fe141f563	api/node_modules/@google-cloud/storage/README.md
+100644 blob c82697f6c6b77ec180967fcb17ae050c8c6558e4	api/node_modules/@google-cloud/storage/node_modules/gcp-metadata/CHANGELOG.md
+100644 blob d0c1b9d19157c1f79eae3728504bfcad8ff56dcd	api/node_modules/@google-cloud/storage/node_modules/gcp-metadata/README.md
+100644 blob dc942a7d060a483212cf715376f86262e2361f30	api/node_modules/@google-cloud/storage/node_modules/google-auth-library/CHANGELOG.md
+100644 blob 4e9255efb59acaa945e58e05ebf2840222c3302b	api/node_modules/@google-cloud/storage/node_modules/google-auth-library/README.md
+100644 blob 7b1ff43c16b013d63ba512dfb91c1ac398849382	api/node_modules/@grpc/grpc-js/README.md
+100644 blob 935c100dc68da7a8fe3d8834461c1fea071e86ef	api/node_modules/@grpc/grpc-js/node_modules/@grpc/proto-loader/README.md
+100644 blob 935c100dc68da7a8fe3d8834461c1fea071e86ef	api/node_modules/@grpc/proto-loader/README.md
+100644 blob 4bd804b6c7da9e899f62584c357a9ee10c74083c	api/node_modules/@js-sdsl/ordered-map/CHANGELOG.md
+100644 blob 5b68d207dfa847f8b4cdc3641ad2cc81dba79ad0	api/node_modules/@js-sdsl/ordered-map/README.md
+100644 blob a10ef17e8253ca4ef396ed494b55bcd44a0f6f94	api/node_modules/@js-sdsl/ordered-map/README.zh-CN.md
+100644 blob 18a7fb6bffc6163e33ea3e41758be21bacfb4cf8	api/node_modules/@nodable/entities/README.md
+100644 blob 40015dbf051b7ecd870d2bc0256396c9397b2b65	api/node_modules/@opentelemetry/api/README.md
+100644 blob 72270960de90f785cc8a768c75d96d19825cf8fe	api/node_modules/@protobufjs/aspromise/README.md
+100644 blob 0e2eb33f01abfe3eda6b514d7ea51c5d0d189584	api/node_modules/@protobufjs/base64/README.md
+100644 blob 01693386b67080d327ef42b1f2f972887c3672ca	api/node_modules/@protobufjs/codegen/README.md
+100644 blob fd2801fb9629ea3536a9db3c09bf7e6a65c86d4a	api/node_modules/@protobufjs/eventemitter/CHANGELOG.md
+100644 blob 998d315108b8954ca23ffb27c88467f2f90b1e99	api/node_modules/@protobufjs/eventemitter/README.md
+100644 blob 63ff0228b5469a8ebd4681265257877eb694800c	api/node_modules/@protobufjs/fetch/CHANGELOG.md
+100644 blob 11088a0b4ab70c90987911a1ab717309379a9a7e	api/node_modules/@protobufjs/fetch/README.md
+100644 blob 4c330738cc959751fb6760a91a50d9e58cfe5cb9	api/node_modules/@protobufjs/fetch/tests/data/file.txt
+100644 blob 8947baea7c7fe125fc1d16f119961420405ed4d1	api/node_modules/@protobufjs/float/README.md
+100644 blob 0e8e6bc3321f4815da4daadfba0cba72d4e13ea6	api/node_modules/@protobufjs/path/README.md
+100644 blob 3955ae035eb98b4420b93d6e9be96a8beb04d588	api/node_modules/@protobufjs/pool/README.md
+100644 blob 369628935cad98e9bfc67ba1a70c66ab7a58f9cf	api/node_modules/@protobufjs/utf8/README.md
+100644 blob 01cfa724e7c4ef33c25e1493b8efdf9cf22cf779	api/node_modules/@protobufjs/utf8/tests/data/surrogate_pair_bug.txt
+100644 blob 744ece8e7cba6d43d1420a491ca40dace583df64	api/node_modules/@protobufjs/utf8/tests/data/utf8.txt
+100644 blob bc980fd406bf8c64556d0e551f29f3858bd55d94	api/node_modules/@tootallnate/once/README.md
+100644 blob 8bd3bddd5ab29a1e912bfb4377d96e3e8832c53e	api/node_modules/@types/caseless/README.md
+100644 blob a9672921b4b4a98d0a2e5bcbc73c199d9f805de7	api/node_modules/@types/jsonwebtoken/README.md
+100755 blob 7e8ba38b826a9d9695c27cb9cdeb3acca35462f5	api/node_modules/@types/long/README.md
+100644 blob 1152869e50f686578f1c0b13d36502a0c29118fd	api/node_modules/@types/ms/README.md
+100644 blob 0a6d38a414a29bce8aaf02c2a86624de76af29f3	api/node_modules/@types/node/README.md
+100644 blob a4678eae2bdb40168b1f72d238c3e4c6266577a0	api/node_modules/@types/request/README.md
+100644 blob c889560d86ffd04936dfd24e1295ffff941b53f4	api/node_modules/@types/tough-cookie/README.md
+100644 blob 9de3e45fcf5d0e021f77baf4a53088e217fb8518	api/node_modules/abort-controller/README.md
+100644 blob 627a81d0c760328910c25e561ae121db3b473127	api/node_modules/accepts/HISTORY.md
+100644 blob f3f10c4a4c36bb690ab2f2f8565a95f400ab153c	api/node_modules/accepts/README.md
+100644 blob b8a86b9d380448dd0527e6b5e7187f26fd8d414b	api/node_modules/agent-base/README.md
+100644 blob 4d848bc36f6b862e5db3effa59ebed515730284e	api/node_modules/ansi-regex/readme.md
+100644 blob 24883de808be6a7480542114a86034312c026dec	api/node_modules/ansi-styles/readme.md
+100644 blob 62fc5efa99ee116ee7cbdcd7f38e656e5b717826	api/node_modules/anynum/README.md
+100644 blob b3dfc8377864cc1e23e2e864d4f038eb86bee908	api/node_modules/arrify/readme.md
+100644 blob b708f872cb51eb69058c6f83864300a5ce4b0658	api/node_modules/async-retry/LICENSE.md
+100644 blob d738d3032c009f667f00c3d0c9c4f7ffbc4c3d4d	api/node_modules/async-retry/README.md
+100644 blob ddcc7e6b95ca9aab30e8ef697e8941869adad32a	api/node_modules/asynckit/README.md
+100644 blob b42a48f41641495df5fc3bda0f2857d698aa8144	api/node_modules/base64-js/README.md
+100644 blob 2c44a01012ddd3287cd9e9fbed320ffe1b8894aa	api/node_modules/basic-auth/HISTORY.md
+100644 blob 5f3d758bc62e742b17c4ae3de9124f6761b7bb62	api/node_modules/basic-auth/README.md
+100644 blob e9a81afd0406f030ba21169f0c7a1dba70b3a93b	api/node_modules/basic-auth/node_modules/safe-buffer/README.md
+100644 blob 15546c495ab44b8a26c55a43f8138faa76e90105	api/node_modules/bcryptjs/README.md
+100644 blob 575996496fbe785dace708942a37ba57d14c6584	api/node_modules/bignumber.js/CHANGELOG.md
+100644 blob f09b7106b1c6649fccf6524d85b943a4751491a3	api/node_modules/bignumber.js/LICENCE.md
+100644 blob e34aaf22f039e81f36989c3db24409fc5a0da55a	api/node_modules/bignumber.js/README.md
+100644 blob 335743d2a10053bc24e98dcd6512d80dc14c3186	api/node_modules/body-parser/README.md
+100644 blob 7f6847d54901b26a15beec1c5c075cab1e0ddd2b	api/node_modules/body-parser/node_modules/content-type/README.md
+100644 blob 9a064f3f46ddd7239274cf0e80dab1bf8a820b34	api/node_modules/buffer-equal-constant-time/LICENSE.txt
+100644 blob 4f227f58bddbe9b1a06a4781efca74538b4b532a	api/node_modules/buffer-equal-constant-time/README.md
+100644 blob d60ce0e6df2efd3f83c08b098d1b7b683b96ec84	api/node_modules/bytes/History.md
+100644 blob 5790e23e328e045e66ec6f0b98526157b6c2abcf	api/node_modules/bytes/Readme.md
+100644 blob 24849428bae69540a59077dd4d6b3d15ab7b097b	api/node_modules/call-bind-apply-helpers/CHANGELOG.md
+100644 blob 8fc0dae1b3f6b0a22322a21b40b0f51665eadfb0	api/node_modules/call-bind-apply-helpers/README.md
+100644 blob 8bde4e9a56313204c5cc43fceb634a5d0c69d6ca	api/node_modules/call-bound/CHANGELOG.md
+100644 blob a44e43e56e07b9dce55d14eba09dcbbaf2024303	api/node_modules/call-bound/README.md
+100644 blob 35e8f4ce93672d13fafcd58a8517b922394da9ca	api/node_modules/camelcase-keys/readme.md
+100644 blob c634da22170993aa27619c9a553d6a0f4ea674d2	api/node_modules/camelcase/readme.md
+100644 blob 61f06c3fc27201fb43c43fe25701288e3be9332d	api/node_modules/cliui/CHANGELOG.md
+100644 blob c7e27478a3eff8862ca150f10d1b93a5ac866af2	api/node_modules/cliui/LICENSE.txt
+100644 blob 65b5672235e8209a2cbd5983684bd68424845550	api/node_modules/cliui/README.md
+100644 blob 0a7bce4fd570ab5f2f7ad89f8456ee0ad26de1f5	api/node_modules/color-convert/CHANGELOG.md
+100644 blob d4b08fc369948daacc146dcde0f63c3a79039852	api/node_modules/color-convert/README.md
+100644 blob 932b979176f33bf738aa6293c70bb3e451f2baf5	api/node_modules/color-name/README.md
+100644 blob 9e367b5bc5b59c98923b75d327799e5759f15e23	api/node_modules/combined-stream/Readme.md
+100644 blob 75c91a96e799150a04bec6fb0393eee2cc3ccf11	api/node_modules/content-disposition/README.md
+100644 blob 458367139eb9f0af3daa5449ff0a3d9e2e189582	api/node_modules/content-type/HISTORY.md
+100644 blob c1a922a9afba84293f449dc4b661124fbac2fd5d	api/node_modules/content-type/README.md
+100644 blob 479211a7b32761ad05e3f735e511424cfbf6c7d3	api/node_modules/cookie-signature/History.md
+100644 blob 369af15f8511f0d6037937f1610bbc71b39f4e60	api/node_modules/cookie-signature/Readme.md
+100644 blob 71fdac1110bba222a716c4b56b90028a6a9e5af4	api/node_modules/cookie/README.md
+100644 blob fd4a6c53a9cd1abacf91125dab3fde3163b4c412	api/node_modules/cookie/SECURITY.md
+100644 blob 3d206e5b6fe5177f539a239e9a3e6d7dfde27808	api/node_modules/cors/README.md
+100644 blob d0f2e05973586a9e863337877138fe0a600cd2ee	api/node_modules/data-uri-to-buffer/README.md
+100644 blob 9ebdfbf1491ef8bdffb942ee0b475e38a65379bf	api/node_modules/debug/README.md
+100644 blob aca36f9f0bc9662c8ff39d6e61e727e69fbe5b2a	api/node_modules/delayed-stream/Readme.md
+100644 blob cd9ebaaa9963f794167f74e00a37d9ceb42e7b91	api/node_modules/depd/History.md
+100644 blob 043d1ca28403a9460a22fcd403b559b90244458f	api/node_modules/depd/Readme.md
+100644 blob 353d387272fbb364dd58aadd5ce09b95086c72b6	api/node_modules/dotenv/CHANGELOG.md
+100644 blob 9b75d1549a9dfdc06e4908f58c16f9e802186618	api/node_modules/dotenv/README-es.md
+100644 blob 29d6f253b7b954f730267b104273beb3ed3c36e4	api/node_modules/dotenv/README.md
+100644 blob 237a8ce742646cab7e777adf830dc92a0e4a1234	api/node_modules/dotenv/SECURITY.md
+100644 blob b736e0e89410fec6006cfbc0f3312addc6b66537	api/node_modules/dotenv/skills/dotenv/SKILL.md
+100644 blob 636c4bba325624b84468c22e85827cb1bd08c8d0	api/node_modules/dotenv/skills/dotenvx/SKILL.md
+100644 blob 9b8b2f82aec45421466c27d777de1d8565e03565	api/node_modules/dunder-proto/CHANGELOG.md
+100644 blob 44b80a2d4f5685511a02eee7f6471630fe9af2b4	api/node_modules/dunder-proto/README.md
+100644 blob 8352900fc645da9be1a546074e97f675f944e805	api/node_modules/duplexify/README.md
+100644 blob daa95d6e48b1f5368f8ea0f534b3ae1b4556eae7	api/node_modules/ecdsa-sig-formatter/README.md
+100644 blob cbd2478beffb7e4e612f99e8bff383255c21f253	api/node_modules/ee-first/README.md
+100644 blob a41e0a7ef970ecdd83d82cd99bda97b22077bc62	api/node_modules/emoji-regex/LICENSE-MIT.txt
+100644 blob f10e1733350471c85b8d85d6370978b03e5fabfb	api/node_modules/emoji-regex/README.md
+100644 blob 3842493ec68e8eb5a5377fa4c3a33e454be4e882	api/node_modules/encodeurl/README.md
+100644 blob 857b14bd7e4ffecbf82d04d2d9f7f54d5b0a9d97	api/node_modules/end-of-stream/README.md
+100644 blob 5f60cc0992cbae4f34123dedce058743617a842c	api/node_modules/es-define-property/CHANGELOG.md
+100644 blob 9b291bddb2d0dd0e37ca82e6ac02a7002b6e0c44	api/node_modules/es-define-property/README.md
+100644 blob 204a9e904b4ea5d092d53f9b9bb77301bfda559e	api/node_modules/es-errors/CHANGELOG.md
+100644 blob 8dbfacfea727f2486a51415fa63e8494689ca3ed	api/node_modules/es-errors/README.md
+100644 blob 8efc7ba1a53065c18c1c777f2409066e83921441	api/node_modules/es-object-atoms/CHANGELOG.md
+100644 blob 447695b2e1220bea0ee1572544a47ccb864e69c0	api/node_modules/es-object-atoms/README.md
+100644 blob 00bdc038cb7c13f8462b70ee72f8bcf71a08d21e	api/node_modules/es-set-tostringtag/CHANGELOG.md
+100644 blob c27bc9fc0c44620607d2e39a20387079694a2c7b	api/node_modules/es-set-tostringtag/README.md
+100644 blob e07ee0d387a9e5531d4bfa596272ed7b7c8ce124	api/node_modules/escalade/readme.md
+100644 blob 653d9eaa793317827ce724c4a0756110e9356fc8	api/node_modules/escape-html/Readme.md
+100644 blob 222b293dee9f8712b82a7e453c1f80e6e65348e7	api/node_modules/etag/HISTORY.md
+100644 blob 09c2169e7b3ab576199dfe890b2f04cb645c5ac7	api/node_modules/etag/README.md
+100644 blob a4f9c1b7ef2b40ddf5cfb04bd7c70fa60373d24b	api/node_modules/event-target-shim/README.md
+100644 blob 468dc35787669c62d4bf44df691cbdd15d967059	api/node_modules/express-rate-limit/license.md
+100644 blob 50705f6f2731292b37d117b2b99e20f4d98ab92b	api/node_modules/express-rate-limit/readme.md
+100644 blob 4c5b6f757f46af739bceddb1092b5afede92b3e4	api/node_modules/express/Readme.md
+100644 blob 2cf7de6fb3ae5dc0c67aeb92f2d6969adc36630d	api/node_modules/extend/CHANGELOG.md
+100644 blob 5b8249aa95e5d34927c0b44988b29fcda85cb1cd	api/node_modules/extend/README.md
+100644 blob a2ee1f82bcd2e85bd839d77cd94704336d5d1305	api/node_modules/farmhash-modern/README.md
+100644 blob d3f4ffcc316f965a5989bf0365cc4716d394878c	api/node_modules/fast-deep-equal/README.md
+100644 blob 52bce87e95deb07cfe664a7cb1f5ea555385bafe	api/node_modules/fast-xml-builder/CHANGELOG.md
+100644 blob 9e5ad891e30b0b0fe0fe7c33579855711efc0139	api/node_modules/fast-xml-builder/README.md
+100644 blob f3b8420316b23505709a32979f7dbf683b2016dd	api/node_modules/fast-xml-parser/CHANGELOG.md
+100644 blob 9eea93f742f5505827008ca0db04e84db38106f6	api/node_modules/fast-xml-parser/README.md
+100644 blob b152afec75fcfa7a315d8ae007da41855912d60d	api/node_modules/faye-websocket/CHANGELOG.md
+100644 blob 1b47ee5184f3384926b90cbbcab8b35fc6d0f73a	api/node_modules/faye-websocket/LICENSE.md
+100644 blob f62e1b560c0793cd5995b72daf9cd81fe9115cb3	api/node_modules/faye-websocket/README.md
+100644 blob fb3e1985159abbd642efd225f84b831ef6892e31	api/node_modules/fetch-blob/README.md
+100644 blob 8b011be00a99399ac5c79dac3251efa5964907cf	api/node_modules/finalhandler/HISTORY.md
+100644 blob e40f729a10085463adc71b4772c2d988bae6f25f	api/node_modules/finalhandler/README.md
+100644 blob 73c5fe9a210150d76b2fc7ffabee165a39cec2dd	api/node_modules/firebase-admin/README.md
+100644 blob cf5c397189ed5c49604dd7da3bb7d2499a0e869e	api/node_modules/form-data/CHANGELOG.md
+100644 blob 9fb1d3451d3cb8c705a4b731e14fef07a893d5eb	api/node_modules/form-data/README.md
+100644 blob 7436f64146e87d2ebe6cacac33af0aeedcc798fb	api/node_modules/form-data/node_modules/mime-db/HISTORY.md
+100644 blob 5a8fcfe4d0d813c4608765b31342fe5297e5867f	api/node_modules/form-data/node_modules/mime-db/README.md
+100644 blob c5043b75b958766a3880805dc4f19d70a4f167dd	api/node_modules/form-data/node_modules/mime-types/HISTORY.md
+100644 blob 48d2fb477241e837c6e8d349777aac312746029b	api/node_modules/form-data/node_modules/mime-types/README.md
+100644 blob 8355299a12f1b95f2cc79b070bb6f827981015f8	api/node_modules/formdata-polyfill/README.md
+100644 blob 381e6aad4619cbed1e74bf64a0dc3fe216dc0abe	api/node_modules/forwarded/HISTORY.md
+100644 blob fdd220bcaab88b00b844736404c326fa6bdfbc0e	api/node_modules/forwarded/README.md
+100644 blob fd3888acb4dd7a0cdb0dae0761c593c95802d6be	api/node_modules/fresh/HISTORY.md
+100644 blob fd79c5b525a9d373331b39a48eaced9003877f1a	api/node_modules/fresh/README.md
+100644 blob 82e4285adc6285693cd6c06af02d606e09dd8fcd	api/node_modules/function-bind/.github/SECURITY.md
+100644 blob f9e6cc078dadd58957c92af75542453c18169d73	api/node_modules/function-bind/CHANGELOG.md
+100644 blob 814c20b5a9e3c97f41dde308939b358f9ed93931	api/node_modules/function-bind/README.md
+100644 blob edd19cbf31206fcad94d54f87c94df754b6b9b32	api/node_modules/functional-red-black-tree/README.md
+100644 blob 1053528f114423f5de3d298a4b74079047041873	api/node_modules/gaxios/CHANGELOG.md
+100644 blob 7cf8b6b8ee610390ff553649b96a61b7146c76ee	api/node_modules/gaxios/README.md
+100644 blob 8742d0dabe00b88dcfd5de0a399774f64e495ce1	api/node_modules/gcp-metadata/README.md
+100644 blob 89b98a2bb4482dc26b6929028c1e1bdcff6b510d	api/node_modules/gcp-metadata/node_modules/gaxios/README.md
+100644 blob 41ca1b6eb4d7ecded300615322179c48fcde9e4e	api/node_modules/gcp-metadata/node_modules/node-fetch/LICENSE.md
+100644 blob badc2b19799590b9f0c81f6f4f7d121e1e809587	api/node_modules/gcp-metadata/node_modules/node-fetch/README.md
+100644 blob bf3e1c071bae44a0eb1a91fc1c16e1d1d55b5bc8	api/node_modules/get-caller-file/LICENSE.md
+100644 blob a7d8c079707355432a0cb44ae9d96e32851db191	api/node_modules/get-caller-file/README.md
+100644 blob ce1dd98713317a95f0a72036434478172fe991d8	api/node_modules/get-intrinsic/CHANGELOG.md
+100644 blob 3aa0bba4037e57211920a2cf8b57194b61eb24d9	api/node_modules/get-intrinsic/README.md
+100644 blob 586022936c59d39d5cd280a281f4ffc6fad932f5	api/node_modules/get-proto/CHANGELOG.md
+100644 blob f8b4cce347f6718bd564f2d5f9f31f93e17fe5d5	api/node_modules/get-proto/README.md
+100644 blob fd95b59ddbe4258a795574b52ce1d16adf8ca822	api/node_modules/google-auth-library/README.md
+100644 blob 89b98a2bb4482dc26b6929028c1e1bdcff6b510d	api/node_modules/google-auth-library/node_modules/gaxios/README.md
+100644 blob 41ca1b6eb4d7ecded300615322179c48fcde9e4e	api/node_modules/google-auth-library/node_modules/node-fetch/LICENSE.md
+100644 blob badc2b19799590b9f0c81f6f4f7d121e1e809587	api/node_modules/google-auth-library/node_modules/node-fetch/README.md
+100644 blob c82697f6c6b77ec180967fcb17ae050c8c6558e4	api/node_modules/google-gax/node_modules/gcp-metadata/CHANGELOG.md
+100644 blob d0c1b9d19157c1f79eae3728504bfcad8ff56dcd	api/node_modules/google-gax/node_modules/gcp-metadata/README.md
+100644 blob dc942a7d060a483212cf715376f86262e2361f30	api/node_modules/google-gax/node_modules/google-auth-library/CHANGELOG.md
+100644 blob 4e9255efb59acaa945e58e05ebf2840222c3302b	api/node_modules/google-gax/node_modules/google-auth-library/README.md
+100644 blob fd50948431d59bd500e0c212d9846bafbb72fd96	api/node_modules/google-logging-utils/README.md
+100644 blob 87f5727fb65c35e7a75fe15464473ffc0455739b	api/node_modules/gopd/CHANGELOG.md
+100644 blob 784e56a09695adb47410cb6cf08e96334a9f9c1f	api/node_modules/gopd/README.md
+100644 blob 6b5ccceb95acdd41068abf774c2a7037f55fedfc	api/node_modules/gtoken/CHANGELOG.md
+100644 blob 9dcb82ee5a9608e014a4f6f22e5398f1f68b33ce	api/node_modules/gtoken/README.md
+100644 blob cc3cf8390d16d4568d961f93395b7d330c4ada27	api/node_modules/has-symbols/CHANGELOG.md
+100644 blob 33905f0fc92c406715fef234ba43605c95390b30	api/node_modules/has-symbols/README.md
+100644 blob eb186ec601ca337a3e77d372edbdc1d560cd4294	api/node_modules/has-tostringtag/CHANGELOG.md
+100644 blob 67a5e929dfce41c47370c4141ed9fae8ba6aea21	api/node_modules/has-tostringtag/README.md
+100644 blob 90a43dc309b047ad27d1efee6c1f08c6d522583f	api/node_modules/hasown/CHANGELOG.md
+100644 blob f759b8a8396e3993fb7901d7551d38ee2a786b31	api/node_modules/hasown/README.md
+100644 blob cdb762506319939b9c5e24128564c2a7f4409e5b	api/node_modules/helmet/CHANGELOG.md
+100644 blob 09c9593da13f600fb8139a6f2a7472ffc619b0a6	api/node_modules/helmet/README.md
+100644 blob 0bc5b59988e61efc3b234688af29e1a38bba6516	api/node_modules/helmet/SECURITY.md
+100644 blob 06576a7e831b63c616d855df6b291dbc05cf2c94	api/node_modules/html-entities/README.md
+100644 blob 3d81d265fce0e22b50480e292188d9d5b733fd7f	api/node_modules/http-errors/HISTORY.md
+100644 blob a8b7330b09582701c7f06f4b4e5a332b3481c55c	api/node_modules/http-errors/README.md
+100644 blob 91e8ce108ea802414941fde6ce5a1ac5ed122150	api/node_modules/http-parser-js/LICENSE.md
+100644 blob 6c7fce083e88903648fdbc4ee4558e233339c7be	api/node_modules/http-parser-js/README.md
+100644 blob d60e20661f86c0b306a6b6ab948608cc9a9dac66	api/node_modules/http-proxy-agent/README.md
+100644 blob 256f1f32196c60a970bd2b0bd75f669b135112bf	api/node_modules/http-proxy-agent/node_modules/agent-base/README.md
+100644 blob ebc53cfa4a3a7b5ac98d9ab638e72537f98c4cfe	api/node_modules/https-proxy-agent/README.md
+100644 blob 78a7a5f1cf2a03ebad4c4bacdfe9d2368470ca81	api/node_modules/iconv-lite/README.md
+100644 blob b1c56658557b8162aa9f5ba8610ed03a5e558d9d	api/node_modules/inherits/README.md
+100644 blob 190b653c5d9bd0e86fd2f8bcf8ceb0868b9b9d98	api/node_modules/ip-address/README.md
+100644 blob f57725b0fed3b74b2ed13d99c0fe8ee65ab29f3c	api/node_modules/ipaddr.js/README.md
+100644 blob 4236bba980d8fea1486c883c16417ca8d5a7d5aa	api/node_modules/is-fullwidth-code-point/readme.md
+100644 blob d53d34bd598a5f775072eb59ddeb1834b41d02e5	api/node_modules/is-promise/readme.md
+100644 blob 19308e7335a2965c55ec679488d6688118ea892c	api/node_modules/is-stream/readme.md
+100644 blob b3629fff183cf36fa353b3ec3848ba4e5a59d7d2	api/node_modules/is-unsafe/README.md
+100644 blob d0ec038a85d95944b66fec1b44cbb1ade45919b7	api/node_modules/jose/LICENSE.md
+100644 blob 1ab05b692b9496059f4d46b2c74a232218038d38	api/node_modules/jose/README.md
+100644 blob e7335c73b9694a8a8f6682c0805a14268664acd6	api/node_modules/json-bigint/README.md
+100644 blob 4e20dd9c7a34e1ad9a0a2ae18080b9b10bee075e	api/node_modules/jsonwebtoken/README.md
+100644 blob 09e96485326a1a9578353eb18a831ec5066e11ba	api/node_modules/jwa/README.md
+100644 blob 8773c173e7b4c3f28fcedabd6506a1e99110ef65	api/node_modules/jwks-rsa/README.md
+100644 blob 18078dfdd51aa33d71c9b03689671845b26aa449	api/node_modules/jws/CHANGELOG.md
+100644 blob 2f32dca9a2900b9e93f94017ec7b669ddca165f7	api/node_modules/jws/readme.md
+100644 blob 13de086a96c9d2a3cedf1437a88b021c8800d885	api/node_modules/limiter/LICENSE.txt
+100644 blob 4280e9f64461860af05b816e6fa52f8cbd16d969	api/node_modules/limiter/README.md
+100644 blob 017eb7485b318373feaf1d6ff2055763e4e573f0	api/node_modules/livekit-server-sdk/README.md
+100644 blob d0ec038a85d95944b66fec1b44cbb1ade45919b7	api/node_modules/livekit-server-sdk/node_modules/jose/LICENSE.md
+100644 blob 6d3d712e0d14995ccfb818f6653a5a9c92bc1250	api/node_modules/livekit-server-sdk/node_modules/jose/README.md
+100644 blob 333d437cb472c9a120d0fc49ff2d3f33484b0db2	api/node_modules/lodash.camelcase/README.md
+100644 blob fee48e4706a972755c2346caea7cbfa36f79b577	api/node_modules/lodash.clonedeep/README.md
+100644 blob 26e93775feb70aa43c28b409a17137d5544505e5	api/node_modules/lodash.includes/README.md
+100644 blob b3c476b024c6cafe002a317ba4f2678ad9f05713	api/node_modules/lodash.isboolean/README.md
+100644 blob 3a78567b68e29c00c9120322e45dd170ad073506	api/node_modules/lodash.isinteger/README.md
+100644 blob a1d434dd67cb1a9cb659a66d7b54287058e05692	api/node_modules/lodash.isnumber/README.md
+100644 blob aeefd74da8557f0e47de1fe2833d5b0950b9ed4f	api/node_modules/lodash.isplainobject/README.md
+100644 blob f184029aac0667afab764b31fa260f697fe210d4	api/node_modules/lodash.isstring/README.md
+100644 blob c4a2f1698f35a64b5e426010d21644b7787d28bf	api/node_modules/lodash.once/README.md
+100644 blob ca4b2f858cb2ebd6c58baa7aba3d72c25ea5fd9a	api/node_modules/long/README.md
+100644 blob 435dfebb7e27d0d8a7c00105c34eb9af0aeba262	api/node_modules/lru-cache/README.md
+100644 blob b8a82b56a11c5704e7bd0a2329e0a6fcf3d64037	api/node_modules/lru-memoizer/README.md
+100644 blob 7367471dd765c703f40607793572565a33b5fcfe	api/node_modules/map-obj/readme.md
+100644 blob 9cf48f5a1421c943f38a21bbf05efc249fb53a41	api/node_modules/math-intrinsics/CHANGELOG.md
+100644 blob 4a66dcf24e0b17dce66d4742994e726e5c45439a	api/node_modules/math-intrinsics/README.md
+100644 blob 538ade14fa848dcce1b5b839ced17f5817fcd5ff	api/node_modules/media-typer/HISTORY.md
+100644 blob 37edad16f5aca0263d8350f3654cf1f04a5c32cf	api/node_modules/media-typer/README.md
+100644 blob 1dee67d843668d895d55ed100debc2a1b36254e6	api/node_modules/merge-descriptors/readme.md
+100644 blob fb35beccad7e990844c8b39305e328db6b904f70	api/node_modules/mime-db/HISTORY.md
+100644 blob ee93fa00ab2fbe05ba2ee0fcdc606d9aad12bd52	api/node_modules/mime-db/README.md
+100644 blob 9ba2dc077dd9f5ed292fcf3d7eaa2c396765a9d1	api/node_modules/mime-types/HISTORY.md
+100644 blob 222d2b58a343a582ba534945387b9106bbd514a4	api/node_modules/mime-types/README.md
+100644 blob cdf9be581e413715fefc1d72d146e35b98cd10ef	api/node_modules/mime/CHANGELOG.md
+100644 blob fc816cbcbf79952aedad5c680f8a4b1135ef8516	api/node_modules/mime/README.md
+100644 blob e384080406c965c87ea95e83c1059925f9884ea2	api/node_modules/morgan/README.md
+100644 blob eadaa189517bbcfb2a6784a48ac8d05d2edafe7c	api/node_modules/morgan/node_modules/debug/CHANGELOG.md
+100644 blob f67be6b317c19952bb506a9e15e797615eea4533	api/node_modules/morgan/node_modules/debug/README.md
+100644 blob 69b61253a38926757b7de1d4df4880fc2105c2c9	api/node_modules/morgan/node_modules/ms/license.md
+100644 blob 84a9974cccd81f9296b7d3c77f2b0d2765dfe181	api/node_modules/morgan/node_modules/ms/readme.md
+100644 blob fa5d39b6213f8a5e142b643575f99d9149cc71c6	api/node_modules/ms/license.md
+100644 blob 0fc1abb3b8e30a3ab97023d243127c75b1b3a4d7	api/node_modules/ms/readme.md
+100644 blob 63d537d3f681143b17f9250b199a865297b020be	api/node_modules/negotiator/HISTORY.md
+100644 blob 6fb7f2db31e670a487e3aa21a99fdc9c3978e6be	api/node_modules/negotiator/README.md
+100644 blob 38d8f85613989fa44d37fb74e7cf37319de66c2e	api/node_modules/node-domexception/.history/README_20210527203617.md
+100644 blob eed1d13bedf96b2fe4cb33d7896b482f968db30d	api/node_modules/node-domexception/.history/README_20210527212714.md
+100644 blob 582541679b782bf3958fca1a47159addb78d177a	api/node_modules/node-domexception/.history/README_20210527213345.md
+100644 blob 4c21ec8fda5c5fb82ba15d47d55a58405ac5a44e	api/node_modules/node-domexception/.history/README_20210527213411.md
+100644 blob 4cb85717f9560c558c407456d065789d85ca30a7	api/node_modules/node-domexception/.history/README_20210527213803.md
+100644 blob a32a91b167dbbedfdf34e456cd067ce0ef382752	api/node_modules/node-domexception/.history/README_20210527214323.md
+100644 blob a32a91b167dbbedfdf34e456cd067ce0ef382752	api/node_modules/node-domexception/.history/README_20210527214408.md
+100644 blob a36946147d2db3f8f9bf27f6e8537bdc91bd38c9	api/node_modules/node-domexception/README.md
+100644 blob 660ffecb58b02f27a562c193c71f14b7b573fc96	api/node_modules/node-fetch/LICENSE.md
+100644 blob 55f09b7ffe21daa5ce7211c671b4c13fac894a69	api/node_modules/node-fetch/README.md
+100644 blob 1be09d35c776cc0e9cc59519c2de6b9eecf8aa68	api/node_modules/object-assign/readme.md
+100644 blob bdf9002747e971f342607364e8557fc8bd3e80ec	api/node_modules/object-inspect/CHANGELOG.md
+100644 blob 1917595a714e11049ec9402d87aa625c68caa080	api/node_modules/on-finished/HISTORY.md
+100644 blob 8973cded6589a6cc5a9e1718e3fb0d709fe6e8d8	api/node_modules/on-finished/README.md
+100644 blob a77a6aa604a91aceb1574744f5bb8e631ef93599	api/node_modules/on-headers/HISTORY.md
+100644 blob 865fe4b86c428a78df84fb15a225efa250f08c66	api/node_modules/on-headers/README.md
+100644 blob 1f1ffca9330e3ceddd54106e1ba63322fc9751f8	api/node_modules/once/README.md
+100644 blob b283c1e635aab38570d6ef544dea70e2af741c7a	api/node_modules/p-limit/readme.md
+100644 blob 8e409541d855de232cc24d29524282441d11cbc7	api/node_modules/parseurl/HISTORY.md
+100644 blob 443e716b85dc54a70d063109d4e9afa39022989d	api/node_modules/parseurl/README.md
+100644 blob 3f655baf0d2c4a267ba3eb0bbb7aa0609eb9d71e	api/node_modules/path-expression-matcher/README.md
+100644 blob f33e3924122f641c7319172204b6929e5b01ff79	api/node_modules/path-to-regexp/Readme.md
+100644 blob 68663c45cd4ff74f19e14004e87ba870ad4a86ec	api/node_modules/pg-cloudflare/README.md
+100644 blob e47adc81674eaa5d5b6a53305cb52ab60c9259b7	api/node_modules/pg-connection-string/README.md
+100644 blob ef2e6084317fb61ce1a62c198134099eec895981	api/node_modules/pg-int8/README.md
+100644 blob 80c64478882ae7ffb5cd752e11c2cfad7605a65d	api/node_modules/pg-pool/README.md
+100644 blob 8c52e40ecb41802595a88ae9e9a7ed58cb63c625	api/node_modules/pg-protocol/README.md
+100644 blob 54a3f2c6b9335154c5c64520f46b7a88dc4675dc	api/node_modules/pg-types/README.md
+100644 blob 75242374c348c9f8cb930c7050197a6a8bc93cf3	api/node_modules/pg/README.md
+100644 blob bbc51939e148beac32d537bd6a74b7382bd7a5b4	api/node_modules/pgpass/README.md
+100644 blob b74b369df932ed5b7e45a66a522901f62a8ba8f1	api/node_modules/postgres-array/readme.md
+100644 blob 4939c3be4bbd31d5212b8fa8b5cf6d7a4ecec5b8	api/node_modules/postgres-bytea/readme.md
+100644 blob 095431a0f078a9dc3f8119d0128c2a644017d255	api/node_modules/postgres-date/readme.md
+100644 blob 53cda4ade18c8f47aeb411c0659e0ea204ce1992	api/node_modules/postgres-interval/readme.md
+100644 blob 6c8913f5dc11679b789fd6be9a200731e7eb6f7d	api/node_modules/proto3-json-serializer/CHANGELOG.md
+100644 blob 21544d0a3ad56e7911d8e90b2401d1db34dbd2c2	api/node_modules/proto3-json-serializer/README.md
+100644 blob baf09ce969dcf9aa0219196b1724918454494588	api/node_modules/protobufjs/README.md
+100644 blob a48517e42051d7d5d683226d244dd1db28b743dd	api/node_modules/protobufjs/ext/debug/README.md
+100644 blob 3bc4c6c9cda641083c348e8691a9e18a069ab7a2	api/node_modules/protobufjs/ext/descriptor/README.md
+100644 blob 09e3f230445ea5a0d12b2fb8ecede8bad4af9c58	api/node_modules/protobufjs/google/README.md
+100644 blob 8480242a0c43af25ec8d685e941b6a79a65c8fb4	api/node_modules/proxy-addr/HISTORY.md
+100644 blob 69c0b63eab22e32821df374c5e84a37c665c28c3	api/node_modules/proxy-addr/README.md
+100644 blob b499cb6861f226e5f975ba814e3849f193b9dc1f	api/node_modules/qs/.github/SECURITY.md
+100644 blob 7e6fef1a55b1069d9629237cd2f35a9bb89d6dfa	api/node_modules/qs/.github/THREAT_MODEL.md
+100644 blob d92ec43a93329ba3aa2c3fc79ef8d8a1ee70dd66	api/node_modules/qs/CHANGELOG.md
+100644 blob fecf6b6942d17bc7ae41a5e106dc98815c0db652	api/node_modules/qs/LICENSE.md
+100644 blob fd64e3cad1ec9df64193504cf783f1049961bd2b	api/node_modules/qs/README.md
+100644 blob d4780c898de8c1adb19bad038d973e34bee2a064	api/node_modules/quick-lru/readme.md
+100644 blob 70a973d800ef108fda6ee25ad76ec626594b656d	api/node_modules/range-parser/HISTORY.md
+100644 blob c247e826e67075a49071a07f830fadc62d28d86a	api/node_modules/range-parser/README.md
+100644 blob d9b36d611830efeaae613bd8dff4082d7fd55971	api/node_modules/raw-body/README.md
+100644 blob f478d58dca85b2c396e2da8a2251be0071c4e9e0	api/node_modules/readable-stream/CONTRIBUTING.md
+100644 blob 16ffb93f24bece9519cc4a220a0c1d3c91481453	api/node_modules/readable-stream/GOVERNANCE.md
+100644 blob 19117c1a059d1bfa7c6ff04d430bf21bb05b0621	api/node_modules/readable-stream/README.md
+100644 blob 926a063ed1f8973ae7fc7888b2769fce1d6e072d	api/node_modules/require-directory/README.markdown
+100644 blob 894f76548f86922840dea1a83c4d35cb803e1be1	api/node_modules/retry-request/CHANGELOG.md
+100644 blob 0c3e0f064ad25a594eee6c96cfe022b775dffc21	api/node_modules/retry-request/readme.md
+100644 blob 6d5415300fb13f3e10e5b5a77b808b6a27ddfa83	api/node_modules/retry/README.md
+100644 blob b292257a44b2de8d9d5ea67ed958d1bd9bf7ab9b	api/node_modules/router/HISTORY.md
+100644 blob 218fd5720f0dba9a507306325ff9e654a44918ce	api/node_modules/router/README.md
+100644 blob e9a81afd0406f030ba21169f0c7a1dba70b3a93b	api/node_modules/safe-buffer/README.md
+100644 blob 68d86bab032fabc624b2e312ec3a87666a12b07c	api/node_modules/safer-buffer/Porting-Buffer.md
+100644 blob 14b0822909320ff4ffafb1526212866f159470c5	api/node_modules/safer-buffer/Readme.md
+100644 blob 5e03abcc07791600ea5ea83ab2f1d7eb217cc811	api/node_modules/semver/README.md
+100644 blob 350fccd5aa88fb0a855d182db3073b17991b6cc2	api/node_modules/send/README.md
+100644 blob 3ff1f1fa397718be73e1bb4a44149f8df224a18a	api/node_modules/serve-static/README.md
+100644 blob 791eeff0c094d51fc53009527cd13884666987ef	api/node_modules/setprototypeof/README.md
+100644 blob e68bcb9b7df414d2ec12c6a1a690aa8832e59792	api/node_modules/side-channel-list/CHANGELOG.md
+100644 blob d9c7a1373440a10641c8a48daf6707b3b3e132b0	api/node_modules/side-channel-list/README.md
+100644 blob b6ccea906b109d2fbdeab5033ef37fcf3c677451	api/node_modules/side-channel-map/CHANGELOG.md
+100644 blob 8fa6f77f07d10658117ff4f4ed4af647e3bd7c40	api/node_modules/side-channel-map/README.md
+100644 blob aba7ab0412975a41899d61be28ff104c1db3fbf8	api/node_modules/side-channel-weakmap/CHANGELOG.md
+100644 blob 856ee3643b0832a52930b5e346539d9593640094	api/node_modules/side-channel-weakmap/README.md
+100644 blob decafe54f0af9e4f11be779a7f0d8b89116741d4	api/node_modules/side-channel/CHANGELOG.md
+100644 blob 73ba466cc7f497e2a9c7ea49fa8425d70628eb69	api/node_modules/side-channel/README.md
+100644 blob 36f03ab67cf1fdf52841bb5b8fcdf8c297c12ca4	api/node_modules/split2/README.md
+100644 blob dc549b8216582796d92fb78868317155cc6d1044	api/node_modules/statuses/HISTORY.md
+100644 blob 89d542f6a4022fa409b0c38875c1c15991081a23	api/node_modules/statuses/README.md
+100644 blob 695a7ce18eb5daea7a287d1ebd4d7d5fc1590ca5	api/node_modules/stream-events/readme.md
+100644 blob d9cc2d945fa16191a7fb4b589a67c59372fc9dcd	api/node_modules/stream-shift/README.md
+100644 blob bdd314129ca7471d65d942148049d0ccfdbc0cae	api/node_modules/string-width/readme.md
+100644 blob 5fd58315ed588027742dde690a31cd0a2610649d	api/node_modules/string_decoder/README.md
+100644 blob 7c4b56d46ddc72a3a627a5fd8f3dfcad8c9b599e	api/node_modules/strip-ansi/readme.md
+100644 blob 15f39212b16e644cc895fbe86d60d10bb85982cb	api/node_modules/strnum/CHANGELOG.md
+100644 blob d95da5ece7d660e4f2f834858c8ba52e0f4d4fa0	api/node_modules/strnum/README.md
+100644 blob ed07628497a5ef0346a2d9df8d0834a42dc2594f	api/node_modules/stubs/readme.md
+100644 blob dcf3642aa33d1aa2c176806abdf553b659266e7c	api/node_modules/teeny-request/CHANGELOG.md
+100644 blob 14e2f9421a273b480d067f2605ded23166ce73f1	api/node_modules/teeny-request/README.md
+100644 blob 256f1f32196c60a970bd2b0bd75f669b135112bf	api/node_modules/teeny-request/node_modules/agent-base/README.md
+100644 blob 328656a9e048a3f45b1e3e3a91c557865cb5a9a5	api/node_modules/teeny-request/node_modules/https-proxy-agent/README.md
+100644 blob cb7cc8927a64ac5d213480e3fba1b0d3dcbba3f6	api/node_modules/toidentifier/HISTORY.md
+100644 blob 57e8a78ab5218e7d424eabde5b6865997a14f500	api/node_modules/toidentifier/README.md
+100644 blob 0e42542369729ec05635e54491d177e86ccea100	api/node_modules/tslib/CopyrightNotice.txt
+100644 blob bfe6430cb0d83f34f5ed859d118dd3dc8ec1f7e8	api/node_modules/tslib/LICENSE.txt
+100644 blob 290cc618fba09dc5e93cb6c6b2364835d474f205	api/node_modules/tslib/README.md
+100644 blob 869fdfe2b246991a053fab9cfec1bed3ab532ab1	api/node_modules/tslib/SECURITY.md
+100644 blob d73ac3dc6647afd6152accfbd3afd60b6142ef7c	api/node_modules/type-fest/readme.md
+100644 blob 6812655c8879f5dc3ff3182ed0741fd8c93b347c	api/node_modules/type-is/HISTORY.md
+100644 blob d23946e607b8d0ea667b7ffefe7e63a68e052df7	api/node_modules/type-is/README.md
+100644 blob 7f6847d54901b26a15beec1c5c075cab1e0ddd2b	api/node_modules/type-is/node_modules/content-type/README.md
+100644 blob 20a721c445a21b60d9d3a20d142da608bffd7d9b	api/node_modules/undici-types/README.md
+100644 blob 85e0f8d747dc2a960e1ae6640c8bf081631ac0ec	api/node_modules/unpipe/HISTORY.md
+100644 blob e536ad2c045bba26e9d1f93202a44833656adfad	api/node_modules/unpipe/README.md
+100644 blob acc8675372e980824723cfcfec09c0ba43a3195a	api/node_modules/util-deprecate/History.md
+100644 blob 75622fa7c250a6605f4778d9dffe97bf60291d17	api/node_modules/util-deprecate/README.md
+100644 blob 0412ad8a67cb18f38b7457b9fe0608eef68d0822	api/node_modules/uuid/CHANGELOG.md
+100644 blob 4a4503d02ca583abaf879d97e9bf7e7c813c8a85	api/node_modules/uuid/CONTRIBUTING.md
+100644 blob 3934168364063216aa8805f06e3a1a8605133d68	api/node_modules/uuid/LICENSE.md
+100644 blob 4f51e0980403a26464533f210a8fb0cdcd66c32a	api/node_modules/uuid/README.md
+100644 blob f6cbcf7f9be9d45391c5e4e14d02541f59087351	api/node_modules/vary/HISTORY.md
+100644 blob cc000b34684a1d0b03d4c4cb4fac3e1094a81eec	api/node_modules/vary/README.md
+100644 blob f4023ff05790d95bb5dd61240af4a4eefa8c5da0	api/node_modules/web-streams-polyfill/README.md
+100644 blob d4a994f50bfa1ecc19489f03822a6e728d3e2a49	api/node_modules/webidl-conversions/LICENSE.md
+100644 blob 3657890a186b14bf37ed8817d28a9a6a20bd397f	api/node_modules/webidl-conversions/README.md
+100644 blob 0d1b3917d142063e3b2cd6759fbf447a348a0f35	api/node_modules/websocket-driver/LICENSE.md
+100644 blob 7a7329ca2ee9a09b981095550ff947bc2be5525f	api/node_modules/websocket-driver/README.md
+100644 blob bb84f5ae640661634b40a0414c8b960c83cb9dd6	api/node_modules/websocket-extensions/CHANGELOG.md
+100644 blob 3a88e5128bb8fc0debc49806977d1128f2118f4a	api/node_modules/websocket-extensions/LICENSE.md
+100644 blob 68694ea4480714d8499b81e83401eb865c01ec22	api/node_modules/websocket-extensions/README.md
+100644 blob 322a9c56369c919f0285e09c1e373a2907fc5e00	api/node_modules/websocket-extensions/lib/pipeline/README.md
+100644 blob 54dfac39d9f523b2c14548f4574076f587c767e2	api/node_modules/whatwg-url/LICENSE.txt
+100644 blob 4347a7fc5414b183a302f73aabe9b6a70d263e29	api/node_modules/whatwg-url/README.md
+100644 blob 68779ba5f4e63fb310ff499b4f518bced4b9d056	api/node_modules/wrap-ansi/readme.md
+100644 blob 98eab2522b86e5fe32c92524c4ec778b98066cbf	api/node_modules/wrappy/README.md
+100644 blob b1335516c8238043b74e2de3163e1189dc126229	api/node_modules/xml-naming/README.md
+100644 blob 4a2703cff276b155e89c3abb7b09fbdfe90273f4	api/node_modules/xtend/README.md
+100644 blob 244d83850d30a2e3ca559b2abeff529a04e971df	api/node_modules/y18n/CHANGELOG.md
+100644 blob 5102bb17dbd41847e8a3c07e0e3e9273fb9ea8c7	api/node_modules/y18n/README.md
+100644 blob f5861018696688887f69d055dd7d3ef54b38ebdc	api/node_modules/yallist/README.md
+100644 blob 584eb86ed54cbe32c58a0edae5c3869220b15657	api/node_modules/yargs-parser/CHANGELOG.md
+100644 blob 836440bef7cf14841c05b0f8635e580c91327fc4	api/node_modules/yargs-parser/LICENSE.txt
+100644 blob 261484076844a39cf85f72d88acf39217692c933	api/node_modules/yargs-parser/README.md
+100644 blob 51f5b225d72cb15edc0a5854ff3e5bec725e7777	api/node_modules/yargs/README.md
+100644 blob c72fefc486d495eb9a51c2a38a1245fc7dae18fc	api/node_modules/yocto-queue/readme.md
+100644 blob 768067ec01f9f5e306f7f7ffc679365d0a85378e	node_modules/@bufbuild/protobuf/README.md
+100644 blob 627a81d0c760328910c25e561ae121db3b473127	node_modules/accepts/HISTORY.md
+100644 blob f3f10c4a4c36bb690ab2f2f8565a95f400ab153c	node_modules/accepts/README.md
+100644 blob 335743d2a10053bc24e98dcd6512d80dc14c3186	node_modules/body-parser/README.md
+100644 blob 7f6847d54901b26a15beec1c5c075cab1e0ddd2b	node_modules/body-parser/node_modules/content-type/README.md
+100644 blob d60ce0e6df2efd3f83c08b098d1b7b683b96ec84	node_modules/bytes/History.md
+100644 blob 5790e23e328e045e66ec6f0b98526157b6c2abcf	node_modules/bytes/Readme.md
+100644 blob 24849428bae69540a59077dd4d6b3d15ab7b097b	node_modules/call-bind-apply-helpers/CHANGELOG.md
+100644 blob 8fc0dae1b3f6b0a22322a21b40b0f51665eadfb0	node_modules/call-bind-apply-helpers/README.md
+100644 blob 8bde4e9a56313204c5cc43fceb634a5d0c69d6ca	node_modules/call-bound/CHANGELOG.md
+100644 blob a44e43e56e07b9dce55d14eba09dcbbaf2024303	node_modules/call-bound/README.md
+100644 blob 75c91a96e799150a04bec6fb0393eee2cc3ccf11	node_modules/content-disposition/README.md
+100644 blob 458367139eb9f0af3daa5449ff0a3d9e2e189582	node_modules/content-type/HISTORY.md
+100644 blob c1a922a9afba84293f449dc4b661124fbac2fd5d	node_modules/content-type/README.md
+100644 blob 479211a7b32761ad05e3f735e511424cfbf6c7d3	node_modules/cookie-signature/History.md
+100644 blob 369af15f8511f0d6037937f1610bbc71b39f4e60	node_modules/cookie-signature/Readme.md
+100644 blob 71fdac1110bba222a716c4b56b90028a6a9e5af4	node_modules/cookie/README.md
+100644 blob fd4a6c53a9cd1abacf91125dab3fde3163b4c412	node_modules/cookie/SECURITY.md
+100644 blob 3d206e5b6fe5177f539a239e9a3e6d7dfde27808	node_modules/cors/README.md
+100644 blob 9ebdfbf1491ef8bdffb942ee0b475e38a65379bf	node_modules/debug/README.md
+100644 blob cd9ebaaa9963f794167f74e00a37d9ceb42e7b91	node_modules/depd/History.md
+100644 blob 043d1ca28403a9460a22fcd403b559b90244458f	node_modules/depd/Readme.md
+100644 blob 9b8b2f82aec45421466c27d777de1d8565e03565	node_modules/dunder-proto/CHANGELOG.md
+100644 blob 44b80a2d4f5685511a02eee7f6471630fe9af2b4	node_modules/dunder-proto/README.md
+100644 blob cbd2478beffb7e4e612f99e8bff383255c21f253	node_modules/ee-first/README.md
+100644 blob 3842493ec68e8eb5a5377fa4c3a33e454be4e882	node_modules/encodeurl/README.md
+100644 blob 5f60cc0992cbae4f34123dedce058743617a842c	node_modules/es-define-property/CHANGELOG.md
+100644 blob 9b291bddb2d0dd0e37ca82e6ac02a7002b6e0c44	node_modules/es-define-property/README.md
+100644 blob 204a9e904b4ea5d092d53f9b9bb77301bfda559e	node_modules/es-errors/CHANGELOG.md
+100644 blob 8dbfacfea727f2486a51415fa63e8494689ca3ed	node_modules/es-errors/README.md
+100644 blob 8efc7ba1a53065c18c1c777f2409066e83921441	node_modules/es-object-atoms/CHANGELOG.md
+100644 blob 447695b2e1220bea0ee1572544a47ccb864e69c0	node_modules/es-object-atoms/README.md
+100644 blob 653d9eaa793317827ce724c4a0756110e9356fc8	node_modules/escape-html/Readme.md
+100644 blob 222b293dee9f8712b82a7e453c1f80e6e65348e7	node_modules/etag/HISTORY.md
+100644 blob 09c2169e7b3ab576199dfe890b2f04cb645c5ac7	node_modules/etag/README.md
+100644 blob 4c5b6f757f46af739bceddb1092b5afede92b3e4	node_modules/express/Readme.md
+100644 blob 8b011be00a99399ac5c79dac3251efa5964907cf	node_modules/finalhandler/HISTORY.md
+100644 blob e40f729a10085463adc71b4772c2d988bae6f25f	node_modules/finalhandler/README.md
+100644 blob 381e6aad4619cbed1e74bf64a0dc3fe216dc0abe	node_modules/forwarded/HISTORY.md
+100644 blob fdd220bcaab88b00b844736404c326fa6bdfbc0e	node_modules/forwarded/README.md
+100644 blob fd3888acb4dd7a0cdb0dae0761c593c95802d6be	node_modules/fresh/HISTORY.md
+100644 blob fd79c5b525a9d373331b39a48eaced9003877f1a	node_modules/fresh/README.md
+100644 blob 82e4285adc6285693cd6c06af02d606e09dd8fcd	node_modules/function-bind/.github/SECURITY.md
+100644 blob f9e6cc078dadd58957c92af75542453c18169d73	node_modules/function-bind/CHANGELOG.md
+100644 blob 814c20b5a9e3c97f41dde308939b358f9ed93931	node_modules/function-bind/README.md
+100644 blob ce1dd98713317a95f0a72036434478172fe991d8	node_modules/get-intrinsic/CHANGELOG.md
+100644 blob 3aa0bba4037e57211920a2cf8b57194b61eb24d9	node_modules/get-intrinsic/README.md
+100644 blob 586022936c59d39d5cd280a281f4ffc6fad932f5	node_modules/get-proto/CHANGELOG.md
+100644 blob f8b4cce347f6718bd564f2d5f9f31f93e17fe5d5	node_modules/get-proto/README.md
+100644 blob 87f5727fb65c35e7a75fe15464473ffc0455739b	node_modules/gopd/CHANGELOG.md
+100644 blob 784e56a09695adb47410cb6cf08e96334a9f9c1f	node_modules/gopd/README.md
+100644 blob cc3cf8390d16d4568d961f93395b7d330c4ada27	node_modules/has-symbols/CHANGELOG.md
+100644 blob 33905f0fc92c406715fef234ba43605c95390b30	node_modules/has-symbols/README.md
+100644 blob 90a43dc309b047ad27d1efee6c1f08c6d522583f	node_modules/hasown/CHANGELOG.md
+100644 blob f759b8a8396e3993fb7901d7551d38ee2a786b31	node_modules/hasown/README.md
+100644 blob 3d81d265fce0e22b50480e292188d9d5b733fd7f	node_modules/http-errors/HISTORY.md
+100644 blob a8b7330b09582701c7f06f4b4e5a332b3481c55c	node_modules/http-errors/README.md
+100644 blob 78a7a5f1cf2a03ebad4c4bacdfe9d2368470ca81	node_modules/iconv-lite/README.md
+100644 blob b1c56658557b8162aa9f5ba8610ed03a5e558d9d	node_modules/inherits/README.md
+100644 blob f57725b0fed3b74b2ed13d99c0fe8ee65ab29f3c	node_modules/ipaddr.js/README.md
+100644 blob d53d34bd598a5f775072eb59ddeb1834b41d02e5	node_modules/is-promise/readme.md
+100644 blob d0ec038a85d95944b66fec1b44cbb1ade45919b7	node_modules/jose/LICENSE.md
+100644 blob 6d3d712e0d14995ccfb818f6653a5a9c92bc1250	node_modules/jose/README.md
+100644 blob 017eb7485b318373feaf1d6ff2055763e4e573f0	node_modules/livekit-server-sdk/README.md
+100644 blob 9cf48f5a1421c943f38a21bbf05efc249fb53a41	node_modules/math-intrinsics/CHANGELOG.md
+100644 blob 4a66dcf24e0b17dce66d4742994e726e5c45439a	node_modules/math-intrinsics/README.md
+100644 blob 538ade14fa848dcce1b5b839ced17f5817fcd5ff	node_modules/media-typer/HISTORY.md
+100644 blob 37edad16f5aca0263d8350f3654cf1f04a5c32cf	node_modules/media-typer/README.md
+100644 blob 1dee67d843668d895d55ed100debc2a1b36254e6	node_modules/merge-descriptors/readme.md
+100644 blob fb35beccad7e990844c8b39305e328db6b904f70	node_modules/mime-db/HISTORY.md
+100644 blob ee93fa00ab2fbe05ba2ee0fcdc606d9aad12bd52	node_modules/mime-db/README.md
+100644 blob 9ba2dc077dd9f5ed292fcf3d7eaa2c396765a9d1	node_modules/mime-types/HISTORY.md
+100644 blob 222d2b58a343a582ba534945387b9106bbd514a4	node_modules/mime-types/README.md
+100644 blob fa5d39b6213f8a5e142b643575f99d9149cc71c6	node_modules/ms/license.md
+100644 blob 0fc1abb3b8e30a3ab97023d243127c75b1b3a4d7	node_modules/ms/readme.md
+100644 blob 63d537d3f681143b17f9250b199a865297b020be	node_modules/negotiator/HISTORY.md
+100644 blob 6fb7f2db31e670a487e3aa21a99fdc9c3978e6be	node_modules/negotiator/README.md
+100644 blob 1be09d35c776cc0e9cc59519c2de6b9eecf8aa68	node_modules/object-assign/readme.md
+100644 blob bdf9002747e971f342607364e8557fc8bd3e80ec	node_modules/object-inspect/CHANGELOG.md
+100644 blob 1917595a714e11049ec9402d87aa625c68caa080	node_modules/on-finished/HISTORY.md
+100644 blob 8973cded6589a6cc5a9e1718e3fb0d709fe6e8d8	node_modules/on-finished/README.md
+100644 blob 1f1ffca9330e3ceddd54106e1ba63322fc9751f8	node_modules/once/README.md
+100644 blob 8e409541d855de232cc24d29524282441d11cbc7	node_modules/parseurl/HISTORY.md
+100644 blob 443e716b85dc54a70d063109d4e9afa39022989d	node_modules/parseurl/README.md
+100644 blob f33e3924122f641c7319172204b6929e5b01ff79	node_modules/path-to-regexp/Readme.md
+100644 blob 8480242a0c43af25ec8d685e941b6a79a65c8fb4	node_modules/proxy-addr/HISTORY.md
+100644 blob 69c0b63eab22e32821df374c5e84a37c665c28c3	node_modules/proxy-addr/README.md
+100644 blob b499cb6861f226e5f975ba814e3849f193b9dc1f	node_modules/qs/.github/SECURITY.md
+100644 blob 7e6fef1a55b1069d9629237cd2f35a9bb89d6dfa	node_modules/qs/.github/THREAT_MODEL.md
+100644 blob 14953a436ddec506df6c479f34423d97a7b1f48b	node_modules/qs/CHANGELOG.md
+100644 blob fecf6b6942d17bc7ae41a5e106dc98815c0db652	node_modules/qs/LICENSE.md
+100644 blob fd64e3cad1ec9df64193504cf783f1049961bd2b	node_modules/qs/README.md
+100644 blob 70a973d800ef108fda6ee25ad76ec626594b656d	node_modules/range-parser/HISTORY.md
+100644 blob 5103c4b65244efbf563c8a247786246a14d4e057	node_modules/range-parser/README.md
+100644 blob d9b36d611830efeaae613bd8dff4082d7fd55971	node_modules/raw-body/README.md
+100644 blob b292257a44b2de8d9d5ea67ed958d1bd9bf7ab9b	node_modules/router/HISTORY.md
+100644 blob 218fd5720f0dba9a507306325ff9e654a44918ce	node_modules/router/README.md
+100644 blob 68d86bab032fabc624b2e312ec3a87666a12b07c	node_modules/safer-buffer/Porting-Buffer.md
+100644 blob 14b0822909320ff4ffafb1526212866f159470c5	node_modules/safer-buffer/Readme.md
+100644 blob 350fccd5aa88fb0a855d182db3073b17991b6cc2	node_modules/send/README.md
+100644 blob 3ff1f1fa397718be73e1bb4a44149f8df224a18a	node_modules/serve-static/README.md
+100644 blob 791eeff0c094d51fc53009527cd13884666987ef	node_modules/setprototypeof/README.md
+100644 blob e68bcb9b7df414d2ec12c6a1a690aa8832e59792	node_modules/side-channel-list/CHANGELOG.md
+100644 blob d9c7a1373440a10641c8a48daf6707b3b3e132b0	node_modules/side-channel-list/README.md
+100644 blob b6ccea906b109d2fbdeab5033ef37fcf3c677451	node_modules/side-channel-map/CHANGELOG.md
+100644 blob 8fa6f77f07d10658117ff4f4ed4af647e3bd7c40	node_modules/side-channel-map/README.md
+100644 blob aba7ab0412975a41899d61be28ff104c1db3fbf8	node_modules/side-channel-weakmap/CHANGELOG.md
+100644 blob 856ee3643b0832a52930b5e346539d9593640094	node_modules/side-channel-weakmap/README.md
+100644 blob decafe54f0af9e4f11be779a7f0d8b89116741d4	node_modules/side-channel/CHANGELOG.md
+100644 blob 73ba466cc7f497e2a9c7ea49fa8425d70628eb69	node_modules/side-channel/README.md
+100644 blob dc549b8216582796d92fb78868317155cc6d1044	node_modules/statuses/HISTORY.md
+100644 blob 89d542f6a4022fa409b0c38875c1c15991081a23	node_modules/statuses/README.md
+100644 blob cb7cc8927a64ac5d213480e3fba1b0d3dcbba3f6	node_modules/toidentifier/HISTORY.md
+100644 blob 57e8a78ab5218e7d424eabde5b6865997a14f500	node_modules/toidentifier/README.md
+100644 blob 6812655c8879f5dc3ff3182ed0741fd8c93b347c	node_modules/type-is/HISTORY.md
+100644 blob d23946e607b8d0ea667b7ffefe7e63a68e052df7	node_modules/type-is/README.md
+100644 blob 7f6847d54901b26a15beec1c5c075cab1e0ddd2b	node_modules/type-is/node_modules/content-type/README.md
+100644 blob 85e0f8d747dc2a960e1ae6640c8bf081631ac0ec	node_modules/unpipe/HISTORY.md
+100644 blob e536ad2c045bba26e9d1f93202a44833656adfad	node_modules/unpipe/README.md
+100644 blob f6cbcf7f9be9d45391c5e4e14d02541f59087351	node_modules/vary/HISTORY.md
+100644 blob cc000b34684a1d0b03d4c4cb4fac3e1094a81eec	node_modules/vary/README.md
+100644 blob 98eab2522b86e5fe32c92524c4ec778b98066cbf	node_modules/wrappy/README.md

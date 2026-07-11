@@ -214,8 +214,10 @@ function renderizarModalCrearUsuario({ instituciones, salones, onGuardar, onCanc
           </select>
         </div>
         <div>
-          <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nombre del Rol *</label>
-          <input type="text" id="inputNombreRol" class="input" placeholder="Ej: Profesor, Alumno..." style="width:100%;">
+          <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Salon / Aula</label>
+          <select id="selectSalon" class="input" style="width:100%;" disabled>
+            <option value="">-- Primero selecciona institucion --</option>
+          </select>
         </div>
       </div>
       
@@ -236,6 +238,13 @@ function renderizarModalCrearUsuario({ instituciones, salones, onGuardar, onCanc
         </div>
       </div>
       
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nombre del Rol *</label>
+          <input type="text" id="inputNombreRol" class="input" placeholder="Ej: Profesor, Alumno..." style="width:100%;">
+        </div>
+      
+      </div>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:16px;">
         <input type="checkbox" id="checkCrearHijos" style="width:18px;height:18px;">
         <span>Puede crear subordinados</span>
@@ -326,6 +335,7 @@ function renderizarModalCrearUsuario({ instituciones, salones, onGuardar, onCanc
       return;
     }
     
+    const salonId = document.getElementById('selectSalon')?.value || '';
     const celular = document.getElementById('inputCelular')?.value?.trim() || '';
     const carrera = document.getElementById('inputCarrera')?.value?.trim() || '';
     const nivelAcademico = document.getElementById('inputNivelAcademico')?.value || '';
@@ -341,6 +351,7 @@ function renderizarModalCrearUsuario({ instituciones, salones, onGuardar, onCanc
       puede_crear_hijos: puedeCrearHijos,
       superior_inmediato_id: superiorId
     };
+    if (salonId) datos.salon_ids = [parseInt(salonId)];
     if (celular) datos.numero_celular = celular;
     if (carrera) datos.carrera_interes = carrera;
     if (nivelAcademico) datos.nivel_academico = nivelAcademico;
