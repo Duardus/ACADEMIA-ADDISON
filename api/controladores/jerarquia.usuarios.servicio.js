@@ -76,7 +76,7 @@ class JerarquiaUsuariosServicio {
         await repositorio.reactivarUsuario(email);
       }
     } else {
-      await repositorio.crearUsuarioBootstrap(uid_firebase, email, nombre_completo);
+      await repositorio.crearUsuarioBootstrap(uid_firebase, email, nombreCompleto);
     }
 
     await repositorio.actualizarCamposUsuario(uid_firebase, {
@@ -218,10 +218,8 @@ class JerarquiaUsuariosServicio {
 
     let subordinados;
     if (miNivel === 0) {
-      // SUPERADMIN: ve TODOS los usuarios de TODAS las instituciones
       subordinados = await repositorio.obtenerTodosSubordinadosTodasInstituciones();
     } else {
-      // Otros: ve solo los de su institución
       subordinados = await repositorio.obtenerTodosSubordinadosInstitucion(institucionId);
     }
 
@@ -352,7 +350,7 @@ class JerarquiaUsuariosServicio {
   }
 
   // ============================================
-  // ELIMINAR USUARIO COMPLETAMENTE
+  // ELIMINAR USUARIO COMPLETAMENTE - CASCADA
   // ============================================
   async eliminarUsuarioCompleto(creadorMembresiaId, creadorUsuarioId, objetivoMembresiaId) {
     if (objetivoMembresiaId === creadorMembresiaId) {
@@ -375,19 +373,16 @@ class JerarquiaUsuariosServicio {
 
     const objetivoUsuarioId = infoObjetivo.usuario_id;
 
-    await repositorio.eliminarSalonesUsuario(objetivoUsuarioId);
-    await repositorio.limpiarCapacidadesMembresia(objetivoMembresiaId);
-    await repositorio.limpiarSuperioresSubordinado(objetivoMembresiaId);
-    await repositorio.eliminarMembresia(objetivoMembresiaId);
-    await repositorio.eliminarUsuario(objetivoUsuarioId);
+    // USAR NUEVO MÉTODO DE CASCADA COMPLETA
+    const resultado = await repositorio.eliminarUsuarioCompleto(objetivoUsuarioId, objetivoMembresiaId);
 
     await repositorio.registrarLog(
       'eliminar_usuario', creadorMembresiaId, creadorUsuarioId,
       objetivoMembresiaId, objetivoUsuarioId,
-      { metodo: 'hard_delete', nivel_previo: infoObjetivo.nivel }
+      { metodo: 'hard_delete', nivel_previo: infoObjetivo.nivel, usuario_completo: resultado.usuario_completo }
     );
 
-    return { usuario_id: objetivoUsuarioId, eliminado: true };
+    return { usuario_id: objetivoUsuarioId, eliminado: true, usuario_completo: resultado.usuario_completo };
   }
 
   // ============================================

@@ -178,7 +178,125 @@ class JerarquiaUsuariosRepositorio {
     await consulta('DELETE FROM superiores_membresia WHERE subordinado_membresia_id = $1', [membresiaId]);
   }
 
-  // --- ELIMINACIÓN PERMANENTE ---
+  // ============================================
+  // ELIMINACIÓN PERMANENTE - CASCADA COMPLETA
+  // ============================================
+  async eliminarUsuarioCompleto(usuarioId, membresiaId) {
+    const client = await require('../configuracion/base_de_datos').pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+
+      // 1. TABLAS HIJAS DE MEMBRESIAS (eliminar primero)
+      await client.query('DELETE FROM membresia_capacidades WHERE membresia_id = $1 OR asignado_por_membresia_id = $1', [membresiaId]);
+      await client.query('DELETE FROM suscripciones WHERE membresia_id = $1', [membresiaId]);
+      await client.query('DELETE FROM salon_usuarios WHERE membresia_id = $1 OR asignado_por_membresia_id = $1', [membresiaId]);
+      await client.query('DELETE FROM miembros_grupo_colaborativo WHERE miembro_membresia_id = $1 OR agregado_por_membresia_id = $1', [membresiaId]);
+      await client.query('DELETE FROM superiores_membresia WHERE superior_membresia_id = $1 OR subordinado_membresia_id = $1 OR asignado_por_membresia_id = $1', [membresiaId]);
+      await client.query('DELETE FROM etiquetas_cargo WHERE creado_por_membresia_id = $1', [membresiaId]);
+      await client.query('DELETE FROM grupos_colaborativos WHERE creador_membresia_id = $1', [membresiaId]);
+      await client.query('DELETE FROM salones WHERE creado_por_membresia_id = $1', [membresiaId]);
+      await client.query('DELETE FROM salon_cursos WHERE asignado_por_membresia_id = $1', [membresiaId]);
+
+      // 2. MEMBRESIAS HIJAS (subordinados) - recursivo
+      await this._eliminarSubordinadosRecursivo(client, membresiaId);
+
+      // 3. TABLAS HIJAS DE USUARIOS
+      await client.query('DELETE FROM asistencia_clases WHERE alumno_id = $1 OR profesor_id = $1', [usuarioId]);
+      await client.query('DELETE FROM calificaciones_clase WHERE alumno_id = $1', [usuarioId]);
+      await client.query('DELETE FROM calificaciones_dificultad WHERE alumno_id = $1', [usuarioId]);
+      await client.query('DELETE FROM examenes WHERE profesor_id = $1', [usuarioId]);
+      await client.query('DELETE FROM grabaciones WHERE profesor_id = $1', [usuarioId]);
+      await client.query('DELETE FROM horario_semanal WHERE profesor_id = $1', [usuarioId]);
+      await client.query('DELETE FROM intentos_examen WHERE alumno_id = $1', [usuarioId]);
+      await client.query('DELETE FROM notificaciones WHERE usuario_id = $1', [usuarioId]);
+      await client.query('DELETE FROM pagos_alumnos WHERE alumno_id = $1', [usuarioId]);
+      await client.query('DELETE FROM pagos_historial WHERE usuario_id = $1', [usuarioId]);
+      await client.query('DELETE FROM pagos_profesores WHERE profesor_id = $1', [usuarioId]);
+      await client.query('DELETE FROM papelera WHERE eliminado_por = $1', [usuarioId]);
+      await client.query('DELETE FROM preguntas WHERE profesor_id = $1', [usuarioId]);
+      await client.query('DELETE FROM progreso_alumno WHERE alumno_id = $1', [usuarioId]);
+      await client.query('DELETE FROM usuarios_campos_valores WHERE usuario_id = $1', [usuarioId]);
+
+      // 4. Eliminar membresía objetivo
+      await client.query('DELETE FROM membresias WHERE membresia_id = $1', [membresiaId]);
+
+      // 5. Verificar si usuario tiene otras membresías
+      const otras = await client.query('SELECT COUNT(*) as total FROM membresias WHERE usuario_id = $1', [usuarioId]);
+      
+      // Solo eliminar usuario si no tiene más membresías
+      if (parseInt(otras.rows[0].total) === 0) {
+        await client.query('DELETE FROM usuarios WHERE usuario_id = $1', [usuarioId]);
+      }
+
+      await client.query('COMMIT');
+      return { eliminado: true, usuario_completo: parseInt(otras.rows[0].total) === 0 };
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  // Método auxiliar recursivo para eliminar subordinados
+  async _eliminarSubordinadosRecursivo(client, padreMembresiaId) {
+    const subordinados = await client.query(
+      `SELECT m.membresia_id, m.usuario_id 
+       FROM membresias m
+       JOIN superiores_membresia sm ON m.membresia_id = sm.subordinado_membresia_id
+       WHERE sm.superior_membresia_id = $1`,
+      [padreMembresiaId]
+    );
+
+    for (const sub of subordinados.rows) {
+      // Primero eliminar sub-subordinados
+      await this._eliminarSubordinadosRecursivo(client, sub.membresia_id);
+
+      const mid = sub.membresia_id;
+      const uid = sub.usuario_id;
+
+      // Limpiar tablas hijas de esta membresía
+      await client.query('DELETE FROM membresia_capacidades WHERE membresia_id = $1 OR asignado_por_membresia_id = $1', [mid]);
+      await client.query('DELETE FROM suscripciones WHERE membresia_id = $1', [mid]);
+      await client.query('DELETE FROM salon_usuarios WHERE membresia_id = $1 OR asignado_por_membresia_id = $1', [mid]);
+      await client.query('DELETE FROM miembros_grupo_colaborativo WHERE miembro_membresia_id = $1 OR agregado_por_membresia_id = $1', [mid]);
+      await client.query('DELETE FROM superiores_membresia WHERE superior_membresia_id = $1 OR subordinado_membresia_id = $1 OR asignado_por_membresia_id = $1', [mid]);
+      await client.query('DELETE FROM etiquetas_cargo WHERE creado_por_membresia_id = $1', [mid]);
+      await client.query('DELETE FROM grupos_colaborativos WHERE creador_membresia_id = $1', [mid]);
+      await client.query('DELETE FROM salones WHERE creado_por_membresia_id = $1', [mid]);
+      await client.query('DELETE FROM salon_cursos WHERE asignado_por_membresia_id = $1', [mid]);
+
+      // Limpiar tablas hijas del usuario
+      await client.query('DELETE FROM asistencia_clases WHERE alumno_id = $1 OR profesor_id = $1', [uid]);
+      await client.query('DELETE FROM calificaciones_clase WHERE alumno_id = $1', [uid]);
+      await client.query('DELETE FROM calificaciones_dificultad WHERE alumno_id = $1', [uid]);
+      await client.query('DELETE FROM examenes WHERE profesor_id = $1', [uid]);
+      await client.query('DELETE FROM grabaciones WHERE profesor_id = $1', [uid]);
+      await client.query('DELETE FROM horario_semanal WHERE profesor_id = $1', [uid]);
+      await client.query('DELETE FROM intentos_examen WHERE alumno_id = $1', [uid]);
+      await client.query('DELETE FROM notificaciones WHERE usuario_id = $1', [uid]);
+      await client.query('DELETE FROM pagos_alumnos WHERE alumno_id = $1', [uid]);
+      await client.query('DELETE FROM pagos_historial WHERE usuario_id = $1', [uid]);
+      await client.query('DELETE FROM pagos_profesores WHERE profesor_id = $1', [uid]);
+      await client.query('DELETE FROM papelera WHERE eliminado_por = $1', [uid]);
+      await client.query('DELETE FROM preguntas WHERE profesor_id = $1', [uid]);
+      await client.query('DELETE FROM progreso_alumno WHERE alumno_id = $1', [uid]);
+      await client.query('DELETE FROM usuarios_campos_valores WHERE usuario_id = $1', [uid]);
+
+      // Eliminar membresía
+      await client.query('DELETE FROM membresias WHERE membresia_id = $1', [mid]);
+
+      // Verificar si quedan más membresías
+      const otras = await client.query('SELECT COUNT(*) as total FROM membresias WHERE usuario_id = $1', [uid]);
+      if (parseInt(otras.rows[0].total) === 0) {
+        await client.query('DELETE FROM usuarios WHERE usuario_id = $1', [uid]);
+      }
+    }
+  }
+
+  // --- Métodos antiguos (mantener compatibilidad) ---
   async eliminarMembresia(membresiaId) {
     await consulta('DELETE FROM membresias WHERE membresia_id = $1', [membresiaId]);
   }
