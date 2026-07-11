@@ -124,6 +124,16 @@ function renderizarSidebar({ arbol, cursoActivoId, progreso, rol, onSeleccionarC
       onSeleccionarCurso(cursoId);
     });
   });
+
+  // Event listeners para navegacion de modulos
+  sidebar.querySelectorAll(".nav-modulo-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const vista = btn.dataset.vista;
+      onNavegar(vista);
+      sidebar.classList.remove("abierto");
+      document.getElementById("sidebarBackdrop")?.classList.remove("visible");
+    });
+  });
 }
 function renderizarPanelCurso({ curso, progreso, grabaciones, rol, puedeIniciarClase }) {
   const main = document.getElementById('main');
