@@ -10,6 +10,7 @@ router.use(middlewareAutenticar);
 router.use(middlewareContexto);
 
 // USUARIOS
+router.put('/subordinado/:membresia_id', (req, res, next) => usuariosControlador.editarUsuario(req, res, next));
 router.post('/crear', (req, res, next) => usuariosControlador.crearUsuarioHijo(req, res, next));
 router.get('/mis-subordinados', (req, res, next) => usuariosControlador.obtenerMisSubordinados(req, res, next));
 router.post('/cambiar-estado/:membresia_id', (req, res, next) => usuariosControlador.cambiarEstado(req, res, next));

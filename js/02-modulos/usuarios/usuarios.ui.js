@@ -88,6 +88,7 @@ function renderizarUsuarios({ subordinados, onCrear, onReactivar, onDesactivar, 
         let botonesAccion = '';
         if (s.sub_estado === 'active' || s.estado_membresia === 'active') {
           botonesAccion = `
+            <button class="btn-icono btn-editar" data-id="${id}" title="Editar">✏️</button>
             <button class="btn-icono btn-capacidades" data-id="${id}" title="Capacidades">🔑</button>
             <button class="btn-icono btn-desactivar" data-id="${id}" title="Desactivar">🛑</button>
             ${esSuperadmin ? `<button class="btn-icono btn-eliminar" data-id="${id}" title="Eliminar Permanentemente" style="color:var(--error);">❌</button>` : ''}
@@ -137,6 +138,13 @@ function renderizarUsuarios({ subordinados, onCrear, onReactivar, onDesactivar, 
   contenedor.appendChild(tabla);
 
   // Event listeners para botones de acción
+  tabla.querySelectorAll('.btn-editar').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      onEditar(btn.dataset.id);
+    });
+  });
+
   tabla.querySelectorAll('.btn-capacidades').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -319,5 +327,82 @@ function renderizarModalCapacidades({ subordinado, capacidadesDisponibles, capac
     const seleccionadas = Array.from(checks).map(c => c.value);
     modal.remove();
     onGuardar(seleccionadas);
+  });
+}
+
+
+// ============================================
+// MODAL EDITAR USUARIO
+// ============================================
+function renderizarModalEditarUsuario({ subordinado, onGuardar, onCancelar }) {
+  document.querySelectorAll('.modal').forEach(m => m.remove());
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.id = 'modalEditarUsuario';
+  const nombreActual = subordinado.sub_nombre_completo || subordinado.nombre_completo || '';
+  const carreraActual = subordinado.sub_carrera || subordinado.carrera_interes || '';
+  const celularActual = subordinado.sub_celular || subordinado.numero_celular || '';
+  const nivelAcademicoActual = subordinado.sub_nivel_academico || subordinado.nivel_academico || '';
+  const observacionesActual = subordinado.sub_observaciones || subordinado.observaciones || '';
+  modal.innerHTML = `
+    <div class="modal-tarjeta" style="max-width:650px;background:var(--superficie);border:1px solid var(--borde);border-radius:var(--radio-borde);padding:22px;max-height:90vh;overflow-y:auto;">
+      <h3 style="margin:0 0 16px;font-size:20px;">✏️ Editar Usuario</h3>
+      <p style="margin:0 0 16px;color:var(--texto-secundario);font-size:13px;">${nombreActual}</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nombre Completo</label>
+          <input type="text" id="editNombre" class="input" value="${nombreActual}" style="width:100%;">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Celular</label>
+          <input type="text" id="editCelular" class="input" value="${celularActual}" placeholder="999-999-999" style="width:100%;">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Carrera de Interés</label>
+          <input type="text" id="editCarrera" class="input" value="${carreraActual}" placeholder="Ej: Ingeniería, Medicina..." style="width:100%;">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nivel Académico</label>
+          <select id="editNivelAcademico" class="input" style="width:100%;">
+            <option value="" ${!nivelAcademicoActual ? 'selected' : ''}>-- Seleccionar --</option>
+            <option value="Primaria" ${nivelAcademicoActual === 'Primaria' ? 'selected' : ''}>Primaria</option>
+            <option value="Secundaria" ${nivelAcademicoActual === 'Secundaria' ? 'selected' : ''}>Secundaria</option>
+            <option value="Pregrado" ${nivelAcademicoActual === 'Pregrado' ? 'selected' : ''}>Pregrado</option>
+            <option value="Posgrado" ${nivelAcademicoActual === 'Posgrado' ? 'selected' : ''}>Posgrado</option>
+            <option value="Doctorado" ${nivelAcademicoActual === 'Doctorado' ? 'selected' : ''}>Doctorado</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Observaciones</label>
+        <textarea id="editObservaciones" class="input" rows="3" placeholder="Notas sobre el usuario..." style="width:100%;resize:vertical;">${observacionesActual}</textarea>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn btn-secundario" id="btnCancelarEditar">Cancelar</button>
+        <button class="btn" id="btnGuardarEditar">Guardar Cambios</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  document.getElementById('btnCancelarEditar').addEventListener('click', () => {
+    modal.remove();
+    onCancelar();
+  });
+  document.getElementById('btnGuardarEditar').addEventListener('click', () => {
+    const nombre = document.getElementById('editNombre').value.trim();
+    const celular = document.getElementById('editCelular').value.trim();
+    const carrera = document.getElementById('editCarrera').value.trim();
+    const nivelAcademico = document.getElementById('editNivelAcademico').value;
+    const observaciones = document.getElementById('editObservaciones').value.trim();
+    const datos = {};
+    if (nombre) datos.nombre_completo = nombre;
+    if (celular) datos.numero_celular = celular;
+    if (carrera) datos.carrera_interes = carrera;
+    if (nivelAcademico) datos.nivel_academico = nivelAcademico;
+    if (observaciones) datos.observaciones = observaciones;
+    modal.remove();
+    onGuardar(datos);
   });
 }

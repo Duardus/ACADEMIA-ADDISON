@@ -69,3 +69,18 @@ async function apiObtenerSalones(institucionId) {
   if (!institucionId) return { salones: [] };
   return await get(`/salones?institucion_id=${institucionId}`);
 }
+
+
+async function apiEditarSubordinado(membresiaId, datos) {
+  return await put('/jerarquia/subordinado/' + membresiaId, datos);
+}
+
+
+async function apiEditarSubordinado(membresiaId, datos) {
+  return await put('/jerarquia/subordinado/' + membresiaId, datos);
+}
+
+
+async function apiEditarSubordinado(membresiaId, datos) {
+  return await put('/jerarquia/subordinado/' + membresiaId, datos);
+}

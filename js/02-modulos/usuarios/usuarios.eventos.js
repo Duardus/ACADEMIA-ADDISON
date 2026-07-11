@@ -95,6 +95,7 @@ async function iniciarUsuarios({ onVolver, onError, onToast }) {
       onDesactivar: (id) => manejarDesactivar({ id, onVolver, onError, onToast }),
       onEliminarCompleto: (id) => manejarEliminarCompleto({ id, onVolver, onError, onToast }),
       onCapacidades: (id) => manejarCapacidades({ id, onVolver, onError, onToast }),
+      onEditar: (id) => manejarEditar({ id, onVolver, onError, onToast }),
       onVolver
     });
   } catch (error) {
@@ -218,5 +219,34 @@ async function manejarCapacidades({ id, onVolver, onError, onToast }) {
   } catch (error) {
     console.error('Error capacidades:', error);
     onError(error.message || 'Error cargando capacidades');
+  }
+}
+
+
+async function manejarEditar({ id, onVolver, onError, onToast }) {
+  try {
+    const respSubordinados = await apiObtenerSubordinados();
+    const datosSub = respSubordinados?.datos || respSubordinados;
+    const subordinados = datosSub?.subordinados || datosSub || [];
+    const subordinado = subordinados.find(s => (s.sub_membresia_id || s.membresia_id) == id);
+    if (!subordinado) {
+      onError('Usuario no encontrado');
+      return;
+    }
+    renderizarModalEditarUsuario({
+      subordinado,
+      onGuardar: async (datos) => {
+        try {
+          await apiEditarSubordinado(id, datos);
+          onToast('Usuario actualizado correctamente', 'exito');
+          iniciarUsuarios({ onVolver, onError, onToast });
+        } catch (error) {
+          onError(error.message || 'Error actualizando usuario');
+        }
+      },
+      onCancelar: () => {}
+    });
+  } catch (error) {
+    onError(error.message || 'Error cargando usuario');
   }
 }

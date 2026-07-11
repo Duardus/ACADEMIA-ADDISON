@@ -397,6 +397,54 @@ class JerarquiaUsuariosServicio {
   async obtenerSuperiores(membresiaId) {
     return await repositorio.obtenerSuperioresMembresia(membresiaId);
   }
+
+
+  // ============================================
+  // EDITAR USUARIO (CAMPOS OPCIONALES)
+  // ============================================
+  async editarUsuario(datosEntrada, contexto) {
+    const {
+      usuario_id, membresia_id,
+      nombre_completo, carrera_interes, nivel_academico,
+      numero_celular, observaciones, avatar_url
+    } = datosEntrada;
+
+    const { membresia_id: creador_membresia_id } = contexto;
+
+    if (!usuario_id && !membresia_id) {
+      throw new ErrorValidacion('usuario_id o membresia_id requerido', 'ID_REQUERIDO');
+    }
+
+    const infoCreador = await repositorio.obtenerInfoCreador(creador_membresia_id);
+    if (infoCreador?.nivel !== 0) {
+      throw new ErrorAutorizacion('Solo superadmin puede editar usuarios', 'SIN_PERMISO_EDITAR');
+    }
+
+    let uid = usuario_id;
+    if (!uid && membresia_id) {
+      const info = await repositorio.obtenerInfoMembresia(membresia_id);
+      if (!info) throw new ErrorNoEncontrado('Membresia no encontrada', 'MEMBRESIA_NO_ENCONTRADA');
+      uid = info.usuario_id;
+    }
+
+    const camposActualizar = {};
+    if (nombre_completo !== undefined) camposActualizar.nombre_completo = nombre_completo;
+    if (carrera_interes !== undefined) camposActualizar.carrera_interes = carrera_interes;
+    if (nivel_academico !== undefined) camposActualizar.nivel_academico = nivel_academico;
+    if (numero_celular !== undefined) camposActualizar.numero_celular = numero_celular;
+    if (observaciones !== undefined) camposActualizar.observaciones = observaciones;
+    if (avatar_url !== undefined) camposActualizar.avatar_url = avatar_url;
+
+    const resultado = await repositorio.actualizarUsuario(uid, camposActualizar);
+
+    await repositorio.registrarLog(
+      'editar_usuario', creador_membresia_id, contexto.usuario_id,
+      membresia_id || null, uid,
+      { campos_actualizados: Object.keys(camposActualizar) }
+    );
+
+    return { usuario_id: uid, actualizado: true, campos: Object.keys(camposActualizar), usuario: resultado.usuario };
+  }
 }
 
 module.exports = new JerarquiaUsuariosServicio();
