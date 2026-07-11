@@ -121,6 +121,19 @@ class JerarquiaUsuariosControlador {
       next(error);
     }
   }
+
+
+  // ============================================
+  // EDITAR USUARIO
+  // ============================================
+  async editarUsuario(req, res, next) {
+    try {
+      const resultado = await servicio.editarUsuario(req.body, req.contexto);
+      respuesta.exito(res, resultado, 'Usuario actualizado correctamente');
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new JerarquiaUsuariosControlador();
