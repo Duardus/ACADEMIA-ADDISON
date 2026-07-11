@@ -23,32 +23,30 @@ async function apiCambiarEstadoSubordinado(membresiaId, estado) {
   return await post(`/jerarquia/cambiar-estado/${membresiaId}`, { estado });
 }
 
+// CORREGIDO: Usar {method: 'DELETE'} en vez de 'DELETE' string
 async function apiDesactivarSubordinado(membresiaId) {
-  return await peticion(`/jerarquia/subordinado/${membresiaId}`, 'DELETE');
+  return await peticion(`/jerarquia/subordinado/${membresiaId}`, { method: 'DELETE' });
 }
 
-// ============================================
-// ELIMINAR USUARIO COMPLETAMENTE (NUEVO)
-// ============================================
+// CORREGIDO: Igual aquí
 async function apiEliminarSubordinadoCompleto(membresiaId) {
-  return await peticion(`/jerarquia/subordinado/${membresiaId}/eliminar`, 'DELETE');
+  return await peticion(`/jerarquia/subordinado/${membresia_id}/eliminar`, { method: 'DELETE' });
 }
 
 async function apiModificarCapacidades(membresiaId, capacidades) {
-  return await put(`/jerarquia/subordinado/${membresiaId}/capacidades`, { capacidades });
+  return await put(`/jerarquia/subordinado/${membresiaId}/capacidades`, { capacidades_ids: capacidades });
 }
 
 async function apiObtenerEtiquetas() {
   return await get('/jerarquia/etiquetas');
 }
 
-// ============================================
-// INSTITUCIONES Y SALONES PARA SELECTS (NUEVO)
-// ============================================
+// INSTITUCIONES Y SALONES PARA SELECTS
 async function apiObtenerInstituciones() {
   return await get('/instituciones');
 }
 
 async function apiObtenerSalones(institucionId) {
+  if (!institucionId) return { salones: [] };
   return await get(`/salones?institucion_id=${institucionId}`);
 }

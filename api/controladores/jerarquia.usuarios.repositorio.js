@@ -256,6 +256,36 @@ class JerarquiaUsuariosRepositorio {
   }
 
   // --- Subordinados ---
+  
+  // SUPERADMIN: Todos los usuarios de TODAS las instituciones
+  async obtenerTodosSubordinadosTodasInstituciones() {
+    const result = await consulta(
+      `SELECT
+        m.membresia_id as sub_membresia_id,
+        m.usuario_id as sub_usuario_id,
+        m.nivel as sub_nivel,
+        m.nombre_rol as sub_nombre_rol,
+        m.estado_membresia as sub_estado,
+        m.puede_crear_hijos as sub_puede_crear_hijos,
+        m.institucion_id as sub_institucion_id,
+        u.correo_electronico as sub_correo,
+        u.nombre_completo as sub_nombre_completo,
+        u.avatar_url as sub_avatar_url,
+        u.numero_celular as sub_celular,
+        u.carrera_interes as sub_carrera,
+        u.nivel_academico as sub_nivel_academico,
+        u.creado_en as sub_creado_en,
+        i.nombre_institucion as sub_institucion_nombre,
+        'directo' as sub_tipo_vinculo
+       FROM membresias m
+       JOIN usuarios u ON m.usuario_id = u.usuario_id
+       LEFT JOIN instituciones i ON m.institucion_id = i.institucion_id
+       ORDER BY m.institucion_id, m.nivel, u.nombre_completo`
+    );
+    return result.rows;
+  }
+
+  // NO-SUPERADMIN: Solo usuarios de SU institución
   async obtenerTodosSubordinadosInstitucion(institucionId) {
     const result = await consulta(
       `SELECT
@@ -265,16 +295,20 @@ class JerarquiaUsuariosRepositorio {
         m.nombre_rol as sub_nombre_rol,
         m.estado_membresia as sub_estado,
         m.puede_crear_hijos as sub_puede_crear_hijos,
+        m.institucion_id as sub_institucion_id,
         u.correo_electronico as sub_correo,
         u.nombre_completo as sub_nombre_completo,
         u.avatar_url as sub_avatar_url,
         u.numero_celular as sub_celular,
         u.carrera_interes as sub_carrera,
         u.nivel_academico as sub_nivel_academico,
+        u.creado_en as sub_creado_en,
+        i.nombre_institucion as sub_institucion_nombre,
         'directo' as sub_tipo_vinculo
        FROM membresias m
        JOIN usuarios u ON m.usuario_id = u.usuario_id
-       WHERE m.institucion_id = $1 AND m.estado_membresia = 'active'
+       LEFT JOIN instituciones i ON m.institucion_id = i.institucion_id
+       WHERE m.institucion_id = $1
        ORDER BY m.nivel, u.nombre_completo`,
       [institucionId]
     );

@@ -12,10 +12,8 @@ class JerarquiaUsuariosServicio {
       superior_inmediato_id, superiores_adicionales,
       capacidades_ids, puede_crear_hijos,
       institucion_id, salon_ids,
-      // NUEVO: Datos de suscripcion
       tipo_plan, duracion_dias, monto_pagado, fecha_vencimiento,
       comprobante_url, notas_pago,
-      // NUEVO: Datos extra del usuario
       carrera_interes, cursos_enseña, nivel_academico,
       numero_celular, fecha_nacimiento, direccion, distrito,
       observaciones, etiquetas
@@ -81,7 +79,6 @@ class JerarquiaUsuariosServicio {
       await repositorio.crearUsuarioBootstrap(uid_firebase, email, nombre_completo);
     }
 
-    // ACTUALIZAR CAMPOS EXTRA DEL USUARIO
     await repositorio.actualizarCamposUsuario(uid_firebase, {
       carrera_interes, cursos_enseña, nivel_academico,
       numero_celular, fecha_nacimiento, direccion, distrito,
@@ -131,14 +128,12 @@ class JerarquiaUsuariosServicio {
       nueva_membresia_id = await repositorio.crearMembresia(datosMembresia);
     }
 
-    // ASIGNAR A SALONES
     if (salon_ids && salon_ids.length > 0) {
       for (const salon_id of salon_ids) {
         await repositorio.asignarSalonUsuario(salon_id, nueva_membresia_id, creador_membresia_id, 'miembro');
       }
     }
 
-    // CREAR SUSCRIPCION SI VIENEN DATOS DE PAGO
     let suscripcion_id = null;
     const dias = parseInt(duracion_dias) || 30;
     const monto = parseFloat(monto_pagado) || 0;
@@ -215,7 +210,7 @@ class JerarquiaUsuariosServicio {
   }
 
   // ============================================
-  // OBTENER SUBORDINADOS - AHORA MUESTRA TODOS
+  // OBTENER SUBORDINADOS — SUPERADMIN VE TODOS
   // ============================================
   async obtenerMisSubordinados(membresiaId, institucionId) {
     const infoCreador = await repositorio.obtenerInfoCreador(membresiaId);
@@ -223,17 +218,17 @@ class JerarquiaUsuariosServicio {
 
     let subordinados;
     if (miNivel === 0) {
-      // Superadmin: ve TODOS los de la institución
-      subordinados = await repositorio.obtenerTodosSubordinadosInstitucion(institucionId);
+      // SUPERADMIN: ve TODOS los usuarios de TODAS las instituciones
+      subordinados = await repositorio.obtenerTodosSubordinadosTodasInstituciones();
     } else {
-      // Otros: ve solo sus subordinados directos
-      subordinados = await repositorio.obtenerSubordinadosPorMembresia(membresiaId);
+      // Otros: ve solo los de su institución
+      subordinados = await repositorio.obtenerTodosSubordinadosInstitucion(institucionId);
     }
 
     const subordinadosEnriquecidos = await Promise.all(
       subordinados.map(async (sub) => {
         const capacidades = await repositorio.obtenerCapacidadesSubordinado(sub.sub_membresia_id);
-        const salones = await repositorio.obtenerSalonesSubordinado(sub.sub_usuario_id, institucionId);
+        const salones = await repositorio.obtenerSalonesSubordinado(sub.sub_usuario_id, sub.sub_institucion_id || institucionId);
         const diasRestantes = await repositorio.obtenerDiasRestantes(sub.sub_membresia_id);
         const suscripcion = await repositorio.obtenerSuscripcionActiva(sub.sub_membresia_id);
         return { 
@@ -254,7 +249,7 @@ class JerarquiaUsuariosServicio {
   }
 
   // ============================================
-  // DESACTIVAR SUBORDINADO (SOFT DELETE) - AHORA PERMITE A CREADORES DIRECTOS
+  // DESACTIVAR SUBORDINADO
   // ============================================
   async desactivarSubordinado(creadorMembresiaId, creadorUsuarioId, objetivoMembresiaId) {
     if (objetivoMembresiaId === creadorMembresiaId) {
@@ -263,8 +258,6 @@ class JerarquiaUsuariosServicio {
 
     const infoCreador = await repositorio.obtenerInfoCreador(creadorMembresiaId);
     
-    // Superadmin puede desactivar a cualquiera
-    // Otros solo a sus subordinados directos
     let puedeDesactivar = false;
     if (infoCreador?.nivel === 0) {
       puedeDesactivar = true;
@@ -302,7 +295,7 @@ class JerarquiaUsuariosServicio {
   }
 
   // ============================================
-  // CAMBIAR ESTADO (ACTIVAR/REACTIVAR/SUSPENDER) - AHORA PERMITE A CREADORES
+  // CAMBIAR ESTADO
   // ============================================
   async cambiarEstadoSubordinado(creadorMembresiaId, creadorUsuarioId, objetivoMembresiaId, estado) {
     if (objetivoMembresiaId === creadorMembresiaId) {
@@ -311,8 +304,6 @@ class JerarquiaUsuariosServicio {
 
     const infoCreador = await repositorio.obtenerInfoCreador(creadorMembresiaId);
     
-    // Superadmin puede cambiar estado a cualquiera
-    // Otros solo a sus subordinados directos
     let puedeModificar = false;
     if (infoCreador?.nivel === 0) {
       puedeModificar = true;
@@ -361,7 +352,7 @@ class JerarquiaUsuariosServicio {
   }
 
   // ============================================
-  // ELIMINAR USUARIO COMPLETAMENTE (HARD DELETE)
+  // ELIMINAR USUARIO COMPLETAMENTE
   // ============================================
   async eliminarUsuarioCompleto(creadorMembresiaId, creadorUsuarioId, objetivoMembresiaId) {
     if (objetivoMembresiaId === creadorMembresiaId) {
