@@ -8,20 +8,17 @@ class JerarquiaUsuariosServicio {
   // CREAR USUARIO HIJO - CON INSTITUCION, SALON Y SUSCRIPCION
   // ============================================
   async crearUsuarioHijo(datosEntrada, contexto) {
-    const { consulta } = require('../configuracion/base_de_datos');
-    const { ErrorValidacion } = require('../errores/AppError');
-    let { nombre_completo, email, institucion_id, nombre_rol, nivel_jerarquico, superior_inmediato_id, puede_crear_hijos } = datosEntrada;
-    const ctx=contexto;
-    if (!email) throw new ErrorValidacion('email requerido','EMAIL_REQUERIDO');
-    if (!nombre_completo || nombre_completo.trim()==='') { nombre_completo = email.split('@')[0] || 'Usuario'; }
-    email=email.trim().toLowerCase();
-    const esSuperadmin = ctx?.nivel===0 || ctx?.esSuperadmin;
-    if (!institucion_id && !esSuperadmin) throw new ErrorValidacion('institucion requerida','INST_REQUERIDA');
-    if (!institucion_id && esSuperadmin) institucion_id = null;
-    const resto = { nombre_completo, email, institucion_id, nombre_rol, nivel_jerarquico, superior_inmediato_id, puede_crear_hijos };
-    datosEntrada = resto; // sigue con tu logica original abajo
-    const { nombre_completo: nc, email: em } = datosEntrada;
-
+    const {
+      email, nombre_rol, nombre_completo, nivel_jerarquico,
+      superior_inmediato_id, superiores_adicionales,
+      capacidades_ids, puede_crear_hijos,
+      institucion_id, salon_ids,
+      tipo_plan, duracion_dias, monto_pagado, fecha_vencimiento,
+      comprobante_url, notas_pago,
+      carrera_interes, cursos_enseña, nivel_academico,
+      numero_celular, fecha_nacimiento, direccion, distrito,
+      observaciones, etiquetas
+    } = datosEntrada;
 
     const { 
       membresia_id: creador_membresia_id, 
@@ -29,15 +26,23 @@ class JerarquiaUsuariosServicio {
       institucion_id: ctx_institucion_id 
     } = contexto;
 
+    const _esSuper = (contexto && (contexto.nivel === 0 || contexto.rol === 'superadmin')) || false;
+  if (_esSuper) {
+    if (!email) throw new ErrorValidacion('Email requerido','CAMPOS_INCOMPLETOS');
+    if (!nombre_rol) nombre_rol = 'Miembro';
+    if (nivel_jerarquico === undefined) nivel_jerarquico = 5;
+    if (!superior_inmediato_id) superior_inmediato_id = creador_membresia_id;
+    if (!nombre_completo) nombre_completo = email.split('@')[0];
+  } else {
     if (!email || !nombre_rol || nivel_jerarquico === undefined || !superior_inmediato_id) {
       throw new ErrorValidacion('Email, nombre_rol, nivel_jerarquico y superior_inmediato_id son obligatorios', 'CAMPOS_INCOMPLETOS');
     }
-
-    let institucion_final = institucion_id;
-  if (institucion_final === undefined) institucion_final = ctx_institucion_id;
-  if (!esSuperadmin && !institucion_final) {
-    throw new ErrorValidacion('institucion_id requerido','SIN_INSTITUCION');
   }
+  const _esSuperInst = _esSuper;
+  const institucion_final = (typeof institucion_id !== 'undefined' ? institucion_id : ctx_institucion_id) || (_esSuperInst ? null : null);
+  if (!_esSuperInst && !institucion_final) {
+    throw new ErrorValidacion('institucion_id requerido', 'SIN_INSTITUCION');
+    }
 
     const tienePoder = await repositorio.verificarCapacidadCrearUsuarios(creador_membresia_id);
     if (!tienePoder) {
@@ -441,11 +446,11 @@ class JerarquiaUsuariosServicio {
 
     // Actualizar campos de usuario
     const camposUsuario = {};
-    if (nombre_completo !== undefined) camposUsuario.nombre_completo = nombre_completo;
-    if (carrera_interes !== undefined) camposUsuario.carrera_interes = carrera_interes;
-    if (nivel_academico !== undefined) camposUsuario.nivel_academico = nivel_academico;
-    if (numero_celular !== undefined) camposUsuario.numero_celular = numero_celular;
-    if (observaciones !== undefined) camposUsuario.observaciones = observaciones;
+    if (nombre_completo !== undefined) camposUsuario.nombre_completo = (nombre_completo === '' ? null : nombre_completo);
+    if (carrera_interes !== undefined) camposUsuario.carrera_interes = (carrera_interes === '' ? null : carrera_interes);
+    if (nivel_academico !== undefined) camposUsuario.nivel_academico = (nivel_academico === '' ? null : nivel_academico);
+    if (numero_celular !== undefined) camposUsuario.numero_celular = (numero_celular === '' ? null : numero_celular);
+    if (observaciones !== undefined) camposUsuario.observaciones = (observaciones === '' ? null : observaciones);
     if (avatar_url !== undefined) camposUsuario.avatar_url = avatar_url;
 
     let resultadoUsuario = null;

@@ -105,22 +105,30 @@ async function iniciarUsuarios({ onVolver, onError, onToast }) {
 }
 
 async function manejarCrear({ onVolver, onError, onToast }) {
- try {
-  const datosSesion = (typeof obtenerUsuario==='function'?obtenerUsuario():null);
-  const esSuperadmin = datosSesion?.rol === 'superadmin' || datosSesion?.nivel === 0;
-  const respInstituciones = await apiObtenerInstituciones().catch(() => ({ datos: { instituciones: [] } }));
-  const institucionesRaw = respInstituciones?.datos || respInstituciones || {};
-  const instituciones = institucionesRaw.instituciones || institucionesRaw || [];
-  renderizarModalCrearUsuario({
-   instituciones, salones: [], esSuperadmin,
-   onGuardar: async (datos) => {
-    try { await apiCrearSubordinado(datos); onToast('Usuario creado correctamente','exito'); iniciarUsuarios({ onVolver, onError, onToast }); } catch (e) { onError(e.message||'Error creando usuario'); }
-   },
-   onCancelar: () => {}
-  });
- } catch (e) { onError(e.message||'Error cargando datos'); }
+  try {
+    const respInstituciones = await apiObtenerInstituciones().catch(() => ({ datos: { instituciones: [] } }));
+    
+    const institucionesRaw = respInstituciones?.datos || respInstituciones || {};
+    const instituciones = institucionesRaw.instituciones || institucionesRaw || [];
+    
+    renderizarModalCrearUsuario({
+      instituciones,
+      salones: [],
+      onGuardar: async (datos) => {
+        try {
+          await apiCrearSubordinado(datos);
+          onToast('Usuario creado correctamente', 'exito');
+          iniciarUsuarios({ onVolver, onError, onToast });
+        } catch (error) {
+          onError(error.message || 'Error creando usuario');
+        }
+      },
+      onCancelar: () => {}
+    });
+  } catch (error) {
+    onError(error.message || 'Error cargando datos');
+  }
 }
-
 
 async function manejarReactivar({ id, onVolver, onError, onToast }) {
   mostrarConfirmacion('¿Reactivar este usuario?', async () => {
