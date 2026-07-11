@@ -1,0 +1,13 @@
+# Cachear CSS y JS por 1 hora (se invalida automático en nuevo deploy)
+/*.css
+  Cache-Control: public, max-age=3600
+/js/*
+  Cache-Control: public, max-age=3600
+/css/*
+  Cache-Control: public, max-age=3600
+
+# HTML nunca cachear (siempre fresco)
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
