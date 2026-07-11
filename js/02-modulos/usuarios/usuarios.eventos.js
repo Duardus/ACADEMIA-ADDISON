@@ -1,12 +1,6 @@
 /* ============================================
    ARCHIVO: usuarios.eventos.js
    MODULO: usuarios
-   DEPENDENCIAS:
-     - usuarios.api.js (HTTP)
-     - usuarios.ui.js (renderizado)
-   CONTRATO:
-     - Orquesta carga y CRUD de usuarios
-     - Recibe callback onVolver para regresar al dashboard
    ============================================ */
 
 async function iniciarUsuarios({ onVolver, onError, onToast }) {
@@ -16,9 +10,10 @@ async function iniciarUsuarios({ onVolver, onError, onToast }) {
     
     const respuesta = await apiObtenerSubordinados();
     
-    // Manejar estructura anidada del backend
-    const datos = respuesta.datos || respuesta;
-    const subordinados = datos.subordinados || datos || [];
+    // El backend devuelve { exito: true, datos: { total, subordinados, mi_nivel } }
+    // O directamente { total, subordinados, mi_nivel }
+    const datos = respuesta?.datos || respuesta;
+    const subordinados = datos?.subordinados || datos || [];
     
     renderizarUsuarios({
       subordinados,
@@ -31,25 +26,21 @@ async function iniciarUsuarios({ onVolver, onError, onToast }) {
       onVolver
     });
   } catch (error) {
+    console.error('Error cargando usuarios:', error);
     onError(error.message || 'Error cargando usuarios');
   }
 }
 
 async function manejarCrear({ onVolver, onError, onToast }) {
   try {
-    // CORREGIDO: Solo pedir instituciones, NO salones (sin institución da error 500)
     const respInstituciones = await apiObtenerInstituciones().catch(() => ({ datos: { instituciones: [] } }));
     
-    // Extraer array de instituciones de estructura anidada
-    const institucionesRaw = respInstituciones.datos || respInstituciones || {};
+    const institucionesRaw = respInstituciones?.datos || respInstituciones || {};
     const instituciones = institucionesRaw.instituciones || institucionesRaw || [];
-    
-    // Salones vacíos por ahora, se cargarán cuando seleccione institución
-    const salones = [];
     
     renderizarModalCrearUsuario({
       instituciones,
-      salones,
+      salones: [],
       onGuardar: async (datos) => {
         try {
           await apiCrearSubordinado(datos);
@@ -88,16 +79,21 @@ async function manejarDesactivar({ id, onVolver, onError, onToast }) {
     onToast('Usuario desactivado', 'exito');
     iniciarUsuarios({ onVolver, onError, onToast });
   } catch (error) {
+    console.error('Error desactivando:', error);
     onError(error.message || 'Error desactivando usuario');
   }
 }
 
 async function manejarEliminarCompleto({ id, onVolver, onError, onToast }) {
   const confirmacion = confirm('⚠️ ¿ELIMINAR PERMANENTEMENTE?\n\nEsta acción NO se puede deshacer.\n\n¿Estás seguro?');
-  if (!confirmacion) return;
+  if (!confirmacion) {
+    onToast('Eliminación cancelada', 'advertencia');
+    return;
+  }
   
-  const segundaConfirmacion = prompt('Escribe ELIMINAR para confirmar:');
-  if (segundaConfirmacion !== 'ELIMINAR') {
+  // Segunda confirmación con prompt
+  const segunda = prompt('Escribe ELIMINAR para confirmar:');
+  if (segunda !== 'ELIMINAR') {
     onToast('Eliminación cancelada', 'advertencia');
     return;
   }
@@ -107,6 +103,7 @@ async function manejarEliminarCompleto({ id, onVolver, onError, onToast }) {
     onToast('Usuario eliminado permanentemente', 'exito');
     iniciarUsuarios({ onVolver, onError, onToast });
   } catch (error) {
+    console.error('Error eliminando:', error);
     onError(error.message || 'Error eliminando usuario');
   }
 }
@@ -118,23 +115,27 @@ async function manejarCapacidades({ id, onVolver, onError, onToast }) {
       apiObtenerSubordinados()
     ]);
     
-    // Extraer datos de estructura anidada
-    const datosSub = respSubordinados.datos || respSubordinados;
-    const subordinados = datosSub.subordinados || datosSub || [];
+    const datosSub = respSubordinados?.datos || respSubordinados;
+    const subordinados = datosSub?.subordinados || datosSub || [];
     
-    const capacidadesRaw = respCapacidades.datos || respCapacidades || {};
+    const capacidadesRaw = respCapacidades?.datos || respCapacidades || {};
     const capacidades = capacidadesRaw.capacidades || capacidadesRaw || [];
     
-    const subordinado = subordinados.find(s => s.sub_membresia_id == id);
+    const subordinado = subordinados.find(s => 
+      (s.sub_membresia_id || s.membresia_id) == id
+    );
+    
     if (!subordinado) {
       onError('Usuario no encontrado');
       return;
     }
     
+    const capsActuales = (subordinado.capacidades || []).map(c => c.codigo || c.capacidad_id);
+    
     renderizarModalCapacidades({
       subordinado,
       capacidadesDisponibles: capacidades,
-      capacidadesActuales: (subordinado.capacidades || []).map(c => c.codigo),
+      capacidadesActuales: capsActuales,
       onGuardar: async (seleccionadas) => {
         try {
           await apiModificarCapacidades(id, seleccionadas);
@@ -147,6 +148,7 @@ async function manejarCapacidades({ id, onVolver, onError, onToast }) {
       onCancelar: () => {}
     });
   } catch (error) {
+    console.error('Error capacidades:', error);
     onError(error.message || 'Error cargando capacidades');
   }
 }
