@@ -8,17 +8,20 @@ class JerarquiaUsuariosServicio {
   // CREAR USUARIO HIJO - CON INSTITUCION, SALON Y SUSCRIPCION
   // ============================================
   async crearUsuarioHijo(datosEntrada, contexto) {
-    const {
-      email, nombre_rol, nombre_completo, nivel_jerarquico,
-      superior_inmediato_id, superiores_adicionales,
-      capacidades_ids, puede_crear_hijos,
-      institucion_id, salon_ids,
-      tipo_plan, duracion_dias, monto_pagado, fecha_vencimiento,
-      comprobante_url, notas_pago,
-      carrera_interes, cursos_enseña, nivel_academico,
-      numero_celular, fecha_nacimiento, direccion, distrito,
-      observaciones, etiquetas
-    } = datosEntrada;
+    const { consulta } = require('../configuracion/base_de_datos');
+    const { ErrorValidacion } = require('../errores/AppError');
+    let { nombre_completo, email, institucion_id, nombre_rol, nivel_jerarquico, superior_inmediato_id, puede_crear_hijos } = datosEntrada;
+    const ctx=contexto;
+    if (!email) throw new ErrorValidacion('email requerido','EMAIL_REQUERIDO');
+    if (!nombre_completo || nombre_completo.trim()==='') { nombre_completo = email.split('@')[0] || 'Usuario'; }
+    email=email.trim().toLowerCase();
+    const esSuperadmin = ctx?.nivel===0 || ctx?.esSuperadmin;
+    if (!institucion_id && !esSuperadmin) throw new ErrorValidacion('institucion requerida','INST_REQUERIDA');
+    if (!institucion_id && esSuperadmin) institucion_id = null;
+    const resto = { nombre_completo, email, institucion_id, nombre_rol, nivel_jerarquico, superior_inmediato_id, puede_crear_hijos };
+    datosEntrada = resto; // sigue con tu logica original abajo
+    const { nombre_completo: nc, email: em } = datosEntrada;
+
 
     const { 
       membresia_id: creador_membresia_id, 
@@ -30,10 +33,11 @@ class JerarquiaUsuariosServicio {
       throw new ErrorValidacion('Email, nombre_rol, nivel_jerarquico y superior_inmediato_id son obligatorios', 'CAMPOS_INCOMPLETOS');
     }
 
-    const institucion_final = institucion_id || ctx_institucion_id;
-    if (!institucion_final) {
-      throw new ErrorValidacion('institucion_id requerido', 'SIN_INSTITUCION');
-    }
+    let institucion_final = institucion_id;
+  if (institucion_final === undefined) institucion_final = ctx_institucion_id;
+  if (!esSuperadmin && !institucion_final) {
+    throw new ErrorValidacion('institucion_id requerido','SIN_INSTITUCION');
+  }
 
     const tienePoder = await repositorio.verificarCapacidadCrearUsuarios(creador_membresia_id);
     if (!tienePoder) {
