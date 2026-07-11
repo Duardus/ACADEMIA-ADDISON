@@ -3,6 +3,80 @@
    MODULO: usuarios
    ============================================ */
 
+// Modal de confirmación personalizado (reemplaza confirm() y prompt())
+function mostrarConfirmacion(mensaje, onConfirmar, onCancelar) {
+  document.querySelectorAll('.modal-confirm').forEach(m => m.remove());
+  
+  const modal = document.createElement('div');
+  modal.className = 'modal-confirm';
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;';
+  modal.innerHTML = `
+    <div style="background:var(--superficie);border:1px solid var(--borde);border-radius:var(--radio-borde);padding:24px;max-width:400px;width:90%;text-align:center;">
+      <p style="margin:0 0 20px;font-size:16px;">${mensaje}</p>
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <button id="btnCancelarConfirm" class="btn btn-secundario">Cancelar</button>
+        <button id="btnConfirmar" class="btn" style="background:var(--error);">Confirmar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  
+  document.getElementById('btnCancelarConfirm').addEventListener('click', () => {
+    modal.remove();
+    if (onCancelar) onCancelar();
+  });
+  
+  document.getElementById('btnConfirmar').addEventListener('click', () => {
+    modal.remove();
+    onConfirmar();
+  });
+}
+
+// Modal de input personalizado (reemplaza prompt())
+function mostrarInputConfirmacion(mensaje, valorEsperado, onConfirmar, onCancelar) {
+  document.querySelectorAll('.modal-input').forEach(m => m.remove());
+  
+  const modal = document.createElement('div');
+  modal.className = 'modal-input';
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;';
+  modal.innerHTML = `
+    <div style="background:var(--superficie);border:1px solid var(--borde);border-radius:var(--radio-borde);padding:24px;max-width:400px;width:90%;text-align:center;">
+      <p style="margin:0 0 12px;font-size:16px;">${mensaje}</p>
+      <p style="margin:0 0 16px;font-size:13px;color:var(--texto-secundario);">Escribe <strong>${valorEsperado}</strong> para confirmar</p>
+      <input type="text" id="inputConfirmacion" class="input" style="width:100%;margin-bottom:20px;text-align:center;font-size:18px;letter-spacing:2px;" placeholder="${valorEsperado}">
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <button id="btnCancelarInput" class="btn btn-secundario">Cancelar</button>
+        <button id="btnConfirmarInput" class="btn" style="background:var(--error);">Eliminar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  
+  const input = document.getElementById('inputConfirmacion');
+  input.focus();
+  
+  document.getElementById('btnCancelarInput').addEventListener('click', () => {
+    modal.remove();
+    if (onCancelar) onCancelar();
+  });
+  
+  document.getElementById('btnConfirmarInput').addEventListener('click', () => {
+    const valor = input.value.trim();
+    modal.remove();
+    if (valor === valorEsperado) {
+      onConfirmar();
+    } else {
+      onCancelar();
+    }
+  });
+  
+  input.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById('btnConfirmarInput').click();
+    }
+  });
+}
+
 async function iniciarUsuarios({ onVolver, onError, onToast }) {
   try {
     const datosSesion = obtenerUsuario();
@@ -10,8 +84,6 @@ async function iniciarUsuarios({ onVolver, onError, onToast }) {
     
     const respuesta = await apiObtenerSubordinados();
     
-    // El backend devuelve { exito: true, datos: { total, subordinados, mi_nivel } }
-    // O directamente { total, subordinados, mi_nivel }
     const datos = respuesta?.datos || respuesta;
     const subordinados = datos?.subordinados || datos || [];
     
@@ -58,54 +130,50 @@ async function manejarCrear({ onVolver, onError, onToast }) {
 }
 
 async function manejarReactivar({ id, onVolver, onError, onToast }) {
-  const confirmacion = confirm('¿Reactivar este usuario?');
-  if (!confirmacion) return;
-  
-  try {
-    await apiCambiarEstadoSubordinado(id, 'active');
-    onToast('Usuario reactivado', 'exito');
-    iniciarUsuarios({ onVolver, onError, onToast });
-  } catch (error) {
-    onError(error.message || 'Error reactivando usuario');
-  }
+  mostrarConfirmacion('¿Reactivar este usuario?', async () => {
+    try {
+      await apiCambiarEstadoSubordinado(id, 'active');
+      onToast('Usuario reactivado', 'exito');
+      iniciarUsuarios({ onVolver, onError, onToast });
+    } catch (error) {
+      onError(error.message || 'Error reactivando usuario');
+    }
+  });
 }
 
 async function manejarDesactivar({ id, onVolver, onError, onToast }) {
-  const confirmacion = confirm('¿Desactivar este usuario?');
-  if (!confirmacion) return;
-  
-  try {
-    await apiDesactivarSubordinado(id);
-    onToast('Usuario desactivado', 'exito');
-    iniciarUsuarios({ onVolver, onError, onToast });
-  } catch (error) {
-    console.error('Error desactivando:', error);
-    onError(error.message || 'Error desactivando usuario');
-  }
+  mostrarConfirmacion('¿Desactivar este usuario?', async () => {
+    try {
+      await apiDesactivarSubordinado(id);
+      onToast('Usuario desactivado', 'exito');
+      iniciarUsuarios({ onVolver, onError, onToast });
+    } catch (error) {
+      console.error('Error desactivando:', error);
+      onError(error.message || 'Error desactivando usuario');
+    }
+  });
 }
 
 async function manejarEliminarCompleto({ id, onVolver, onError, onToast }) {
-  const confirmacion = confirm('⚠️ ¿ELIMINAR PERMANENTEMENTE?\n\nEsta acción NO se puede deshacer.\n\n¿Estás seguro?');
-  if (!confirmacion) {
-    onToast('Eliminación cancelada', 'advertencia');
-    return;
-  }
-  
-  // Segunda confirmación con prompt
-  const segunda = prompt('Escribe ELIMINAR para confirmar:');
-  if (segunda !== 'ELIMINAR') {
-    onToast('Eliminación cancelada', 'advertencia');
-    return;
-  }
-  
-  try {
-    await apiEliminarSubordinadoCompleto(id);
-    onToast('Usuario eliminado permanentemente', 'exito');
-    iniciarUsuarios({ onVolver, onError, onToast });
-  } catch (error) {
-    console.error('Error eliminando:', error);
-    onError(error.message || 'Error eliminando usuario');
-  }
+  mostrarConfirmacion('⚠️ ¿ELIMINAR PERMANENTEMENTE?<br><br>Esta acción NO se puede deshacer.', () => {
+    mostrarInputConfirmacion(
+      'Confirmar eliminación',
+      'ELIMINAR',
+      async () => {
+        try {
+          await apiEliminarSubordinadoCompleto(id);
+          onToast('Usuario eliminado permanentemente', 'exito');
+          iniciarUsuarios({ onVolver, onError, onToast });
+        } catch (error) {
+          console.error('Error eliminando:', error);
+          onError(error.message || 'Error eliminando usuario');
+        }
+      },
+      () => {
+        onToast('Eliminación cancelada', 'advertencia');
+      }
+    );
+  });
 }
 
 async function manejarCapacidades({ id, onVolver, onError, onToast }) {

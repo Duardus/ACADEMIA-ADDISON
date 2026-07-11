@@ -1,10 +1,6 @@
 /* ============================================
    ARCHIVO: usuarios.api.js
    MODULO: usuarios
-   DEPENDENCIAS: peticiones.js (01-nucleo)
-   CONTRATO:
-     - Solo HTTP, NUNCA toca DOM
-     - Devuelve datos planos o lanza error
    ============================================ */
 
 async function apiObtenerSubordinados() {
@@ -23,14 +19,38 @@ async function apiCambiarEstadoSubordinado(membresiaId, estado) {
   return await post(`/jerarquia/cambiar-estado/${membresiaId}`, { estado });
 }
 
-// CORREGIDO: Usar del() que ya existe en peticiones.js
+// USAR fetch DIRECTO con DELETE para evitar problemas con del()
 async function apiDesactivarSubordinado(membresiaId) {
-  return await del(`/jerarquia/subordinado/${membresiaId}`);
+  const token = obtenerToken?.() || '';
+  const resp = await fetch(`${API_CONFIG.BASE_URL}/jerarquia/subordinado/${membresiaId}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+    }
+  });
+  const json = await resp.json();
+  if (!resp.ok || json.exito === false) {
+    throw new Error(json.error || `HTTP ${resp.status}`);
+  }
+  return json.datos !== undefined ? json.datos : json;
 }
 
-// CORREGIDO: Variable era membresia_id (minúscula) → membresiaId (camelCase)
+// USAR fetch DIRECTO con DELETE
 async function apiEliminarSubordinadoCompleto(membresiaId) {
-  return await del(`/jerarquia/subordinado/${membresiaId}/eliminar`);
+  const token = obtenerToken?.() || '';
+  const resp = await fetch(`${API_CONFIG.BASE_URL}/jerarquia/subordinado/${membresiaId}/eliminar`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+    }
+  });
+  const json = await resp.json();
+  if (!resp.ok || json.exito === false) {
+    throw new Error(json.error || `HTTP ${resp.status}`);
+  }
+  return json.datos !== undefined ? json.datos : json;
 }
 
 async function apiModificarCapacidades(membresiaId, capacidades) {
@@ -41,7 +61,6 @@ async function apiObtenerEtiquetas() {
   return await get('/jerarquia/etiquetas');
 }
 
-// INSTITUCIONES Y SALONES PARA SELECTS
 async function apiObtenerInstituciones() {
   return await get('/instituciones');
 }
