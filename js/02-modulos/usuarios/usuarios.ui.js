@@ -7,7 +7,7 @@
      - Recibe datos planos, callbacks
    ============================================ */
 
-function renderizarUsuarios({ subordinados, onCrear, onReactivar, onDesactivar, onEliminarCompleto, onCapacidades, onVolver, esSuperadmin }) {
+function renderizarUsuarios({ subordinados, onCrear, onReactivar, onDesactivar, onEliminarCompleto, onCapacidades, onEditar, onVolver, esSuperadmin }) {
   const app = document.getElementById('app');
   
   // Contar activos y suspendidos
@@ -140,6 +140,7 @@ function renderizarUsuarios({ subordinados, onCrear, onReactivar, onDesactivar, 
   // Event listeners para botones de acción
   tabla.querySelectorAll('.btn-editar').forEach(btn => {
     btn.addEventListener('click', (e) => {
+      console.log('CLICK EDITAR', btn.dataset.id);
       e.stopPropagation();
       onEditar(btn.dataset.id);
     });
@@ -147,6 +148,7 @@ function renderizarUsuarios({ subordinados, onCrear, onReactivar, onDesactivar, 
 
   tabla.querySelectorAll('.btn-capacidades').forEach(btn => {
     btn.addEventListener('click', (e) => {
+      console.log('CLICK EDITAR', btn.dataset.id);
       e.stopPropagation();
       onCapacidades(btn.dataset.id);
     });
@@ -154,6 +156,7 @@ function renderizarUsuarios({ subordinados, onCrear, onReactivar, onDesactivar, 
   
   tabla.querySelectorAll('.btn-desactivar').forEach(btn => {
     btn.addEventListener('click', (e) => {
+      console.log('CLICK EDITAR', btn.dataset.id);
       e.stopPropagation();
       onDesactivar(btn.dataset.id);
     });
@@ -161,6 +164,7 @@ function renderizarUsuarios({ subordinados, onCrear, onReactivar, onDesactivar, 
   
   tabla.querySelectorAll('.btn-reactivar').forEach(btn => {
     btn.addEventListener('click', (e) => {
+      console.log('CLICK EDITAR', btn.dataset.id);
       e.stopPropagation();
       onReactivar(btn.dataset.id);
     });
@@ -168,6 +172,7 @@ function renderizarUsuarios({ subordinados, onCrear, onReactivar, onDesactivar, 
   
   tabla.querySelectorAll('.btn-eliminar').forEach(btn => {
     btn.addEventListener('click', (e) => {
+      console.log('CLICK EDITAR', btn.dataset.id);
       e.stopPropagation();
       onEliminarCompleto(btn.dataset.id);
     });
