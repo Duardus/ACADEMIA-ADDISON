@@ -1,13 +1,6 @@
 /* ============================================
    📁 ARCHIVO: peticiones.js
    📂 CAPA: 01-nucleo
-   🔗 DEPENDENCIAS: api.config.js (00-config)
-   📝 CONTRATO:
-     - Única capa que hace fetch al backend
-     - Desempaqueta { exito, datos } automáticamente
-     - Maneja 401 (logout), 404, timeout, red
-     - Devuelve Promise que resuelve con datos o rechaza con Error
-   🚫 NO TOCAR: UI, localStorage directo, Firebase
    ============================================ */
 
 const TIMEOUT_MS = API_CONFIG?.TIMEOUT || 15000;
@@ -23,15 +16,22 @@ async function peticion(ruta, opciones = {}) {
     ...(opciones.headers || {})
   };
 
+  // Construir opciones de fetch, eliminando body si es undefined
+  const fetchOptions = {
+    ...opciones,
+    headers,
+    signal: controller.signal
+  };
+  
+  // Si body es undefined, eliminarlo para que fetch no lo envíe
+  if (fetchOptions.body === undefined) {
+    delete fetchOptions.body;
+  }
+
   try {
-    const respuesta = await fetch(`${API_CONFIG.BASE_URL}${ruta}`, {
-      ...opciones,
-      headers,
-      signal: controller.signal
-    });
+    const respuesta = await fetch(`${API_CONFIG.BASE_URL}${ruta}`, fetchOptions);
     clearTimeout(timer);
 
-    // 401 = sesión inválida → logout silencioso
     if (respuesta.status === 401) {
       limpiarSesion?.();
       window.location.href = '/';
@@ -40,7 +40,6 @@ async function peticion(ruta, opciones = {}) {
 
     const json = await respuesta.json();
 
-    // Error del backend con formato { exito: false, error }
     if (json.exito === false && json.error) {
       const err = new Error(json.error);
       err.codigo = json.codigo || 'ERROR_DESCONOCIDO';
@@ -48,14 +47,12 @@ async function peticion(ruta, opciones = {}) {
       throw err;
     }
 
-    // Error HTTP sin formato de backend
     if (!respuesta.ok) {
       const err = new Error(json.error || `HTTP ${respuesta.status}`);
       err.status = respuesta.status;
       throw err;
     }
 
-    // Éxito: devolver datos directamente
     return json.datos !== undefined ? json.datos : json;
 
   } catch (error) {
@@ -71,4 +68,8 @@ async function peticion(ruta, opciones = {}) {
 function get(ruta)    { return peticion(ruta); }
 function post(ruta, body)   { return peticion(ruta, { method: 'POST', body: JSON.stringify(body) }); }
 function put(ruta, body)    { return peticion(ruta, { method: 'PUT', body: JSON.stringify(body) }); }
-function del(ruta, body)    { return peticion(ruta, { method: 'DELETE', body: body ? JSON.stringify(body) : undefined }); }
+function del(ruta, body)    { 
+  const opts = { method: 'DELETE' };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+  return peticion(ruta, opts);
+}
