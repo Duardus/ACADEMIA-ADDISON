@@ -392,9 +392,15 @@ class JerarquiaUsuariosRepositorio {
         u.numero_celular as sub_celular,
         u.carrera_interes as sub_carrera,
         u.nivel_academico as sub_nivel_academico,
+        u.observaciones as sub_observaciones,
         u.creado_en as sub_creado_en,
         i.nombre_institucion as sub_institucion_nombre,
-        'directo' as sub_tipo_vinculo
+        'directo' as sub_tipo_vinculo,
+        (SELECT string_agg(s.nombre_salon, ', ' ORDER BY s.nombre_salon)
+         FROM salones s
+         JOIN salon_usuarios su ON s.salon_id = su.salon_id
+         WHERE su.membresia_id = m.membresia_id
+        ) as sub_salones
        FROM membresias m
        JOIN usuarios u ON m.usuario_id = u.usuario_id
        LEFT JOIN instituciones i ON m.institucion_id = i.institucion_id
@@ -420,9 +426,15 @@ class JerarquiaUsuariosRepositorio {
         u.numero_celular as sub_celular,
         u.carrera_interes as sub_carrera,
         u.nivel_academico as sub_nivel_academico,
+        u.observaciones as sub_observaciones,
         u.creado_en as sub_creado_en,
         i.nombre_institucion as sub_institucion_nombre,
-        'directo' as sub_tipo_vinculo
+        'directo' as sub_tipo_vinculo,
+        (SELECT string_agg(s.nombre_salon, ', ' ORDER BY s.nombre_salon)
+         FROM salones s
+         JOIN salon_usuarios su ON s.salon_id = su.salon_id
+         WHERE su.membresia_id = m.membresia_id
+        ) as sub_salones
        FROM membresias m
        JOIN usuarios u ON m.usuario_id = u.usuario_id
        LEFT JOIN instituciones i ON m.institucion_id = i.institucion_id

@@ -51,8 +51,13 @@ function renderizarUsuarios({ subordinados, onCrear, onReactivar, onDesactivar, 
         <th style="padding:10px;">Nivel</th>
         <th style="padding:10px;">Usuario</th>
         <th style="padding:10px;">Correo</th>
+        <th style="padding:10px;">Celular</th>
         <th style="padding:10px;">Rol</th>
+        <th style="padding:10px;">Carrera</th>
+        <th style="padding:10px;">Nivel Académico</th>
+        <th style="padding:10px;">Observaciones</th>
         <th style="padding:10px;">Institución</th>
+        <th style="padding:10px;">Salón/Aula</th>
         <th style="padding:10px;">Estado</th>
         <th style="padding:10px;">Creado</th>
         <th style="padding:10px;text-align:right;">Acciones</th>
@@ -68,7 +73,12 @@ function renderizarUsuarios({ subordinados, onCrear, onReactivar, onDesactivar, 
         const avatarUrl = s.sub_avatar_url || s.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(nombreMostrar)}&background=random&size=32`;
         
         const correo = s.sub_correo || s.correo_electronico || s.correo || '-';
+        const celular = s.sub_celular || s.numero_celular || '-';
         const rol = s.sub_nombre_rol || s.nombre_rol || 'Sin rol';
+        const carrera = s.sub_carrera || s.carrera_interes || '-';
+        const nivelAcademico = s.sub_nivel_academico || s.nivel_academico || '-';
+        const observaciones = s.sub_observaciones || s.observaciones || '-';
+        const salones = s.sub_salones || s.salones || '-';
         const nivel = s.sub_nivel !== undefined ? s.sub_nivel : (s.nivel !== undefined ? s.nivel : '-');
         const institucion = s.sub_institucion_nombre || s.institucion_nombre || 'Sistema Addison';
         const creado = s.sub_creado_en || s.creado_en || '-';
@@ -103,8 +113,13 @@ function renderizarUsuarios({ subordinados, onCrear, onReactivar, onDesactivar, 
             </div>
           </td>
           <td style="padding:10px;font-size:12px;color:var(--texto-secundario);">${correo}</td>
+          <td style="padding:10px;font-size:12px;">${celular}</td>
           <td style="padding:10px;">${rol}</td>
+          <td style="padding:10px;font-size:12px;">${carrera}</td>
+          <td style="padding:10px;font-size:12px;">${nivelAcademico}</td>
+          <td style="padding:10px;font-size:12px;color:var(--texto-secundario);">${observaciones}</td>
           <td style="padding:10px;font-size:12px;">${institucion}</td>
+          <td style="padding:10px;font-size:12px;">${salones}</td>
           <td style="padding:10px;">
             <span style="display:inline-block;padding:4px 10px;border-radius:var(--radio-borde-xs);${estadoClass}color:#fff;font-size:11px;font-weight:600;">
               ${estadoTexto}

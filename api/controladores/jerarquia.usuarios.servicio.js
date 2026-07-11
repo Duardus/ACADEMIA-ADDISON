@@ -1,5 +1,6 @@
 const repositorio = require('./jerarquia.usuarios.repositorio');
 const { ErrorValidacion, ErrorAutorizacion, ErrorNoEncontrado, ErrorConflicto } = require('../errores/AppError');
+const firebaseSync = require('../servicios/firebase.sync.servicio');
 
 class JerarquiaUsuariosServicio {
 
@@ -76,7 +77,9 @@ class JerarquiaUsuariosServicio {
         await repositorio.reactivarUsuario(email);
       }
     } else {
-      await repositorio.crearUsuarioBootstrap(uid_firebase, email, nombreCompleto);
+      await repositorio.crearUsuarioBootstrap(uid_firebase, email, nombre_completo);
+      // Sincronizar con Firebase Auth (servicio independiente)
+      await firebaseSync.crearUsuario(uid_firebase, email, nombre_completo);
     }
 
     await repositorio.actualizarCamposUsuario(uid_firebase, {
@@ -375,6 +378,9 @@ class JerarquiaUsuariosServicio {
 
     // USAR NUEVO MÉTODO DE CASCADA COMPLETA
     const resultado = await repositorio.eliminarUsuarioCompleto(objetivoUsuarioId, objetivoMembresiaId);
+
+    // Sincronizar eliminación con Firebase Auth (servicio independiente)
+    await firebaseSync.eliminarUsuario(objetivoUsuarioId);
 
     await repositorio.registrarLog(
       'eliminar_usuario', creadorMembresiaId, creadorUsuarioId,
