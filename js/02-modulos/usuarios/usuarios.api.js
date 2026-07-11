@@ -23,14 +23,14 @@ async function apiCambiarEstadoSubordinado(membresiaId, estado) {
   return await post(`/jerarquia/cambiar-estado/${membresiaId}`, { estado });
 }
 
-// CORREGIDO: Usar {method: 'DELETE'} en vez de 'DELETE' string
+// CORREGIDO: Usar del() que ya existe en peticiones.js
 async function apiDesactivarSubordinado(membresiaId) {
-  return await peticion(`/jerarquia/subordinado/${membresiaId}`, { method: 'DELETE' });
+  return await del(`/jerarquia/subordinado/${membresiaId}`);
 }
 
-// CORREGIDO: Igual aquí
+// CORREGIDO: Variable era membresia_id (minúscula) → membresiaId (camelCase)
 async function apiEliminarSubordinadoCompleto(membresiaId) {
-  return await peticion(`/jerarquia/subordinado/${membresia_id}/eliminar`, { method: 'DELETE' });
+  return await del(`/jerarquia/subordinado/${membresiaId}/eliminar`);
 }
 
 async function apiModificarCapacidades(membresiaId, capacidades) {

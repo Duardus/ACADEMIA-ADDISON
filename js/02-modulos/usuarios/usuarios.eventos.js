@@ -16,11 +16,10 @@ async function iniciarUsuarios({ onVolver, onError, onToast }) {
     
     const respuesta = await apiObtenerSubordinados();
     
-    // Manejar estructura anidada del backend: { exito: true, datos: { total, subordinados, mi_nivel } }
+    // Manejar estructura anidada del backend
     const datos = respuesta.datos || respuesta;
     const subordinados = datos.subordinados || datos || [];
     
-    // Mostrar TODOS los usuarios
     renderizarUsuarios({
       subordinados,
       esSuperadmin,
@@ -38,18 +37,15 @@ async function iniciarUsuarios({ onVolver, onError, onToast }) {
 
 async function manejarCrear({ onVolver, onError, onToast }) {
   try {
-    const [respInstituciones, respSalones] = await Promise.all([
-      apiObtenerInstituciones().catch(() => ({ datos: { instituciones: [] } })),
-      apiObtenerSalones().catch(() => ({ datos: { salones: [] } }))
-    ]);
+    // CORREGIDO: Solo pedir instituciones, NO salones (sin institución da error 500)
+    const respInstituciones = await apiObtenerInstituciones().catch(() => ({ datos: { instituciones: [] } }));
     
-    // CORREGIDO: Extraer array de instituciones de estructura anidada
+    // Extraer array de instituciones de estructura anidada
     const institucionesRaw = respInstituciones.datos || respInstituciones || {};
     const instituciones = institucionesRaw.instituciones || institucionesRaw || [];
     
-    // CORREGIDO: Extraer array de salones
-    const salonesRaw = respSalones.datos || respSalones || {};
-    const salones = salonesRaw.salones || salonesRaw || [];
+    // Salones vacíos por ahora, se cargarán cuando seleccione institución
+    const salones = [];
     
     renderizarModalCrearUsuario({
       instituciones,
@@ -122,7 +118,7 @@ async function manejarCapacidades({ id, onVolver, onError, onToast }) {
       apiObtenerSubordinados()
     ]);
     
-    // CORREGIDO: Extraer datos de estructura anidada
+    // Extraer datos de estructura anidada
     const datosSub = respSubordinados.datos || respSubordinados;
     const subordinados = datosSub.subordinados || datosSub || [];
     
