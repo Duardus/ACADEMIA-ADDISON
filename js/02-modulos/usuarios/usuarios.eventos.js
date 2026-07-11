@@ -225,16 +225,37 @@ async function manejarCapacidades({ id, onVolver, onError, onToast }) {
 
 async function manejarEditar({ id, onVolver, onError, onToast }) {
   try {
-    const respSubordinados = await apiObtenerSubordinados();
+    const [respSubordinados, respInstituciones] = await Promise.all([
+      apiObtenerSubordinados(),
+      apiObtenerInstituciones()
+    ]);
+    
     const datosSub = respSubordinados?.datos || respSubordinados;
     const subordinados = datosSub?.subordinados || datosSub || [];
     const subordinado = subordinados.find(s => (s.sub_membresia_id || s.membresia_id) == id);
+    
     if (!subordinado) {
       onError('Usuario no encontrado');
       return;
     }
+    
+    const instituciones = respInstituciones?.datos || respInstituciones?.instituciones || respInstituciones || [];
+    const institucionId = subordinado.sub_institucion_id || subordinado.institucion_id;
+    
+    let salones = [];
+    if (institucionId) {
+      try {
+        const respSalones = await apiObtenerSalones(institucionId);
+        salones = respSalones?.datos?.salones || respSalones?.salones || [];
+      } catch (e) {
+        console.warn('Error cargando salones:', e);
+      }
+    }
+    
     renderizarModalEditarUsuario({
       subordinado,
+      instituciones,
+      salones,
       onGuardar: async (datos) => {
         try {
           await apiEditarSubordinado(id, datos);

@@ -612,7 +612,50 @@ class JerarquiaUsuariosRepositorio {
     return result.rows[0].total;
   }
 
-  // --- Logging ---
+  
+  // --- Actualización de membresías ---
+  async actualizarCamposMembresia(membresiaId, campos) {
+    const updates = [];
+    const values = [];
+    let idx = 1;
+    
+    if (campos.nombre_rol !== undefined) { updates.push(`nombre_rol = $${idx++}`); values.push(campos.nombre_rol); }
+    if (campos.nivel !== undefined) { updates.push(`nivel = $${idx++}`); values.push(campos.nivel); }
+    if (campos.padre_membresia_id !== undefined) { updates.push(`padre_membresia_id = $${idx++}`); values.push(campos.padre_membresia_id); }
+    if (campos.puede_crear_hijos !== undefined) { updates.push(`puede_crear_hijos = $${idx++}`); values.push(campos.puede_crear_hijos); }
+    if (campos.estado_membresia !== undefined) { updates.push(`estado_membresia = $${idx++}`); values.push(campos.estado_membresia); }
+    
+    if (updates.length === 0) return { actualizado: false };
+    
+    values.push(membresiaId);
+    await consulta(
+      `UPDATE membresias SET ${updates.join(', ')} WHERE membresia_id = $${idx}`,
+      values
+    );
+    return { actualizado: true, campos: updates.map(u => u.split(' = ')[0]) };
+  }
+
+  async sincronizarSalonesMembresia(membresiaId, salonIds, asignadoPorId, rolEnSalon) {
+    // Eliminar salones actuales de la membresía
+    await consulta(
+      'DELETE FROM salon_usuarios WHERE membresia_id = $1',
+      [membresiaId]
+    );
+    
+    // Asignar nuevos salones
+    if (Array.isArray(salonIds) && salonIds.length > 0) {
+      for (const salonId of salonIds) {
+        await consulta(
+          `INSERT INTO salon_usuarios (salon_id, membresia_id, asignado_por_membresia_id, rol_en_salon)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (salon_id, membresia_id) DO UPDATE SET rol_en_salon = $4, asignado_por_membresia_id = $3`,
+          [salonId, membresiaId, asignadoPorId, rolEnSalon || 'miembro']
+        );
+      }
+    }
+  }
+
+// --- Logging ---
   async registrarLog(accion, actorMembresiaId, actorUsuarioId, objetivoMembresiaId, objetivoUsuarioId, detalle) {
     await consulta(
       `INSERT INTO jerarquia_log (accion, actor_membresia_id, actor_usuario_id, objetivo_membresia_id, objetivo_usuario_id, detalle_json)

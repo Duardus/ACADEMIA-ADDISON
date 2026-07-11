@@ -406,7 +406,9 @@ class JerarquiaUsuariosServicio {
     const {
       usuario_id, membresia_id,
       nombre_completo, carrera_interes, nivel_academico,
-      numero_celular, observaciones, avatar_url
+      numero_celular, observaciones, avatar_url,
+      nombre_rol, nivel_jerarquico, superior_inmediato_id, puede_crear_hijos,
+      salon_ids
     } = datosEntrada;
 
     const { membresia_id: creador_membresia_id } = contexto;
@@ -421,29 +423,71 @@ class JerarquiaUsuariosServicio {
     }
 
     let uid = usuario_id;
-    if (!uid && membresia_id) {
-      const info = await repositorio.obtenerInfoMembresia(membresia_id);
+    let mid = membresia_id;
+    if (!uid && mid) {
+      const info = await repositorio.obtenerInfoMembresia(mid);
       if (!info) throw new ErrorNoEncontrado('Membresia no encontrada', 'MEMBRESIA_NO_ENCONTRADA');
       uid = info.usuario_id;
     }
+    if (uid && !mid) {
+      // Buscar membresia activa del usuario para obtener el membresia_id
+      const info = await repositorio.obtenerInfoMembresiaPorUsuario(uid);
+      if (info) mid = info.membresia_id;
+    }
 
-    const camposActualizar = {};
-    if (nombre_completo !== undefined) camposActualizar.nombre_completo = nombre_completo;
-    if (carrera_interes !== undefined) camposActualizar.carrera_interes = carrera_interes;
-    if (nivel_academico !== undefined) camposActualizar.nivel_academico = nivel_academico;
-    if (numero_celular !== undefined) camposActualizar.numero_celular = numero_celular;
-    if (observaciones !== undefined) camposActualizar.observaciones = observaciones;
-    if (avatar_url !== undefined) camposActualizar.avatar_url = avatar_url;
+    // Actualizar campos de usuario
+    const camposUsuario = {};
+    if (nombre_completo !== undefined) camposUsuario.nombre_completo = nombre_completo;
+    if (carrera_interes !== undefined) camposUsuario.carrera_interes = carrera_interes;
+    if (nivel_academico !== undefined) camposUsuario.nivel_academico = nivel_academico;
+    if (numero_celular !== undefined) camposUsuario.numero_celular = numero_celular;
+    if (observaciones !== undefined) camposUsuario.observaciones = observaciones;
+    if (avatar_url !== undefined) camposUsuario.avatar_url = avatar_url;
 
-    const resultado = await repositorio.actualizarUsuario(uid, camposActualizar);
+    let resultadoUsuario = null;
+    if (Object.keys(camposUsuario).length > 0) {
+      resultadoUsuario = await repositorio.actualizarCamposUsuario(uid, camposUsuario);
+    }
+
+    // Actualizar campos de membresia
+    const camposMembresia = {};
+    if (nombre_rol !== undefined) camposMembresia.nombre_rol = nombre_rol;
+    if (nivel_jerarquico !== undefined) camposMembresia.nivel = parseInt(nivel_jerarquico);
+    if (superior_inmediato_id !== undefined) camposMembresia.padre_membresia_id = parseInt(superior_inmediato_id);
+    if (puede_crear_hijos !== undefined) camposMembresia.puede_crear_hijos = puede_crear_hijos;
+
+    let resultadoMembresia = null;
+    if (mid && Object.keys(camposMembresia).length > 0) {
+      resultadoMembresia = await repositorio.actualizarCamposMembresia(mid, camposMembresia);
+    }
+
+    // Sincronizar salones
+    let resultadoSalones = null;
+    if (mid && salon_ids !== undefined) {
+      await repositorio.sincronizarSalonesMembresia(mid, salon_ids, creador_membresia_id, null);
+      resultadoSalones = { salon_ids };
+    }
+
+    const camposActualizados = [
+      ...Object.keys(camposUsuario),
+      ...(resultadoMembresia?.campos || []),
+      ...(resultadoSalones ? ['salones'] : [])
+    ];
 
     await repositorio.registrarLog(
       'editar_usuario', creador_membresia_id, contexto.usuario_id,
-      membresia_id || null, uid,
-      { campos_actualizados: Object.keys(camposActualizar) }
+      mid || null, uid,
+      { campos_actualizados: camposActualizados }
     );
 
-    return { usuario_id: uid, actualizado: true, campos: Object.keys(camposActualizar), usuario: resultado.usuario };
+    return { 
+      usuario_id: uid, 
+      membresia_id: mid,
+      actualizado: true, 
+      campos: camposActualizados,
+      usuario: resultadoUsuario,
+      membresia: resultadoMembresia
+    };
   }
 }
 

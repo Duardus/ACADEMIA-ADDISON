@@ -418,20 +418,30 @@ function renderizarModalCapacidades({ subordinado, capacidadesDisponibles, capac
 // ============================================
 // MODAL EDITAR USUARIO
 // ============================================
-function renderizarModalEditarUsuario({ subordinado, onGuardar, onCancelar }) {
+function renderizarModalEditarUsuario({ subordinado, instituciones, salones, onGuardar, onCancelar }) {
   document.querySelectorAll('.modal').forEach(m => m.remove());
   const modal = document.createElement('div');
   modal.className = 'modal';
   modal.id = 'modalEditarUsuario';
+  
   const nombreActual = subordinado.sub_nombre_completo || subordinado.nombre_completo || '';
   const carreraActual = subordinado.sub_carrera || subordinado.carrera_interes || '';
   const celularActual = subordinado.sub_celular || subordinado.numero_celular || '';
   const nivelAcademicoActual = subordinado.sub_nivel_academico || subordinado.nivel_academico || '';
   const observacionesActual = subordinado.sub_observaciones || subordinado.observaciones || '';
+  const rolActual = subordinado.sub_nombre_rol || subordinado.nombre_rol || '';
+  const nivelActual = subordinado.sub_nivel !== undefined ? subordinado.sub_nivel : (subordinado.nivel !== undefined ? subordinado.nivel : 5);
+  const superiorActual = subordinado.sub_padre_membresia_id || subordinado.padre_membresia_id || subordinado.superior_inmediato_id || '';
+  const puedeCrearHijos = subordinado.sub_puede_crear_hijos || subordinado.puede_crear_hijos || false;
+  const institucionActual = subordinado.sub_institucion_id || subordinado.institucion_id || '';
+  const salonActual = subordinado.sub_salon_id || subordinado.salon_id || '';
+  const membresiaId = subordinado.sub_membresia_id || subordinado.membresia_id || '';
+  
   modal.innerHTML = `
     <div class="modal-tarjeta" style="max-width:650px;background:var(--superficie);border:1px solid var(--borde);border-radius:var(--radio-borde);padding:22px;max-height:90vh;overflow-y:auto;">
       <h3 style="margin:0 0 16px;font-size:20px;">✏️ Editar Usuario</h3>
       <p style="margin:0 0 16px;color:var(--texto-secundario);font-size:13px;">${nombreActual}</p>
+      
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
         <div>
           <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nombre Completo</label>
@@ -442,6 +452,58 @@ function renderizarModalEditarUsuario({ subordinado, onGuardar, onCancelar }) {
           <input type="text" id="editCelular" class="input" value="${celularActual}" placeholder="999-999-999" style="width:100%;">
         </div>
       </div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Institución</label>
+          <select id="editInstitucion" class="input" style="width:100%;" disabled>
+            <option value="">-- Sin institución --</option>
+            ${Array.isArray(instituciones) ? instituciones.map(inst => `
+              <option value="${inst.institucion_id}" ${institucionActual == inst.institucion_id ? 'selected' : ''}>${inst.nombre_institucion}</option>
+            `).join('') : ''}
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Salón / Aula</label>
+          <select id="editSalon" class="input" style="width:100%;">
+            <option value="">-- Sin asignar --</option>
+            ${Array.isArray(salones) ? salones.map(s => `
+              <option value="${s.salon_id}" ${salonActual == s.salon_id ? 'selected' : ''}>${s.nombre_salon}</option>
+            `).join('') : ''}
+          </select>
+        </div>
+      </div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nombre del Rol</label>
+          <input type="text" id="editNombreRol" class="input" value="${rolActual}" placeholder="Ej: Profesor, Alumno..." style="width:100%;">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nivel Jerárquico</label>
+          <select id="editNivel" class="input" style="width:100%;">
+            <option value="1" ${nivelActual == 1 ? 'selected' : ''}>Nivel 1 - Director/Admin</option>
+            <option value="2" ${nivelActual == 2 ? 'selected' : ''}>Nivel 2 - Coordinador</option>
+            <option value="3" ${nivelActual == 3 ? 'selected' : ''}>Nivel 3 - Profesor</option>
+            <option value="4" ${nivelActual == 4 ? 'selected' : ''}>Nivel 4 - Auxiliar</option>
+            <option value="5" ${nivelActual == 5 ? 'selected' : ''}>Nivel 5 - Alumno</option>
+          </select>
+        </div>
+      </div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Superior Inmediato (membresia_id)</label>
+          <input type="number" id="editSuperior" class="input" value="${superiorActual}" placeholder="1" style="width:100%;">
+        </div>
+        <div style="display:flex;align-items:flex-end;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="editCrearHijos" style="width:18px;height:18px;" ${puedeCrearHijos ? 'checked' : ''}>
+            <span style="font-size:13px;">Puede crear subordinados</span>
+          </label>
+        </div>
+      </div>
+      
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
         <div>
           <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Carrera de Interés</label>
@@ -459,10 +521,12 @@ function renderizarModalEditarUsuario({ subordinado, onGuardar, onCancelar }) {
           </select>
         </div>
       </div>
+      
       <div style="margin-bottom:16px;">
         <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Observaciones</label>
         <textarea id="editObservaciones" class="input" rows="3" placeholder="Notas sobre el usuario..." style="width:100%;resize:vertical;">${observacionesActual}</textarea>
       </div>
+      
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button class="btn btn-secundario" id="btnCancelarEditar">Cancelar</button>
         <button class="btn" id="btnGuardarEditar">Guardar Cambios</button>
@@ -470,22 +534,38 @@ function renderizarModalEditarUsuario({ subordinado, onGuardar, onCancelar }) {
     </div>
   `;
   document.body.appendChild(modal);
+  
   document.getElementById('btnCancelarEditar').addEventListener('click', () => {
     modal.remove();
     onCancelar();
   });
+  
   document.getElementById('btnGuardarEditar').addEventListener('click', () => {
     const nombre = document.getElementById('editNombre').value.trim();
     const celular = document.getElementById('editCelular').value.trim();
     const carrera = document.getElementById('editCarrera').value.trim();
     const nivelAcademico = document.getElementById('editNivelAcademico').value;
     const observaciones = document.getElementById('editObservaciones').value.trim();
-    const datos = {};
+    const nombreRol = document.getElementById('editNombreRol').value.trim();
+    const nivel = parseInt(document.getElementById('editNivel').value);
+    const superiorId = parseInt(document.getElementById('editSuperior').value) || null;
+    const puedeCrear = document.getElementById('editCrearHijos').checked;
+    const salonId = document.getElementById('editSalon').value;
+    
+    const datos = {
+      membresia_id: membresiaId
+    };
     if (nombre) datos.nombre_completo = nombre;
     if (celular) datos.numero_celular = celular;
     if (carrera) datos.carrera_interes = carrera;
     if (nivelAcademico) datos.nivel_academico = nivelAcademico;
     if (observaciones) datos.observaciones = observaciones;
+    if (nombreRol) datos.nombre_rol = nombreRol;
+    datos.nivel_jerarquico = nivel;
+    if (superiorId) datos.superior_inmediato_id = superiorId;
+    datos.puede_crear_hijos = puedeCrear;
+    if (salonId) datos.salon_ids = [parseInt(salonId)];
+    
     modal.remove();
     onGuardar(datos);
   });
