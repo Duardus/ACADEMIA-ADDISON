@@ -4,14 +4,21 @@ const { ErrorValidacion, ErrorAutorizacion, ErrorNoEncontrado, ErrorConflicto } 
 class JerarquiaUsuariosServicio {
 
   // ============================================
-  // CREAR USUARIO HIJO - CON INSTITUCION Y SALON
+  // CREAR USUARIO HIJO - CON INSTITUCION, SALON Y SUSCRIPCION
   // ============================================
   async crearUsuarioHijo(datosEntrada, contexto) {
     const {
       email, nombre_rol, nombre_completo, nivel_jerarquico,
       superior_inmediato_id, superiores_adicionales,
       capacidades_ids, puede_crear_hijos,
-      institucion_id, salon_ids
+      institucion_id, salon_ids,
+      // NUEVO: Datos de suscripcion
+      tipo_plan, duracion_dias, monto_pagado, fecha_vencimiento,
+      comprobante_url, notas_pago,
+      // NUEVO: Datos extra del usuario
+      carrera_interes, cursos_enseña, nivel_academico,
+      numero_celular, fecha_nacimiento, direccion, distrito,
+      observaciones, etiquetas
     } = datosEntrada;
 
     const { 
@@ -74,6 +81,13 @@ class JerarquiaUsuariosServicio {
       await repositorio.crearUsuarioBootstrap(uid_firebase, email, nombre_completo);
     }
 
+    // ACTUALIZAR CAMPOS EXTRA DEL USUARIO
+    await repositorio.actualizarCamposUsuario(uid_firebase, {
+      carrera_interes, cursos_enseña, nivel_academico,
+      numero_celular, fecha_nacimiento, direccion, distrito,
+      observaciones, etiquetas: etiquetas ? JSON.stringify(etiquetas) : '[]'
+    });
+
     const membresiaActiva = await repositorio.buscarMembresiaActiva(uid_firebase, institucion_final);
     if (membresiaActiva) {
       throw new ErrorConflicto('Ya tiene membresia activa', 'MEMBRESIA_EXISTENTE');
@@ -124,6 +138,32 @@ class JerarquiaUsuariosServicio {
       }
     }
 
+    // CREAR SUSCRIPCION SI VIENEN DATOS DE PAGO
+    let suscripcion_id = null;
+    const dias = parseInt(duracion_dias) || 30;
+    const monto = parseFloat(monto_pagado) || 0;
+    const vencimiento = fecha_vencimiento || new Date(Date.now() + dias * 24 * 60 * 60 * 1000).toISOString();
+
+    if (monto > 0 || tipo_plan) {
+      suscripcion_id = await repositorio.crearSuscripcion({
+        membresia_id: nueva_membresia_id,
+        usuario_id: uid_firebase,
+        institucion_id: institucion_final,
+        tipo_plan: tipo_plan || 'mensual',
+        duracion_dias: dias,
+        monto_pagado: monto,
+        moneda: 'PEN',
+        fecha_inicio: new Date().toISOString(),
+        fecha_vencimiento: vencimiento,
+        fecha_pago: new Date().toISOString(),
+        estado_suscripcion: 'activa',
+        comprobante_url: comprobante_url || null,
+        comprobante_tipo: comprobante_url ? 'recibo' : null,
+        notas_pago: notas_pago || null,
+        creado_por_membresia_id: creador_membresia_id
+      });
+    }
+
     await repositorio.registrarSuperiorInmediato(superior_inmediato_id, nueva_membresia_id, creador_membresia_id);
 
     if (superiores_adicionales && superiores_adicionales.length > 0) {
@@ -151,7 +191,10 @@ class JerarquiaUsuariosServicio {
         capacidades_ids: capacidades_ids || [],
         puede_crear_hijos: puede_crear_hijos || false,
         institucion_id: institucion_final,
-        salon_ids: salon_ids || []
+        salon_ids: salon_ids || [],
+        suscripcion_id,
+        monto_pagado: monto,
+        fecha_vencimiento: vencimiento
       }
     );
 
@@ -163,12 +206,16 @@ class JerarquiaUsuariosServicio {
       nivel: nivel_jerarquico,
       superior_inmediato_id,
       puede_crear_hijos: puede_crear_hijos || false,
-      salon_ids: salon_ids || []
+      salon_ids: salon_ids || [],
+      suscripcion_id,
+      dias_restantes: dias,
+      fecha_vencimiento: vencimiento,
+      creado_en: new Date().toISOString()
     };
   }
 
   // ============================================
-  // OBTENER SUBORDINADOS
+  // OBTENER SUBORDINADOS - AHORA MUESTRA TODOS
   // ============================================
   async obtenerMisSubordinados(membresiaId, institucionId) {
     const infoCreador = await repositorio.obtenerInfoCreador(membresiaId);
@@ -176,8 +223,10 @@ class JerarquiaUsuariosServicio {
 
     let subordinados;
     if (miNivel === 0) {
+      // Superadmin: ve TODOS los de la institución
       subordinados = await repositorio.obtenerTodosSubordinadosInstitucion(institucionId);
     } else {
+      // Otros: ve solo sus subordinados directos
       subordinados = await repositorio.obtenerSubordinadosPorMembresia(membresiaId);
     }
 
@@ -185,24 +234,47 @@ class JerarquiaUsuariosServicio {
       subordinados.map(async (sub) => {
         const capacidades = await repositorio.obtenerCapacidadesSubordinado(sub.sub_membresia_id);
         const salones = await repositorio.obtenerSalonesSubordinado(sub.sub_usuario_id, institucionId);
-        return { ...sub, capacidades, salones };
+        const diasRestantes = await repositorio.obtenerDiasRestantes(sub.sub_membresia_id);
+        const suscripcion = await repositorio.obtenerSuscripcionActiva(sub.sub_membresia_id);
+        return { 
+          ...sub, 
+          capacidades, 
+          salones,
+          dias_restantes: diasRestantes,
+          suscripcion: suscripcion || null
+        };
       })
     );
 
-    return { total: subordinadosEnriquecidos.length, subordinados: subordinadosEnriquecidos };
+    return { 
+      total: subordinadosEnriquecidos.length, 
+      subordinados: subordinadosEnriquecidos,
+      mi_nivel: miNivel
+    };
   }
 
   // ============================================
-  // DESACTIVAR SUBORDINADO (SOFT DELETE)
+  // DESACTIVAR SUBORDINADO (SOFT DELETE) - AHORA PERMITE A CREADORES DIRECTOS
   // ============================================
   async desactivarSubordinado(creadorMembresiaId, creadorUsuarioId, objetivoMembresiaId) {
     if (objetivoMembresiaId === creadorMembresiaId) {
       throw new ErrorAutorizacion('No puedes desactivarte a ti mismo', 'AUTO_DESACTIVACION');
     }
 
-    const esSubordinado = await repositorio.esSubordinadoDirecto(creadorMembresiaId, objetivoMembresiaId);
-    if (!esSubordinado) {
-      throw new ErrorAutorizacion('No es tu subordinado', 'NO_ES_SUBORDINADO');
+    const infoCreador = await repositorio.obtenerInfoCreador(creadorMembresiaId);
+    
+    // Superadmin puede desactivar a cualquiera
+    // Otros solo a sus subordinados directos
+    let puedeDesactivar = false;
+    if (infoCreador?.nivel === 0) {
+      puedeDesactivar = true;
+    } else {
+      const esSubordinado = await repositorio.esSubordinadoDirecto(creadorMembresiaId, objetivoMembresiaId);
+      puedeDesactivar = esSubordinado;
+    }
+
+    if (!puedeDesactivar) {
+      throw new ErrorAutorizacion('No tienes permiso para desactivar este usuario', 'SIN_PERMISO_DESACTIVAR');
     }
 
     const infoObjetivo = await repositorio.obtenerInfoMembresia(objetivoMembresiaId);
@@ -226,11 +298,11 @@ class JerarquiaUsuariosServicio {
       { metodo: 'soft_delete', nivel_previo: infoObjetivo.nivel, sesion_revocada: true }
     );
 
-    return { membresia_id: objetivoMembresiaId };
+    return { membresia_id: objetivoMembresiaId, estado: 'suspended' };
   }
 
   // ============================================
-  // CAMBIAR ESTADO (ACTIVAR/REACTIVAR/SUSPENDER)
+  // CAMBIAR ESTADO (ACTIVAR/REACTIVAR/SUSPENDER) - AHORA PERMITE A CREADORES
   // ============================================
   async cambiarEstadoSubordinado(creadorMembresiaId, creadorUsuarioId, objetivoMembresiaId, estado) {
     if (objetivoMembresiaId === creadorMembresiaId) {
@@ -238,8 +310,19 @@ class JerarquiaUsuariosServicio {
     }
 
     const infoCreador = await repositorio.obtenerInfoCreador(creadorMembresiaId);
-    if (infoCreador?.nivel !== 0) {
-      throw new ErrorAutorizacion('Solo superadmin puede cambiar estado', 'SIN_PERMISO');
+    
+    // Superadmin puede cambiar estado a cualquiera
+    // Otros solo a sus subordinados directos
+    let puedeModificar = false;
+    if (infoCreador?.nivel === 0) {
+      puedeModificar = true;
+    } else {
+      const esSubordinado = await repositorio.esSubordinadoDirecto(creadorMembresiaId, objetivoMembresiaId);
+      puedeModificar = esSubordinado;
+    }
+
+    if (!puedeModificar) {
+      throw new ErrorAutorizacion('No tienes permiso para cambiar el estado de este usuario', 'SIN_PERMISO');
     }
 
     const infoObjetivo = await repositorio.obtenerInfoMembresia(objetivoMembresiaId);

@@ -61,6 +61,31 @@ class JerarquiaUsuariosRepositorio {
     );
   }
 
+  async actualizarCamposUsuario(usuarioId, campos) {
+    const updates = [];
+    const values = [];
+    let idx = 1;
+    
+    if (campos.carrera_interes !== undefined) { updates.push(`carrera_interes = $${idx++}`); values.push(campos.carrera_interes); }
+    if (campos.cursos_enseña !== undefined) { updates.push(`cursos_enseña = $${idx++}`); values.push(campos.cursos_enseña); }
+    if (campos.nivel_academico !== undefined) { updates.push(`nivel_academico = $${idx++}`); values.push(campos.nivel_academico); }
+    if (campos.numero_celular !== undefined) { updates.push(`numero_celular = $${idx++}`); values.push(campos.numero_celular); }
+    if (campos.fecha_nacimiento !== undefined) { updates.push(`fecha_nacimiento = $${idx++}`); values.push(campos.fecha_nacimiento); }
+    if (campos.direccion !== undefined) { updates.push(`direccion = $${idx++}`); values.push(campos.direccion); }
+    if (campos.distrito !== undefined) { updates.push(`distrito = $${idx++}`); values.push(campos.distrito); }
+    if (campos.observaciones !== undefined) { updates.push(`observaciones = $${idx++}`); values.push(campos.observaciones); }
+    if (campos.etiquetas !== undefined) { updates.push(`etiquetas = $${idx++}`); values.push(campos.etiquetas); }
+    if (campos.campos_dinamicos !== undefined) { updates.push(`campos_dinamicos = $${idx++}`); values.push(campos.campos_dinamicos); }
+    
+    if (updates.length === 0) return;
+    
+    values.push(usuarioId);
+    await consulta(
+      `UPDATE usuarios SET ${updates.join(', ')} WHERE usuario_id = $${idx}`,
+      values
+    );
+  }
+
   // --- Salones ---
   async asignarSalonUsuario(salonId, membresiaId, asignadoPorId, rolEnSalon) {
     await consulta(
@@ -153,6 +178,22 @@ class JerarquiaUsuariosRepositorio {
     await consulta('DELETE FROM superiores_membresia WHERE subordinado_membresia_id = $1', [membresiaId]);
   }
 
+  // --- ELIMINACIÓN PERMANENTE ---
+  async eliminarMembresia(membresiaId) {
+    await consulta('DELETE FROM membresias WHERE membresia_id = $1', [membresiaId]);
+  }
+
+  async eliminarUsuario(usuarioId) {
+    await consulta('DELETE FROM pagos_alumnos WHERE alumno_id = $1', [usuarioId]);
+    await consulta('DELETE FROM pagos_profesores WHERE profesor_id = $1', [usuarioId]);
+    await consulta('DELETE FROM progreso_alumno WHERE alumno_id = $1', [usuarioId]);
+    await consulta('DELETE FROM notificaciones WHERE usuario_id = $1', [usuarioId]);
+    await consulta('DELETE FROM membresia_capacidades WHERE membresia_id IN (SELECT membresia_id FROM membresias WHERE usuario_id = $1)', [usuarioId]);
+    await consulta('DELETE FROM superiores_membresia WHERE superior_membresia_id IN (SELECT membresia_id FROM membresias WHERE usuario_id = $1) OR subordinado_membresia_id IN (SELECT membresia_id FROM membresias WHERE usuario_id = $1)', [usuarioId]);
+    await consulta('DELETE FROM membresias WHERE usuario_id = $1', [usuarioId]);
+    await consulta('DELETE FROM usuarios WHERE usuario_id = $1', [usuarioId]);
+  }
+
   // --- Capacidades ---
   async obtenerCapacidadesDelegables(membresiaId, capacidadesIds) {
     const result = await consulta(
@@ -226,6 +267,10 @@ class JerarquiaUsuariosRepositorio {
         m.puede_crear_hijos as sub_puede_crear_hijos,
         u.correo_electronico as sub_correo,
         u.nombre_completo as sub_nombre_completo,
+        u.avatar_url as sub_avatar_url,
+        u.numero_celular as sub_celular,
+        u.carrera_interes as sub_carrera,
+        u.nivel_academico as sub_nivel_academico,
         'directo' as sub_tipo_vinculo
        FROM membresias m
        JOIN usuarios u ON m.usuario_id = u.usuario_id
@@ -267,7 +312,7 @@ class JerarquiaUsuariosRepositorio {
 
   async obtenerInfoMembresia(membresiaId) {
     const result = await consulta(
-      'SELECT nivel, usuario_id FROM membresias WHERE membresia_id = $1',
+      'SELECT nivel, usuario_id, nombre_rol, puede_crear_hijos, padre_membresia_id FROM membresias WHERE membresia_id = $1',
       [membresiaId]
     );
     return result.rows[0] || null;
@@ -294,6 +339,113 @@ class JerarquiaUsuariosRepositorio {
       [membresiaId]
     );
     return result.rows;
+  }
+
+  // --- SUSCRIPCIONES ---
+  async crearSuscripcion(datos) {
+    const result = await consulta(
+      `INSERT INTO suscripciones (
+        membresia_id, usuario_id, institucion_id, tipo_plan, duracion_dias,
+        monto_pagado, moneda, fecha_inicio, fecha_vencimiento, fecha_pago,
+        estado_suscripcion, comprobante_url, comprobante_tipo, notas_pago,
+        creado_por_membresia_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      RETURNING suscripcion_id`,
+      [
+        datos.membresia_id, datos.usuario_id, datos.institucion_id,
+        datos.tipo_plan, datos.duracion_dias, datos.monto_pagado, datos.moneda,
+        datos.fecha_inicio, datos.fecha_vencimiento, datos.fecha_pago,
+        datos.estado_suscripcion, datos.comprobante_url, datos.comprobante_tipo,
+        datos.notas_pago, datos.creado_por_membresia_id
+      ]
+    );
+    return result.rows[0].suscripcion_id;
+  }
+
+  async obtenerSuscripcionActiva(membresiaId) {
+    const result = await consulta(
+      `SELECT * FROM suscripciones 
+       WHERE membresia_id = $1 AND estado_suscripcion = 'activa'
+       ORDER BY fecha_vencimiento DESC LIMIT 1`,
+      [membresiaId]
+    );
+    return result.rows[0] || null;
+  }
+
+  async obtenerDiasRestantes(membresiaId) {
+    const result = await consulta(
+      'SELECT dias_restantes_suscripcion($1) as dias',
+      [membresiaId]
+    );
+    return result.rows[0]?.dias || 0;
+  }
+
+  // --- CAMPOS DINÁMICOS (Notion-style) ---
+  async crearCampoDinamico(institucionId, campoNombre, campoTipo, opciones, requerido) {
+    const result = await consulta(
+      `INSERT INTO usuarios_campos_dinamicos (institucion_id, campo_nombre, campo_tipo, campo_opciones, requerido)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (institucion_id, campo_nombre) DO UPDATE SET
+         campo_tipo = $3, campo_opciones = $4, requerido = $5
+       RETURNING campo_id`,
+      [institucionId, campoNombre, campoTipo, JSON.stringify(opciones || []), requerido || false]
+    );
+    return result.rows[0].campo_id;
+  }
+
+  async obtenerCamposDinamicos(institucionId) {
+    const result = await consulta(
+      `SELECT * FROM usuarios_campos_dinamicos 
+       WHERE institucion_id = $1 ORDER BY campo_orden, campo_nombre`,
+      [institucionId]
+    );
+    return result.rows;
+  }
+
+  async obtenerValoresCamposDinamicos(usuarioId) {
+    const result = await consulta(
+      `SELECT c.campo_nombre, c.campo_tipo, v.valor_texto, v.valor_numero, v.valor_fecha, v.valor_json
+       FROM usuarios_campos_valores v
+       JOIN usuarios_campos_dinamicos c ON v.campo_id = c.campo_id
+       WHERE v.usuario_id = $1`,
+      [usuarioId]
+    );
+    return result.rows;
+  }
+
+  // --- PAGOS ---
+  async registrarPago(datos) {
+    const result = await consulta(
+      `INSERT INTO pagos_historial (
+        suscripcion_id, usuario_id, institucion_id, monto, moneda,
+        concepto, metodo_pago, comprobante_url, comprobante_tipo,
+        fecha_pago, periodo_desde, periodo_hasta, registrado_por_membresia_id, notas
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      RETURNING pago_id`,
+      [
+        datos.suscripcion_id, datos.usuario_id, datos.institucion_id,
+        datos.monto, datos.moneda, datos.concepto, datos.metodo_pago,
+        datos.comprobante_url, datos.comprobante_tipo, datos.fecha_pago,
+        datos.periodo_desde, datos.periodo_hasta, datos.registrado_por_membresia_id, datos.notas
+      ]
+    );
+    return result.rows[0].pago_id;
+  }
+
+  async obtenerPagosUsuario(usuarioId) {
+    const result = await consulta(
+      `SELECT * FROM pagos_historial WHERE usuario_id = $1 ORDER BY fecha_pago DESC`,
+      [usuarioId]
+    );
+    return result.rows;
+  }
+
+  async obtenerTotalPagosInstitucion(institucionId) {
+    const result = await consulta(
+      `SELECT COALESCE(SUM(monto), 0) as total FROM pagos_historial WHERE institucion_id = $1`,
+      [institucionId]
+    );
+    return result.rows[0].total;
   }
 
   // --- Logging ---

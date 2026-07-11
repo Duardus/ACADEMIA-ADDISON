@@ -15,10 +15,12 @@ async function iniciarUsuarios({ onVolver, onError, onToast }) {
     const esSuperadmin = datosSesion?.rol === 'superadmin' || datosSesion?.nivel === 0;
     
     const respuesta = await apiObtenerSubordinados();
+    
+    // Manejar estructura anidada del backend: { exito: true, datos: { total, subordinados, mi_nivel } }
     const datos = respuesta.datos || respuesta;
     const subordinados = datos.subordinados || datos || [];
     
-    // Mostrar TODOS los usuarios (no filtrar)
+    // Mostrar TODOS los usuarios
     renderizarUsuarios({
       subordinados,
       esSuperadmin,
@@ -37,12 +39,17 @@ async function iniciarUsuarios({ onVolver, onError, onToast }) {
 async function manejarCrear({ onVolver, onError, onToast }) {
   try {
     const [respInstituciones, respSalones] = await Promise.all([
-      apiObtenerInstituciones().catch(() => ({ datos: [] })),
-      apiObtenerSalones().catch(() => ({ datos: [] }))
+      apiObtenerInstituciones().catch(() => ({ datos: { instituciones: [] } })),
+      apiObtenerSalones().catch(() => ({ datos: { salones: [] } }))
     ]);
     
-    const instituciones = respInstituciones.datos || respInstituciones || [];
-    const salones = respSalones.datos || respSalones || [];
+    // CORREGIDO: Extraer array de instituciones de estructura anidada
+    const institucionesRaw = respInstituciones.datos || respInstituciones || {};
+    const instituciones = institucionesRaw.instituciones || institucionesRaw || [];
+    
+    // CORREGIDO: Extraer array de salones
+    const salonesRaw = respSalones.datos || respSalones || {};
+    const salones = salonesRaw.salones || salonesRaw || [];
     
     renderizarModalCrearUsuario({
       instituciones,
@@ -115,9 +122,12 @@ async function manejarCapacidades({ id, onVolver, onError, onToast }) {
       apiObtenerSubordinados()
     ]);
     
+    // CORREGIDO: Extraer datos de estructura anidada
     const datosSub = respSubordinados.datos || respSubordinados;
     const subordinados = datosSub.subordinados || datosSub || [];
-    const capacidades = respCapacidades.datos || respCapacidades;
+    
+    const capacidadesRaw = respCapacidades.datos || respCapacidades || {};
+    const capacidades = capacidadesRaw.capacidades || capacidadesRaw || [];
     
     const subordinado = subordinados.find(s => s.sub_membresia_id == id);
     if (!subordinado) {
@@ -127,7 +137,7 @@ async function manejarCapacidades({ id, onVolver, onError, onToast }) {
     
     renderizarModalCapacidades({
       subordinado,
-      capacidadesDisponibles: capacidades || [],
+      capacidadesDisponibles: capacidades,
       capacidadesActuales: (subordinado.capacidades || []).map(c => c.codigo),
       onGuardar: async (seleccionadas) => {
         try {

@@ -49,10 +49,11 @@ function renderizarUsuarios({ subordinados, onCrear, onReactivar, onDesactivar, 
     <thead>
       <tr style="border-bottom:2px solid var(--borde);text-align:left;">
         <th style="padding:10px;">Nivel</th>
-        <th style="padding:10px;">Nombre</th>
+        <th style="padding:10px;">Usuario</th>
         <th style="padding:10px;">Correo</th>
         <th style="padding:10px;">Rol</th>
         <th style="padding:10px;">Salones</th>
+        <th style="padding:10px;">Suscripción</th>
         <th style="padding:10px;">Estado</th>
         <th style="padding:10px;">Crear</th>
         <th style="padding:10px;text-align:right;">Acciones</th>
@@ -65,10 +66,28 @@ function renderizarUsuarios({ subordinados, onCrear, onReactivar, onDesactivar, 
           ? salones.map(sal => `<span style="display:inline-block;padding:2px 8px;background:var(--primario);color:#fff;border-radius:4px;font-size:11px;margin-right:4px;">${sal.nombre_salon}</span>`).join('')
           : '<span style="color:var(--texto-secundario);font-size:12px;">Sin salón</span>';
         
+        // SUSCRIPCIÓN: días restantes y estado
+        const diasRestantes = s.dias_restantes || 0;
+        const suscripcion = s.suscripcion || {};
+        let suscripcionHtml = '';
+        if (diasRestantes > 7) {
+          suscripcionHtml = `<span style="color:var(--exito);font-size:12px;font-weight:600;">${diasRestantes} días</span>`;
+        } else if (diasRestantes > 0) {
+          suscripcionHtml = `<span style="color:var(--advertencia);font-size:12px;font-weight:600;">⚠️ ${diasRestantes} días</span>`;
+        } else {
+          suscripcionHtml = `<span style="color:var(--error);font-size:12px;font-weight:600;">VENCIDO</span>`;
+        }
+        if (suscripcion.monto_pagado) {
+          suscripcionHtml += `<br><span style="font-size:11px;color:var(--texto-secundario);">S/ ${suscripcion.monto_pagado}</span>`;
+        }
+        
         const estadoClass = s.sub_estado === 'active' ? 'background:var(--exito);' : 'background:var(--advertencia);';
         const estadoTexto = s.sub_estado === 'active' ? 'Activo' : 'Suspendido';
         
         const puedeCrear = s.sub_puede_crear_hijos ? '✅' : '❌';
+        
+        // AVATAR
+        const avatarUrl = s.sub_avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(s.sub_nombre_completo || 'U')}&background=random&size=32`;
         
         // Botones según estado
         let botonesAccion = '';
@@ -79,7 +98,6 @@ function renderizarUsuarios({ subordinados, onCrear, onReactivar, onDesactivar, 
             ${esSuperadmin ? `<button class="btn-icono" data-accion="eliminar" data-id="${s.sub_membresia_id}" title="Eliminar Permanentemente" style="color:var(--error);">❌</button>` : ''}
           `;
         } else {
-          // Usuario suspendido - mostrar reactivar
           botonesAccion = `
             <button class="btn-icono" data-accion="reactivar" data-id="${s.sub_membresia_id}" title="Reactivar" style="color:var(--exito);">✅</button>
             ${esSuperadmin ? `<button class="btn-icono" data-accion="eliminar" data-id="${s.sub_membresia_id}" title="Eliminar Permanentemente" style="color:var(--error);">❌</button>` : ''}
@@ -93,10 +111,16 @@ function renderizarUsuarios({ subordinados, onCrear, onReactivar, onDesactivar, 
               ${s.sub_nivel}
             </span>
           </td>
-          <td style="padding:10px;font-weight:500;">${s.sub_nombre_completo || s.sub_nombre || 'Sin nombre'}</td>
+          <td style="padding:10px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <img src="${avatarUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" alt="">
+              <span style="font-weight:500;">${s.sub_nombre_completo || s.sub_nombre || 'Sin nombre'}</span>
+            </div>
+          </td>
           <td style="padding:10px;font-size:12px;color:var(--texto-secundario);">${s.sub_correo || s.correo || '-'}</td>
           <td style="padding:10px;">${s.sub_nombre_rol || s.nombre_rol || 'Sin rol'}</td>
           <td style="padding:10px;">${salonesTexto}</td>
+          <td style="padding:10px;">${suscripcionHtml}</td>
           <td style="padding:10px;">
             <span style="display:inline-block;padding:4px 10px;border-radius:var(--radio-borde-xs);${estadoClass}color:#fff;font-size:11px;font-weight:600;">
               ${estadoTexto}
@@ -125,7 +149,7 @@ function renderizarUsuarios({ subordinados, onCrear, onReactivar, onDesactivar, 
 }
 
 // ============================================
-// MODAL CREAR USUARIO
+// MODAL CREAR USUARIO — ESTILO NOTION
 // ============================================
 function renderizarModalCrearUsuario({ instituciones, salones, onGuardar, onCancelar }) {
   document.querySelectorAll('.modal').forEach(m => m.remove());
@@ -134,49 +158,144 @@ function renderizarModalCrearUsuario({ instituciones, salones, onGuardar, onCanc
   modal.className = 'modal';
   modal.id = 'modalUsuarios';
   modal.innerHTML = `
-    <div class="modal-tarjeta" style="max-width:550px;background:var(--superficie);border:1px solid var(--borde);border-radius:var(--radio-borde);padding:22px;max-height:90vh;overflow-y:auto;">
+    <div class="modal-tarjeta" style="max-width:650px;background:var(--superficie);border:1px solid var(--borde);border-radius:var(--radio-borde);padding:22px;max-height:90vh;overflow-y:auto;">
       <h3 style="margin:0 0 16px;font-size:20px;">+ Nuevo Usuario</h3>
       
-      <div style="margin:16px 0;">
-        <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nombre Completo *</label>
-        <input type="text" id="inputNombre" class="input" placeholder="Nombre del usuario..." style="width:100%;margin-bottom:12px;">
+      <!-- SECCIÓN: DATOS BÁSICOS -->
+      <div style="margin:16px 0;padding:16px;background:var(--fondo-secundario);border-radius:var(--radio-borde-xs);">
+        <h4 style="margin:0 0 12px;font-size:14px;color:var(--texto-secundario);text-transform:uppercase;letter-spacing:1px;">📋 Datos Básicos</h4>
         
-        <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Correo Electronico *</label>
-        <input type="email" id="inputCorreo" class="input" placeholder="correo@ejemplo.com" style="width:100%;margin-bottom:12px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nombre Completo *</label>
+            <input type="text" id="inputNombre" class="input" placeholder="Nombre del usuario..." style="width:100%;">
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Correo Electrónico *</label>
+            <input type="email" id="inputCorreo" class="input" placeholder="correo@ejemplo.com" style="width:100%;">
+          </div>
+        </div>
         
-        <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Institución *</label>
-        <select id="selectInstitucion" class="input" style="width:100%;margin-bottom:12px;">
-          <option value="">-- Seleccionar institución --</option>
-          ${(instituciones || []).map(inst => `
-            <option value="${inst.institucion_id}">${inst.nombre_institucion}</option>
-          `).join('')}
-        </select>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+          <div>
+            <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Celular</label>
+            <input type="tel" id="inputCelular" class="input" placeholder="+51 999 888 777" style="width:100%;">
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Fecha de Nacimiento</label>
+            <input type="date" id="inputFechaNac" class="input" style="width:100%;">
+          </div>
+        </div>
+      </div>
+      
+      <!-- SECCIÓN: INSTITUCIÓN Y ROL -->
+      <div style="margin:16px 0;padding:16px;background:var(--fondo-secundario);border-radius:var(--radio-borde-xs);">
+        <h4 style="margin:0 0 12px;font-size:14px;color:var(--texto-secundario);text-transform:uppercase;letter-spacing:1px;">🏫 Institución y Rol</h4>
         
-        <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Salón / Grupo / Aula (Ctrl+Click para varios)</label>
-        <select id="selectSalon" class="input" multiple style="width:100%;margin-bottom:8px;height:80px;">
-          <option value="">-- Primero selecciona institución --</option>
-        </select>
-        <p style="font-size:11px;color:var(--texto-secundario);margin:0 0 12px;">Mantén presionado Ctrl/Cmd para seleccionar varios</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Institución *</label>
+            <select id="selectInstitucion" class="input" style="width:100%;">
+              <option value="">-- Seleccionar --</option>
+              ${Array.isArray(instituciones) ? instituciones.map(inst => `
+                <option value="${inst.institucion_id}">${inst.nombre_institucion}</option>
+              `).join('') : '<option value="">Error cargando instituciones</option>'}
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Salón / Grupo (Ctrl+Click varios)</label>
+            <select id="selectSalon" class="input" multiple style="width:100%;height:60px;">
+              <option value="">-- Primero selecciona institución --</option>
+            </select>
+          </div>
+        </div>
         
-        <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nombre del Rol (personalizable)</label>
-        <input type="text" id="inputNombreRol" class="input" placeholder="Ej: Profesor, Alumno, Director..." style="width:100%;margin-bottom:12px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+          <div>
+            <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nombre del Rol *</label>
+            <input type="text" id="inputNombreRol" class="input" placeholder="Ej: Profesor, Alumno..." style="width:100%;">
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nivel Jerárquico *</label>
+            <select id="selectNivel" class="input" style="width:100%;">
+              <option value="1">Nivel 1 - Director/Admin</option>
+              <option value="2">Nivel 2 - Coordinador</option>
+              <option value="3">Nivel 3 - Profesor</option>
+              <option value="4">Nivel 4 - Auxiliar</option>
+              <option value="5">Nivel 5 - Alumno</option>
+            </select>
+          </div>
+        </div>
         
-        <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nivel Jerárquico *</label>
-        <select id="selectNivel" class="input" style="width:100%;margin-bottom:12px;">
-          <option value="1">Nivel 1 - Director/Admin</option>
-          <option value="2">Nivel 2 - Coordinador</option>
-          <option value="3">Nivel 3 - Profesor</option>
-          <option value="4">Nivel 4 - Auxiliar</option>
-          <option value="5">Nivel 5 - Alumno</option>
-        </select>
-        
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:12px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:12px;">
           <input type="checkbox" id="checkCrearHijos" style="width:18px;height:18px;">
           <span>Puede crear subordinados</span>
         </label>
       </div>
       
-      <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <!-- SECCIÓN: SUSCRIPCIÓN Y PAGO -->
+      <div style="margin:16px 0;padding:16px;background:var(--fondo-secundario);border-radius:var(--radio-borde-xs);">
+        <h4 style="margin:0 0 12px;font-size:14px;color:var(--texto-secundario);text-transform:uppercase;letter-spacing:1px;">💰 Suscripción y Pago</h4>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+          <div>
+            <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Tipo de Plan</label>
+            <select id="selectPlan" class="input" style="width:100%;">
+              <option value="mensual">Mensual (30 días)</option>
+              <option value="trimestral">Trimestral (90 días)</option>
+              <option value="semestral">Semestral (180 días)</option>
+              <option value="anual">Anual (365 días)</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Monto Pagado (S/)</label>
+            <input type="number" id="inputMonto" class="input" placeholder="0.00" step="0.01" min="0" style="width:100%;">
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Fecha de Vencimiento</label>
+            <input type="date" id="inputVencimiento" class="input" style="width:100%;">
+          </div>
+        </div>
+        
+        <div style="margin-top:12px;">
+          <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Comprobante de Pago (imagen)</label>
+          <input type="file" id="inputComprobante" class="input" accept="image/*" style="width:100%;">
+          <p style="font-size:11px;color:var(--texto-secundario);margin:4px 0 0;">JPG, PNG. Máx 2MB. Se comprimirá automáticamente.</p>
+        </div>
+      </div>
+      
+      <!-- SECCIÓN: DATOS EXTRA (ESTILO NOTION) -->
+      <div style="margin:16px 0;padding:16px;background:var(--fondo-secundario);border-radius:var(--radio-borde-xs);">
+        <h4 style="margin:0 0 12px;font-size:14px;color:var(--texto-secundario);text-transform:uppercase;letter-spacing:1px;">📝 Datos Adicionales</h4>
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Carrera / Interés</label>
+            <input type="text" id="inputCarrera" class="input" placeholder="Ej: Ingeniería, Medicina..." style="width:100%;">
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nivel Académico</label>
+            <input type="text" id="inputNivelAcademico" class="input" placeholder="Ej: Universitario, Secundaria..." style="width:100%;">
+          </div>
+        </div>
+        
+        <div style="margin-top:12px;">
+          <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Cursos que Enseña (separados por coma)</label>
+          <input type="text" id="inputCursos" class="input" placeholder="Matemática, Física, Química..." style="width:100%;">
+        </div>
+        
+        <div style="margin-top:12px;">
+          <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Dirección</label>
+          <input type="text" id="inputDireccion" class="input" placeholder="Av. Principal 123, Lima" style="width:100%;">
+        </div>
+        
+        <div style="margin-top:12px;">
+          <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Observaciones / Notas</label>
+          <textarea id="inputObservaciones" class="input" placeholder="Notas adicionales..." style="width:100%;min-height:60px;resize:vertical;"></textarea>
+        </div>
+      </div>
+      
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:20px;">
         <button class="btn btn-secundario" id="btnCancelar">Cancelar</button>
         <button class="btn" id="btnGuardar">Crear Usuario</button>
       </div>
@@ -197,7 +316,7 @@ function renderizarModalCrearUsuario({ instituciones, salones, onGuardar, onCanc
       return;
     }
     
-    const salonesFiltrados = (salones || []).filter(s => s.institucion_id == instId);
+    const salonesFiltrados = Array.isArray(salones) ? salones.filter(s => s.institucion_id == instId) : [];
     
     if (salonesFiltrados.length === 0) {
       selectSalon.innerHTML = '<option value="">No hay salones en esta institución</option>';
@@ -210,6 +329,20 @@ function renderizarModalCrearUsuario({ instituciones, salones, onGuardar, onCanc
       });
     }
   });
+
+  // Calcular fecha de vencimiento automática según plan
+  const selectPlan = document.getElementById('selectPlan');
+  const inputVencimiento = document.getElementById('inputVencimiento');
+  
+  function calcularVencimiento() {
+    const plan = selectPlan.value;
+    const dias = { mensual: 30, trimestral: 90, semestral: 180, anual: 365 };
+    const hoy = new Date();
+    hoy.setDate(hoy.getDate() + (dias[plan] || 30));
+    inputVencimiento.value = hoy.toISOString().split('T')[0];
+  }
+  selectPlan.addEventListener('change', calcularVencimiento);
+  calcularVencimiento(); // Calcular al abrir
 
   document.getElementById('btnCancelar').addEventListener('click', () => {
     modal.remove();
@@ -234,6 +367,20 @@ function renderizarModalCrearUsuario({ instituciones, salones, onGuardar, onCanc
       return;
     }
     
+    // Recoger datos de suscripción
+    const tipoPlan = document.getElementById('selectPlan').value;
+    const montoPagado = parseFloat(document.getElementById('inputMonto').value) || 0;
+    const fechaVencimiento = document.getElementById('inputVencimiento').value;
+    
+    // Recoger datos extra
+    const celular = document.getElementById('inputCelular').value.trim();
+    const fechaNacimiento = document.getElementById('inputFechaNac').value;
+    const carrera = document.getElementById('inputCarrera').value.trim();
+    const nivelAcademico = document.getElementById('inputNivelAcademico').value.trim();
+    const cursos = document.getElementById('inputCursos').value.trim();
+    const direccion = document.getElementById('inputDireccion').value.trim();
+    const observaciones = document.getElementById('inputObservaciones').value.trim();
+    
     modal.remove();
     onGuardar({ 
       nombre_completo: nombre, 
@@ -243,7 +390,20 @@ function renderizarModalCrearUsuario({ instituciones, salones, onGuardar, onCanc
       nivel_jerarquico: nivel,
       puede_crear_hijos: puedeCrearHijos,
       salon_ids: salonIds,
-      superior_inmediato_id: 1
+      superior_inmediato_id: 1,
+      // Suscripción
+      tipo_plan: tipoPlan,
+      duracion_dias: { mensual: 30, trimestral: 90, semestral: 180, anual: 365 }[tipoPlan],
+      monto_pagado: montoPagado,
+      fecha_vencimiento: fechaVencimiento ? new Date(fechaVencimiento).toISOString() : null,
+      // Datos extra
+      numero_celular: celular,
+      fecha_nacimiento: fechaNacimiento || null,
+      carrera_interes: carrera,
+      nivel_academico: nivelAcademico,
+      cursos_enseña: cursos,
+      direccion: direccion,
+      observaciones: observaciones
     });
   });
 }
@@ -259,15 +419,18 @@ function renderizarModalCapacidades({ subordinado, capacidadesDisponibles, capac
       <h3 style="margin:0 0 16px;font-size:20px;">🔑 Capacidades de ${subordinado.sub_nombre_completo || subordinado.nombre}</h3>
       <p style="margin:0 0 12px;color:var(--texto-secundario);font-size:13px;">Nivel ${subordinado.sub_nivel} • ${subordinado.sub_nombre_rol}</p>
       <div style="margin:16px 0;max-height:350px;overflow-y:auto;">
-        ${(capacidadesDisponibles || []).map(cap => `
-          <label style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:var(--radio-borde-xs);cursor:pointer;margin-bottom:4px;background:var(--fondo-secundario);">
-            <input type="checkbox" value="${cap.codigo || cap.capacidad_id}" ${capacidadesActuales.includes(cap.codigo || cap.capacidad_id) ? 'checked' : ''} style="width:18px;height:18px;">
-            <div>
-              <div style="font-weight:600;">${cap.nombre}</div>
-              <div style="font-size:12px;color:var(--texto-secundario);">${cap.descripcion || cap.categoria || ''}</div>
-            </div>
-          </label>
-        `).join('') || '<p style="color:var(--texto-secundario);">No hay capacidades disponibles.</p>'}
+        ${Array.isArray(capacidadesDisponibles) && capacidadesDisponibles.length > 0 
+          ? capacidadesDisponibles.map(cap => `
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;border-radius:var(--radio-borde-xs);cursor:pointer;margin-bottom:4px;background:var(--fondo-secundario);">
+              <input type="checkbox" value="${cap.codigo || cap.capacidad_id}" ${(capacidadesActuales || []).includes(cap.codigo || cap.capacidad_id) ? 'checked' : ''} style="width:18px;height:18px;">
+              <div>
+                <div style="font-weight:600;">${cap.nombre}</div>
+                <div style="font-size:12px;color:var(--texto-secundario);">${cap.descripcion || cap.categoria || ''}</div>
+              </div>
+            </label>
+          `).join('')
+          : '<p style="color:var(--texto-secundario);">No hay capacidades disponibles.</p>'
+        }
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button class="btn btn-secundario" id="btnCancelar">Cancelar</button>
