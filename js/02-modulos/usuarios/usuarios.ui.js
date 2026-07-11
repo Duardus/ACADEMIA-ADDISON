@@ -241,6 +241,36 @@ function renderizarModalCrearUsuario({ instituciones, salones, onGuardar, onCanc
         <span>Puede crear subordinados</span>
       </label>
       
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Celular</label>
+          <input type="text" id="inputCelular" class="input" placeholder="999-999-999" style="width:100%;">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Carrera de Interés</label>
+          <input type="text" id="inputCarrera" class="input" placeholder="Ej: Ingeniería, Medicina..." style="width:100%;">
+        </div>
+      </div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Nivel Académico</label>
+          <select id="inputNivelAcademico" class="input" style="width:100%;">
+            <option value="">-- Seleccionar --</option>
+            <option value="Primaria">Primaria</option>
+            <option value="Secundaria">Secundaria</option>
+            <option value="Pregrado">Pregrado</option>
+            <option value="Posgrado">Posgrado</option>
+            <option value="Doctorado">Doctorado</option>
+          </select>
+        </div>
+      </div>
+      
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:12px;color:var(--texto-secundario);margin-bottom:4px;">Observaciones</label>
+        <textarea id="inputObservaciones" class="input" rows="2" placeholder="Notas sobre el usuario..." style="width:100%;resize:vertical;"></textarea>
+      </div>
+      
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button class="btn btn-secundario" id="btnCancelar">Cancelar</button>
         <button class="btn" id="btnGuardar">Crear Usuario</button>
@@ -268,8 +298,13 @@ function renderizarModalCrearUsuario({ instituciones, salones, onGuardar, onCanc
       return;
     }
     
+    const celular = document.getElementById('inputCelular')?.value?.trim() || '';
+    const carrera = document.getElementById('inputCarrera')?.value?.trim() || '';
+    const nivelAcademico = document.getElementById('inputNivelAcademico')?.value || '';
+    const observaciones = document.getElementById('inputObservaciones')?.value?.trim() || '';
+    
     modal.remove();
-    onGuardar({ 
+    const datos = { 
       nombre_completo: nombre, 
       email: correo, 
       institucion_id: parseInt(institucionId),
@@ -277,7 +312,12 @@ function renderizarModalCrearUsuario({ instituciones, salones, onGuardar, onCanc
       nivel_jerarquico: nivel,
       puede_crear_hijos: puedeCrearHijos,
       superior_inmediato_id: superiorId
-    });
+    };
+    if (celular) datos.numero_celular = celular;
+    if (carrera) datos.carrera_interes = carrera;
+    if (nivelAcademico) datos.nivel_academico = nivelAcademico;
+    if (observaciones) datos.observaciones = observaciones;
+    onGuardar(datos);
   });
 }
 
