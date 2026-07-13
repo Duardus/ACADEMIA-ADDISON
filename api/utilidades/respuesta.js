@@ -1,68 +1,43 @@
-/* ============================================
-   📦 FORMATO ESTÁNDAR DE RESPUESTA
-   Todas las respuestas API usan la misma estructura
-   ============================================ */
+// ═══════════════════════════════════════════════════════════════════════════
+// ACADEMIA-ADDISON — Respuestas HTTP estandarizadas
+// Regla Oro: Toda respuesta del backend usa esta estructura.
+// ═══════════════════════════════════════════════════════════════════════════
 
-/**
- * Respuesta exitosa
- * @param {Object} res - Response de Express
- * @param {*} datos - Datos a devolver
- * @param {string} mensaje - Mensaje descriptivo
- * @param {number} codigoHttp - Código HTTP (default 200)
- */
-function exito(res, datos = null, mensaje = 'Operacion exitosa', codigoHttp = 200) {
+function exito(datos = null, mensaje = 'Operacion exitosa', meta = null) {
   const respuesta = {
     exito: true,
     mensaje,
-    timestamp: new Date().toISOString()
+    datos,
   };
-  if (datos !== null) {
-    respuesta.datos = datos;
-  }
-  return res.status(codigoHttp).json(respuesta);
+  if (meta) respuesta.meta = meta;
+  return respuesta;
 }
 
-/**
- * Respuesta de error (usada por middleware de errores)
- * @param {Object} res - Response de Express
- * @param {number} codigoHttp - Código HTTP
- * @param {string} codigoInterno - Código interno del error
- * @param {string} mensaje - Mensaje descriptivo
- * @param {*} detalle - Detalles adicionales (solo en desarrollo)
- */
-function error(res, codigoHttp, codigoInterno, mensaje, detalle = null) {
+function error(mensaje = 'Error interno del servidor', codigo = 500, detalles = null) {
   const respuesta = {
     exito: false,
-    error: mensaje,
-    codigo: codigoInterno,
-    timestamp: new Date().toISOString()
+    error: {
+      mensaje,
+      codigo,
+    },
   };
-  
-  // Solo incluir detalle en desarrollo (no en producción)
-  if (detalle && process.env.NODE_ENV !== 'production') {
-    respuesta.detalle = detalle;
+  if (detalles && process.env.NODE_ENV !== 'production') {
+    respuesta.error.detalles = detalles;
   }
-  
-  return res.status(codigoHttp).json(respuesta);
+  return respuesta;
 }
 
-/**
- * Respuesta paginada
- */
-function paginado(res, items, pagina, porPagina, total) {
-  return exito(res, {
-    items,
-    paginacion: {
-      pagina,
-      por_pagina: porPagina,
-      total,
-      total_paginas: Math.ceil(total / porPagina)
-    }
+function paginado(datos, pagina, porPagina, total) {
+  return exito(datos, 'Listado paginado', {
+    pagina: parseInt(pagina, 10),
+    por_pagina: parseInt(porPagina, 10),
+    total,
+    total_paginas: Math.ceil(total / porPagina),
   });
 }
 
 module.exports = {
   exito,
   error,
-  paginado
+  paginado,
 };
