@@ -1,6 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // ACADEMIA-ADDISON — Respuestas HTTP estandarizadas
-// Regla Oro: Toda respuesta del backend usa esta estructura.
 // ═══════════════════════════════════════════════════════════════════════════
 
 function exito(datos = null, mensaje = 'Operacion exitosa', meta = null) {
@@ -13,7 +12,7 @@ function exito(datos = null, mensaje = 'Operacion exitosa', meta = null) {
   return respuesta;
 }
 
-function error(mensaje = 'Error interno del servidor', codigo = 500, detalles = null) {
+function respuestaError(mensaje = 'Error interno del servidor', codigo = 500, detalles = null) {
   const respuesta = {
     exito: false,
     error: {
@@ -38,6 +37,6 @@ function paginado(datos, pagina, porPagina, total) {
 
 module.exports = {
   exito,
-  error,
+  respuestaError,
   paginado,
 };

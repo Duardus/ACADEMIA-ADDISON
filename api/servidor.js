@@ -1,9 +1,3 @@
-// ═══════════════════════════════════════════════════════════════════════════
-// ACADEMIA-ADDISON — Servidor Principal (Entrypoint)
-// Version: 3.0.0-phoenix
-// Integra: CORS, body parser, rutas, manejo de errores, health check
-// ═══════════════════════════════════════════════════════════════════════════
-
 require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
 
 const express = require('express');
@@ -18,7 +12,6 @@ const { manejadorErrores, rutaNoEncontrada } = require('./middlewares/manejador_
 const app = express();
 const PUERTO = process.env.PORT || 3000;
 
-// ── MIDDLEWARES GLOBALES ───────────────────────────────────────────────────
 app.use(helmet());
 app.use(morgan('combined'));
 app.use(cors({
@@ -30,7 +23,7 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// ── HEALTH CHECK (antes de rutas para no pasar por auth) ─────────────────────
+// Health check RAIZ (antes de rutas)
 app.get('/health', (req, res) => {
   res.status(200).json({
     exito: true,
@@ -41,28 +34,22 @@ app.get('/health', (req, res) => {
   });
 });
 
-// ── RUTAS ──────────────────────────────────────────────────────────────────
+// Rutas API
 configurarRutas(app);
 
-// ── RUTA NO ENCONTRADA (404) ───────────────────────────────────────────────
+// 404 y errores
 app.use(rutaNoEncontrada);
-
-// ── MANEJADOR DE ERRORES GLOBAL ────────────────────────────────────────────
 app.use(manejadorErrores);
 
-// ── INICIO DEL SERVIDOR ────────────────────────────────────────────────────
 async function iniciarServidor() {
   console.log('');
   console.log('╔══════════════════════════════════════════════════════════════════╗');
   console.log('║        ACADEMIA-ADDISON API v3.0.0-phoenix                      ║');
   console.log('╠══════════════════════════════════════════════════════════════════╣');
-
-  // Probar conexion a BD
   const bdOk = await probarConexion();
   if (!bdOk) {
-    console.log('║  ⚠️  PostgreSQL no responde, pero el servidor iniciara igual   ║');
+    console.log('║  ⚠️  PostgreSQL no responde                                   ║');
   }
-
   app.listen(PUERTO, '0.0.0.0', () => {
     console.log('║  🚀 Servidor escuchando en puerto:', PUERTO);
     console.log('║  📡 CORS origin:', process.env.CORS_ORIGIN || '*');
@@ -72,18 +59,8 @@ async function iniciarServidor() {
   });
 }
 
-// Manejo graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('[SERVIDOR] SIGTERM recibido, cerrando graceful...');
-  process.exit(0);
-});
+process.on('SIGTERM', () => { console.log('[SERVIDOR] SIGTERM...'); process.exit(0); });
+process.on('SIGINT', () => { console.log('[SERVIDOR] SIGINT...'); process.exit(0); });
 
-process.on('SIGINT', () => {
-  console.log('[SERVIDOR] SIGINT recibido, cerrando graceful...');
-  process.exit(0);
-});
-
-// Iniciar
 iniciarServidor();
-
 module.exports = app;
