@@ -1,0 +1,39 @@
+{
+  "proyecto": "ACADEMIA-ADDISON",
+  "protocolo": "PHOENIX-GIST-NINJA",
+  "version": "1.0.0",
+  "timestamp_inicio": "2026-07-13T16:51:00Z",
+  "timestamp_ultima_actualizacion": "2026-07-13T16:51:00Z",
+  "fase_actual": 1,
+  "progreso_total_porcentaje": 0,
+  "ambiente": "Oracle Cloud (OCI)",
+  "fases": {
+    "fase_1_cimientos": {
+      "nombre": "Cimientos",
+      "descripcion": "Variables de entorno, Conexión BD, Firebase Config",
+      "estado": "EN_AUDITORIA",
+      "progreso_porcentaje": 0,
+      "subtareas": {
+        "env_variables": { "estado": "PENDIENTE", "notas": "" },
+        "conexion_bd": { "estado": "PENDIENTE", "notas": "" },
+        "firebase_config": { "estado": "PENDIENTE", "notas": "" },
+        "estructura_carpetas": { "estado": "PENDIENTE", "notas": "" }
+      }
+    },
+    "fase_2_utilidades": { "nombre": "Utilidades y Middlewares", "descripcion": "Manejo de errores, Respuestas estandarizadas", "estado": "BLOQUEADA", "progreso_porcentaje": 0, "subtareas": {} },
+    "fase_3_repositorios": { "nombre": "Repositorios", "descripcion": "Consultas SQL puras y robustas", "estado": "BLOQUEADA", "progreso_porcentaje": 0, "subtareas": {} },
+    "fase_4_servicios": { "nombre": "Servicios", "descripcion": "Lógica de negocio, validaciones", "estado": "BLOQUEADA", "progreso_porcentaje": 0, "subtareas": {} },
+    "fase_5_controladores": { "nombre": "Controladores y Rutas", "descripcion": "Endpoints", "estado": "BLOQUEADA", "progreso_porcentaje": 0, "subtareas": {} },
+    "fase_6_entrypoint": { "nombre": "Entrypoint", "descripcion": "servidor.js, CORS, integraciones", "estado": "BLOQUEADA", "progreso_porcentaje": 0, "subtareas": {} }
+  },
+  "hallazgos_auditoria": {
+    "archivos_detectados": [],
+    "archivos_faltantes_criticos": [],
+    "dependencias_instaladas": [],
+    "dependencias_faltantes": [],
+    "advertencias": []
+  },
+  "historial": [
+    { "fase": 0, "accion": "AUDITORIA_INICIAL", "timestamp": "2026-07-13T16:51:00Z", "nota": "Escaneo masivo vía Gist" }
+  ]
+}
