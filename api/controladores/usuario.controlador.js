@@ -1,18 +1,52 @@
-const usuarioServicio = require('./usuario.servicio');
-const respuesta = require('../utilidades/respuesta');
+// ═══════════════════════════════════════════════════════════════════════════
+// ACADEMIA-ADDISON — Controlador de Usuarios
+// Endpoints: GET /api/v1/usuarios, GET /api/v1/usuarios/:id, PATCH /api/v1/usuarios/:id/rol
+// ═══════════════════════════════════════════════════════════════════════════
 
-class UsuarioControlador {
+const usuarioServicio = require('../servicios/usuario.servicio');
+const { exito, error, paginado } = require('../utilidades/respuesta');
 
-  async crearUsuario(req, res, next) {
-    const resultado = await usuarioServicio.crearUsuario(req.body, req.contexto_institucion);
-    respuesta.exito(res, resultado, 'Usuario creado exitosamente');
+async function listar(req, res, next) {
+  try {
+    const pagina = parseInt(req.query.pagina, 10) || 1;
+    const porPagina = parseInt(req.query.por_pagina, 10) || 20;
+    const institucionId = req.query.institucion_id || null;
+
+    const resultado = await usuarioServicio.listarUsuarios(institucionId, pagina, porPagina);
+    res.status(200).json(paginado(resultado.usuarios, pagina, porPagina, resultado.total));
+  } catch (err) {
+    next(err);
   }
-
-  async listarUsuarios(req, res, next) {
-    const usuarios = await usuarioServicio.listarUsuarios(req.contexto_institucion.institucion_id);
-    respuesta.exito(res, { usuarios }, 'Usuarios obtenidos');
-  }
-
 }
 
-module.exports = new UsuarioControlador();
+async function obtener(req, res, next) {
+  try {
+    const { id } = req.params;
+    const usuario = await usuarioServicio.obtenerUsuario(id);
+    res.status(200).json(exito(usuario, 'Usuario obtenido'));
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function actualizarRol(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { rol } = req.body;
+
+    if (!rol) {
+      return res.status(400).json(error('Rol requerido en el body', 400));
+    }
+
+    const usuario = await usuarioServicio.actualizarRol(id, rol);
+    res.status(200).json(exito(usuario, 'Rol actualizado'));
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = {
+  listar,
+  obtener,
+  actualizarRol,
+};

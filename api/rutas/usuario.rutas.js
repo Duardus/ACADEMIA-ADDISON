@@ -1,11 +1,14 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// ACADEMIA-ADDISON — Rutas de Usuarios
+// ═══════════════════════════════════════════════════════════════════════════
+
 const express = require('express');
 const router = express.Router();
-const { middlewareAutenticar } = require('../middleware/autenticar');
-const { middlewareContexto } = require('../middleware/contexto_institucion');
-const { requerirRol } = require('../middleware/rbac');
-const { crearUsuario, listarUsuarios } = require('../controladores/usuario.controlador');
+const usuarioControlador = require('../controladores/usuario.controlador');
+const { verificarAuth, requerirRol } = require('../middlewares/verificar_auth');
 
-router.post('/', middlewareAutenticar, middlewareContexto, requerirRol('superadmin', 'director'), crearUsuario);
-router.get('/', middlewareAutenticar, middlewareContexto, requerirRol('superadmin', 'director', 'auxiliary'), listarUsuarios);
+router.get('/', verificarAuth, usuarioControlador.listar);
+router.get('/:id', verificarAuth, usuarioControlador.obtener);
+router.patch('/:id/rol', verificarAuth, requerirRol('superadmin', 'admin'), usuarioControlador.actualizarRol);
 
 module.exports = router;

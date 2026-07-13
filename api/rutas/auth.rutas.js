@@ -1,14 +1,13 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// ACADEMIA-ADDISON — Rutas de Autenticacion
+// ═══════════════════════════════════════════════════════════════════════════
+
 const express = require('express');
 const router = express.Router();
-const { login, seleccionarContexto, switchContext } = require('../controladores/auth.controlador');
-const { asyncHandler } = require('../middleware/async_handler');
-const { middlewareAutenticar } = require('../middleware/autenticar');
+const authControlador = require('../controladores/auth.controlador');
+const { verificarAuth } = require('../middlewares/verificar_auth');
 
-// Auth - No requiere autenticación previa
-router.post('/login', asyncHandler(login));
-router.post('/seleccionar-contexto', asyncHandler(seleccionarContexto));
-
-// Switch context - Requiere token válido
-router.post('/switch-context', middlewareAutenticar, asyncHandler(switchContext));
+router.post('/login', authControlador.login);
+router.get('/perfil', verificarAuth, authControlador.perfil);
 
 module.exports = router;
