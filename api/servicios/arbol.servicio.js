@@ -1,7 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ACADEMIA-ADDISON — Servicio del Arbol Academico
-// Ensambla la jerarquia: Grupos -> Cursos -> Temas -> Subtemas -> Teorias -> Materiales
-// FIX: Resuelve el endpoint /api/v1/arbol que causaba "Failed to fetch"
+// ACADEMIA-ADDISON — Servicio del Arbol Academico (ensamblaje jerarquico)
 // ═══════════════════════════════════════════════════════════════════════════
 
 const arbolRepositorio = require('../repositorios/arbol.repositorio');
@@ -19,7 +17,7 @@ function ensamblarArbol(filasPlanas) {
     if (!grupos.has(fila.grupo_id)) {
       grupos.set(fila.grupo_id, {
         id: fila.grupo_id,
-        nombre: fila.grupo_nombre,
+        nombre: fila.nombre_grupo,
         orden: fila.grupo_orden,
         cursos: [],
       });
