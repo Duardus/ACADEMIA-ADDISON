@@ -74,7 +74,7 @@
         
         notificar('exito', '✅ ¡Passkey creado exitosamente! Bienvenido.');
         setTimeout(function() {
-          window.location.href = '/dashboard.html';
+          window.location.href = '/';
         }, 1500);
       } else {
         notificar('error', (verificacion && verificacion.mensaje) || 'Error al verificar el passkey');
@@ -166,7 +166,7 @@
         
         notificar('exito', '✅ ¡Bienvenido de vuelta!');
         setTimeout(function() {
-          window.location.href = '/dashboard.html';
+          window.location.href = '/';
         }, 1000);
       } else {
         notificar('error', (verificacion && verificacion.mensaje) || 'Error al verificar autenticación');
