@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Academia Virtual Addison - Examen</title>
+  <link rel="stylesheet" href="css/examen.css">
+</head>
+<body>
+
+<!--
+=================================================================
+EXAMEN - VERSIÓN COMENTADA
+=================================================================
+-->
+
+
+<div class="bg-dots"></div>
+<div id="app" aria-hidden="false">
+  <!-- ========== HEADER: logo, tiempo y puntaje ========== -->
+<header>
+    <div class="brand">
+      <div class="logo-small" aria-hidden="true"><svg viewBox="253 0 796.098 328.257" fill="none" xmlns="http://www.w3.org/2000/svg" style="height:100%;width:auto;display:block">
+  <path fill="#D30000"  d="M617.285 190.79C555.732 193.536 471.685 222.193 425.084 244.521L428.153 328.257C432.208 325.47 456.01 319.56 467.404 316.954C466.205 316.196 464.592 312.684 466.757 304.542C467.22 302.802 468.054 301.173 469.183 299.77C477.476 289.467 486.138 287.174 492.82 286.02C495.699 285.522 498.642 285.238 501.519 285.752C505.141 286.4 508.296 287.622 509.824 288.543C510.52 286.066 512.971 280.682 517.755 275.705C520.203 273.158 523.223 271.219 526.479 269.849C532.513 267.31 537.973 266.474 543.255 266.165C547.907 265.892 552.614 266.501 556.843 268.459C561.907 270.804 566.179 273.584 571.568 275.215C577.397 277.181 590.005 275.979 596.88 267.521C609.299 253.013 614.432 230.076 617.285 190.79Z"/>
+  <path fill="#D30000"  d="M410.923 244.55L413.456 278.64L240.332 210.27L619.003 7.93075e-05L1036.43 187.096L862.986 263.767C862.659 252.795 862.037 230.678 862.164 229.994C689.293 155.478 555.005 154.471 410.923 244.55Z"/>
+  <path fill="#D30000"  d="M845.976 231.417C738.331 196.42 689.957 190.107 633.473 189.368C641.993 224.568 657.388 251.311 663.502 261.292C673.01 278.401 688.645 276.015 699.209 269.514C705.414 265.695 710.616 260.052 717.519 257.72C743.8 248.841 760.942 270.179 758.824 281.617C783.376 268.474 805.55 292.049 807.831 308.398L849.742 316.168L845.976 231.417Z"/>
+  <path fill="white"  d="M305.626 230.355L302.648 212.992L296.565 217.173L300.399 210.806L283.133 208.489L300.494 205.515L295.457 199.272L302.522 204.121L304.296 184.985L307.115 203.203L313.198 199.022L309.365 205.39L326.63 207.706L309.269 210.681L313.451 216.765L307.242 212.074L305.626 230.355Z"/>
+  <path fill="white"  d="M960.652 209.308L957.675 191.945L951.592 196.126L955.425 189.759L938.159 187.442L955.52 184.468L950.483 178.225L957.548 183.074L959.322 163.938L962.142 182.156L968.224 177.975L964.391 184.343L981.657 186.659L964.296 189.634L968.478 195.718L962.268 191.028L960.652 209.308Z"/>
+  <path fill="white" fill-rule="evenodd" clip-rule="evenodd" d="M573.506 159.665L607.279 158.849L607.627 171.3L644.124 170.104L643.776 157.652L677.548 156.836L657.241 108.831C658.351 55.0645 636.998 17.4836 620.27 17.0364C608.358 19.2517 587.353 41.9009 590.235 112.334L573.506 159.665ZM619.165 70.8022C627.196 72.2912 634.912 66.9877 636.4 58.9565C637.887 50.9253 632.582 43.2076 624.551 41.7186C616.52 40.2296 608.804 45.5331 607.317 53.5643C605.83 61.5956 611.134 69.3132 619.165 70.8022Z"/>
+</svg></div>
+      <div class="brand-text">ADDISON</div>
+    </div>
+    <div class="pills">
+      <div class="pill time" id="timePill" aria-live="polite">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        <span id="timeTxt">20:00</span>
+      </div>
+      <div class="pill score" id="scorePill">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.1 6.7.98-4.85 4.73 1.15 6.69L12 17.77 6.1 20.5l1.15-6.69L2.4 9.08l6.7-.98L12 2z"/></svg>
+        <span id="scoreTxt">0 / 0</span>
+      </div>
+    </div>
+  </header>
+  <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+  <!-- ========== MAIN: tarjeta de pregunta ========== -->
+<main>
+    <section class="card" role="region" aria-label="Pregunta">
+      <div class="card-head">
+        <div class="q-meta" id="qMeta">Pregunta 1 de 20 · Teoría de exponentes</div>
+        <h2 class="q-text" id="qText">Cargando...</h2>
+      </div>
+      <div class="options" id="options" role="listbox" aria-label="Opciones"></div>
+      <div class="explanation" id="explanation" aria-live="polite">
+        <span class="dot" aria-hidden="true"></span>
+        <span id="expTxt">Selecciona una opción para ver la explicación.</span>
+      </div>
+      <div class="card-foot">
+        <div class="hint">
+          <kbd>A-E</kbd> seleccionar · <kbd>Enter</kbd> siguiente
+        </div>
+        <button class="btn" id="nextBtn" disabled>Siguiente →</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ========== OVERLAY BIENVENIDA ========== -->
+<div id="welcome" class="overlay active" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+  <div class="modal"><button class="close-x" id="welcomeClose" aria-label="Cerrar">×</button>
+    <div class="company">Academia Virtual Addison</div>
+    <div class="logo-hero" aria-hidden="true"><svg viewBox="253 0 796.098 328.257" fill="none" xmlns="http://www.w3.org/2000/svg" style="height:100%;width:auto;display:block">
+  <path fill="#D30000"  d="M617.285 190.79C555.732 193.536 471.685 222.193 425.084 244.521L428.153 328.257C432.208 325.47 456.01 319.56 467.404 316.954C466.205 316.196 464.592 312.684 466.757 304.542C467.22 302.802 468.054 301.173 469.183 299.77C477.476 289.467 486.138 287.174 492.82 286.02C495.699 285.522 498.642 285.238 501.519 285.752C505.141 286.4 508.296 287.622 509.824 288.543C510.52 286.066 512.971 280.682 517.755 275.705C520.203 273.158 523.223 271.219 526.479 269.849C532.513 267.31 537.973 266.474 543.255 266.165C547.907 265.892 552.614 266.501 556.843 268.459C561.907 270.804 566.179 273.584 571.568 275.215C577.397 277.181 590.005 275.979 596.88 267.521C609.299 253.013 614.432 230.076 617.285 190.79Z"/>
+  <path fill="#D30000"  d="M410.923 244.55L413.456 278.64L240.332 210.27L619.003 7.93075e-05L1036.43 187.096L862.986 263.767C862.659 252.795 862.037 230.678 862.164 229.994C689.293 155.478 555.005 154.471 410.923 244.55Z"/>
+  <path fill="#D30000"  d="M845.976 231.417C738.331 196.42 689.957 190.107 633.473 189.368C641.993 224.568 657.388 251.311 663.502 261.292C673.01 278.401 688.645 276.015 699.209 269.514C705.414 265.695 710.616 260.052 717.519 257.72C743.8 248.841 760.942 270.179 758.824 281.617C783.376 268.474 805.55 292.049 807.831 308.398L849.742 316.168L845.976 231.417Z"/>
+  <path fill="white"  d="M305.626 230.355L302.648 212.992L296.565 217.173L300.399 210.806L283.133 208.489L300.494 205.515L295.457 199.272L302.522 204.121L304.296 184.985L307.115 203.203L313.198 199.022L309.365 205.39L326.63 207.706L309.269 210.681L313.451 216.765L307.242 212.074L305.626 230.355Z"/>
+  <path fill="white"  d="M960.652 209.308L957.675 191.945L951.592 196.126L955.425 189.759L938.159 187.442L955.52 184.468L950.483 178.225L957.548 183.074L959.322 163.938L962.142 182.156L968.224 177.975L964.391 184.343L981.657 186.659L964.296 189.634L968.478 195.718L962.268 191.028L960.652 209.308Z"/>
+  <path fill="white" fill-rule="evenodd" clip-rule="evenodd" d="M573.506 159.665L607.279 158.849L607.627 171.3L644.124 170.104L643.776 157.652L677.548 156.836L657.241 108.831C658.351 55.0645 636.998 17.4836 620.27 17.0364C608.358 19.2517 587.353 41.9009 590.235 112.334L573.506 159.665ZM619.165 70.8022C627.196 72.2912 634.912 66.9877 636.4 58.9565C637.887 50.9253 632.582 43.2076 624.551 41.7186C616.52 40.2296 608.804 45.5331 607.317 53.5643C605.83 61.5956 611.134 69.3132 619.165 70.8022Z"/>
+</svg></div>
+    <div class="course">Álgebra</div>
+    <h1 id="welcomeTitle">Examen de Función exponencial</h1>
+    <div class="sub">20 preguntas · 20 minutos</div>
+    <div id="nameDisplay" style="margin:12px 0; font-weight:700; color:#9d174d; font-size:15px; display:none"></div>
+    <div class="field" style="display:none">
+      <label for="nameInput">Tu nombre</label>
+      <input id="nameInput" type="text" placeholder="Escribe tu nombre completo" autocomplete="name" />
+    </div>
+    <button class="btn" id="startBtn">Comenzar examen →</button>
+  </div>
+</div>
+
+<!-- ========== OVERLAY RESULTADOS ========== -->
+<div id="results" class="overlay" role="dialog" aria-modal="true" aria-labelledby="resultsTitle">
+  <div class="modal results-modal"><button class="close-x" id="resultsClose" aria-label="Cerrar">×</button>
+    <canvas id="fireworksCanvas" class="fireworks-canvas"></canvas>
+    <div class="company">Academia Virtual Addison</div>
+    <div class="exam-title-small" id="resultsExamTitle"></div><h1 id="resultsTitle" style="margin-top:8px"></h1>
+    <div id="resultsName" style="font-weight:700; color:#9d174d; margin-bottom:6px; display:none"></div>
+    <div class="score-wrap" style="--p:0" id="scoreWrap">
+      <div class="score-circle">
+        <div class="score-val" id="scoreVal">0<span>%</span></div>
+      </div>
+    </div>
+    <div id="resultsMsg" style="font-weight:700; color:#444; margin-bottom:8px"></div>
+    <div class="stats">
+      <div class="stat"><div class="num" id="statCorrect">0</div><div class="lbl">Correctas</div></div>
+      <div class="stat"><div class="num" id="statWrong">0</div><div class="lbl">Incorrectas</div></div>
+      <div class="stat"><div class="num" id="statTime">00:00</div><div class="lbl">Tiempo</div></div>
+    </div>
+    <div class="results-actions">
+      <button class="btn ghost" id="reviewBtn">Ver revisión</button>
+      <button class="btn" id="restartBtn">Reiniciar</button>
+    </div>
+    <div style="margin-top:10px; font-size:12px; color:var(--muted)">Presiona Enter o Esc para volver al inicio</div>
+  </div>
+</div>
+
+<!-- ========== OVERLAY REVISIÓN ========== -->
+<div id="review" class="overlay" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
+  <div class="modal review-modal">
+    <div class="review-head">
+      <h2 id="reviewTitle">Revisión del examen</h2>
+      <button class="btn ghost" id="closeReviewBtn" style="padding:8px 12px">Cerrar</button>
+    </div>
+    <div class="review-list" id="reviewList"></div>
+  </div>
+</div>
+
+<canvas id="confetti"></canvas>
+
+
+
+<footer class="site-footer" aria-label="Pie de página">
+  <span class="brand">Academia Virtual <strong>Addison</strong></span>
+  <span class="sep">—</span>
+  <span class="tagline">prepárate con los mejores</span>
+</footer>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <script src="js/examen-engine.js"></script>
+</body>
+</html>
