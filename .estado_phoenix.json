@@ -1,18 +1,21 @@
 {
   "proyecto": "ACADEMIA-ADDISON",
   "protocolo": "PHOENIX-GIST-NINJA",
+  "fase_actual": 2,
   "fases": {
-    "1_cimientos": {"estado": "en_progreso", "inicio": "2026-07-13"},
-    "2_utilidades": {"estado": "pendiente"},
+    "1_cimientos": {"estado": "completada", "inicio": "2026-07-13", "fin": "2026-07-13"},
+    "2_utilidades": {"estado": "en_progreso", "inicio": "2026-07-13"},
     "3_repositorios": {"estado": "pendiente"},
     "4_servicios": {"estado": "pendiente"},
     "5_controladores": {"estado": "pendiente"},
     "6_entrypoint": {"estado": "pendiente"}
   },
   "stack": {
-    "auth": "passkeys + oracle_smtp",
+    "auth": "passkeys + resend_smtp",
     "db": "postgresql",
     "backend": "nodejs",
     "frontend": "cloudflare_pages"
-  }
+  },
+  "tablas_creadas": ["passkeys", "magic_links", "sesiones_passkey"],
+  "notas": "Schema adaptado a usuario_id varchar(36). Resend SMTP configurado."
 }
