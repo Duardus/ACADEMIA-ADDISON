@@ -15,7 +15,7 @@ const PUERTO = process.env.PORT || 3000;
 app.use(helmet());
 app.use(morgan('combined'));
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: ['https://academia-addison.pages.dev', 'https://academia-addison.duckdns.org', '*'],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
