@@ -3,8 +3,8 @@
    ============================================ */
 
 var API_CONFIG = {
-  // URL relativa - Cloudflare Pages Functions hace proxy al backend
-  BASE_URL: '/api/v1',
+  // DuckDNS - funciona para 99% de usuarios
+  BASE_URL: 'https://academia-addison.duckdns.org/api/v1',
   
   TIMEOUT: 15000,
   
