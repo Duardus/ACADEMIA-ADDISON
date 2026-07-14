@@ -11,7 +11,7 @@ var PASSKEY_CONFIG = {
   // API endpoints
   API_BASE: API_CONFIG.BASE_URL,
   
-  // Helpers para codificar/decodear base64url (WebAuthn usa base64url)
+  // Convertir base64url string a ArrayBuffer (para enviar al navegador)
   base64URLToBuffer: function(base64url) {
     const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
     const binary = atob(base64);
@@ -22,12 +22,20 @@ var PASSKEY_CONFIG = {
     return bytes.buffer;
   },
   
+  // Convertir ArrayBuffer a base64url string (para enviar al backend)
+  // ESTA ES LA FUNCIÓN CRÍTICA - debe manejar ArrayBuffer correctamente
   bufferToBase64URL: function(buffer) {
+    // Asegurar que es ArrayBuffer
     const bytes = new Uint8Array(buffer);
     let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
       binary += String.fromCharCode(bytes[i]);
     }
-    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    // Convertir a base64url (sin padding =)
+    return btoa(binary)
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
   }
 };

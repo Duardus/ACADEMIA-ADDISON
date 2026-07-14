@@ -43,7 +43,7 @@ async function iniciarRegistroPasskey({ correo, nombre, onExito, onError }) {
     // 3. Llamar a WebAuthn API del navegador
     const credential = await navigator.credentials.create({ publicKey: options });
     
-    // 4. Preparar respuesta para backend
+    // 4. Preparar respuesta para backend - CONVERSIÓN CORRECTA
     const respuestaCliente = {
       id: credential.id,
       rawId: PASSKEY_CONFIG.bufferToBase64URL(credential.rawId),
@@ -98,7 +98,7 @@ async function iniciarLoginPasskey({ correo, onExito, onError }) {
     // 3. Llamar a WebAuthn API
     const assertion = await navigator.credentials.get({ publicKey: options });
     
-    // 4. Preparar respuesta
+    // 4. Preparar respuesta - CONVERSIÓN CORRECTA
     const respuestaCliente = {
       id: assertion.id,
       rawId: PASSKEY_CONFIG.bufferToBase64URL(assertion.rawId),
@@ -127,7 +127,6 @@ async function iniciarLoginPasskey({ correo, onExito, onError }) {
   } catch (error) {
     console.error('[PASSKEY LOGIN] Error:', error);
     
-    // Mensajes amigables
     if (error.name === 'NotAllowedError') {
       onError('Autenticación cancelada o no permitida');
     } else if (error.name === 'SecurityError') {
