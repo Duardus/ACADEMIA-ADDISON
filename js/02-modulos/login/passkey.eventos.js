@@ -69,8 +69,7 @@
       const verificacion = await apiPasskeyRegistroVerificar(correo, respuestaCliente);
       
       if (verificacion && verificacion.exito) {
-        if (typeof guardarToken === 'function') guardarToken(verificacion.token_sesion);
-        if (typeof guardarUsuario === 'function') guardarUsuario(verificacion.usuario);
+        if (typeof guardarSesion === 'function') guardarSesion(verificacion.token_sesion, verificacion.usuario);
         
         notificar('exito', '✅ ¡Passkey creado exitosamente! Bienvenido.');
         setTimeout(function() {
@@ -161,8 +160,7 @@
       const verificacion = await apiPasskeyLoginVerificar(correo, respuestaCliente);
       
       if (verificacion && verificacion.exito) {
-        if (typeof guardarToken === 'function') guardarToken(verificacion.token_sesion);
-        if (typeof guardarUsuario === 'function') guardarUsuario(verificacion.usuario);
+        if (typeof guardarSesion === 'function') guardarSesion(verificacion.token_sesion, verificacion.usuario);
         
         notificar('exito', '✅ ¡Bienvenido de vuelta!');
         setTimeout(function() {
