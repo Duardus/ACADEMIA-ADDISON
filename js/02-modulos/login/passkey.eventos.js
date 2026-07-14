@@ -65,13 +65,14 @@
         },
         type: credential.type
       };
-
-      const verificacion = await apiPasskeyRegistroVerificar(correo, respuestaCliente);
-      
       if (verificacion && verificacion.exito) {
-        } else {
-        }
-        if (verificacion && verificacion.exito) {
+        if (typeof guardarSesion === 'function') guardarSesion(verificacion.token_sesion, verificacion.usuario);
+        
+        notificar('exito', '✅ ¡Passkey creado exitosamente! Bienvenido.');
+        setTimeout(function() {
+          window.location.href = '/';
+        }, 1500);
+      } else {
         if (typeof guardarSesion === 'function') guardarSesion(verificacion.token_sesion, verificacion.usuario);
         
         notificar('exito', '✅ ¡Passkey creado exitosamente! Bienvenido.');
