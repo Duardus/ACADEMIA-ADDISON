@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ACADEMIA-ADDISON — Servicio de Autenticacion Passkeys (WebAuthn) v2
-// RP_ID y ORIGIN dinamicos segun el request
+// ACADEMIA-ADDISON — Servicio de Autenticacion Passkeys v3
+// Compatible con usuarios.usuario_id = VARCHAR
 // ═══════════════════════════════════════════════════════════════════════════
 
 const { 
@@ -14,25 +14,20 @@ const { generarToken } = require('../utilidades/jwt');
 const crypto = require('crypto');
 
 const RP_NAME = 'Academia Addison';
-// RP_ID por defecto, pero se sobreescribe dinamicamente
 const RP_ID_DEFAULT = 'academia-addison.pages.dev';
 const ORIGIN_DEFAULT = 'https://academia-addison.pages.dev';
 
 class PasskeyServicio {
 
   _getRPConfig(reqOrigen) {
-    // Detectar origin del request para soporte multi-dominio
     let rpID = RP_ID_DEFAULT;
     let origin = ORIGIN_DEFAULT;
-    
     if (reqOrigen) {
       try {
         const url = new URL(reqOrigen);
         rpID = url.hostname;
         origin = url.origin;
-      } catch(e) {
-        // fallback a defaults
-      }
+      } catch(e) {}
     }
     return { rpID, origin };
   }
@@ -47,7 +42,7 @@ class PasskeyServicio {
     const options = await generateRegistrationOptions({
       rpName: RP_NAME,
       rpID: rpID,
-      userID: Buffer.from(usuario.usuario_id),
+      userID: Buffer.from(String(usuario.usuario_id)),
       userName: correo,
       userDisplayName: nombre || correo,
       attestationType: 'none',
@@ -111,7 +106,7 @@ class PasskeyServicio {
     const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
 
     await passkeyRepositorio.guardarPasskey(
-      usuario.usuario_id,
+      String(usuario.usuario_id),
       Buffer.from(credential.id),
       Buffer.from(credential.publicKey),
       'Dispositivo Local',
@@ -125,7 +120,7 @@ class PasskeyServicio {
     const refreshToken = crypto.randomBytes(32).toString('hex');
 
     await passkeyRepositorio.guardarSesion(
-      usuario.usuario_id,
+      String(usuario.usuario_id),
       crypto.createHash('sha256').update(refreshToken).digest('hex'),
       'Dispositivo Local',
       'Navegador',
@@ -153,7 +148,7 @@ class PasskeyServicio {
     if (!usuario) throw new Error('Usuario no encontrado');
     if (!usuario.passkey_registrado) throw new Error('Usuario sin passkey registrado');
 
-    const passkeys = await passkeyRepositorio.listarPasskeysPorUsuario(usuario.usuario_id);
+    const passkeys = await passkeyRepositorio.listarPasskeysPorUsuario(String(usuario.usuario_id));
     if (passkeys.length === 0) throw new Error('No hay passkeys activos');
 
     const allowCredentials = passkeys.map(pk => ({
@@ -192,7 +187,7 @@ class PasskeyServicio {
     const credentialIdBuffer = Buffer.from(respuesta.id, 'base64url');
     const passkey = await passkeyRepositorio.buscarPasskeyPorCredentialId(credentialIdBuffer);
 
-    if (!passkey || passkey.usuario_id !== usuario.usuario_id) {
+    if (!passkey || String(passkey.usuario_id) !== String(usuario.usuario_id)) {
       throw new Error('Passkey no encontrado');
     }
 
@@ -224,7 +219,7 @@ class PasskeyServicio {
     const refreshToken = crypto.randomBytes(32).toString('hex');
 
     await passkeyRepositorio.guardarSesion(
-      usuario.usuario_id,
+      String(usuario.usuario_id),
       crypto.createHash('sha256').update(refreshToken).digest('hex'),
       passkey.nombre_dispositivo || 'Dispositivo Local',
       'Navegador',
@@ -256,7 +251,7 @@ class PasskeyServicio {
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const expiraEn = new Date(Date.now() + 15 * 60 * 1000);
 
-    await passkeyRepositorio.guardarMagicLink(usuario.usuario_id, tokenHash, expiraEn);
+    await passkeyRepositorio.guardarMagicLink(String(usuario.usuario_id), tokenHash, expiraEn);
     return { token, tokenHash, expiraEn };
   }
 
