@@ -11,10 +11,10 @@
     "6_entrypoint": {"estado": "completada", "inicio": "2026-07-14", "fin": "2026-07-14"}
   },
   "stack": {
-    "auth": "passkeys_pure",
+    "auth": "passkeys_pure_v2",
     "db": "postgresql",
     "backend": "nodejs",
     "frontend": "cloudflare_pages"
   },
-  "notas": "TODAS LAS FASES COMPLETADAS. Sistema Passkeys implementado. Firebase eliminado."
+  "notas": "Tablas passkey creadas. RP_ID/ORIGIN dinamicos. Fix NotAllowedError."
 }

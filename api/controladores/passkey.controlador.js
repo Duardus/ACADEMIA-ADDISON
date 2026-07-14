@@ -1,11 +1,15 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ACADEMIA-ADDISON — Controlador de Passkeys
+// ACADEMIA-ADDISON — Controlador de Passkeys v2 (con Origin dinamico)
 // ═══════════════════════════════════════════════════════════════════════════
 
 const passkeyServicio = require('../servicios/passkey.servicio');
 const { exito, respuestaError } = require('../utilidades/respuesta');
 
 class PasskeyControlador {
+
+  _getOrigin(req) {
+    return req.headers.origin || req.headers.referer || ORIGIN_DEFAULT;
+  }
 
   // POST /api/v1/passkey/registro/opciones
   async opcionesRegistro(req, res, next) {
@@ -15,7 +19,7 @@ class PasskeyControlador {
         return res.status(400).json(respuestaError('Correo requerido', 400));
       }
 
-      const resultado = await passkeyServicio.generarOpcionesRegistro(correo, nombre);
+      const resultado = await passkeyServicio.generarOpcionesRegistro(correo, nombre, this._getOrigin(req));
       res.status(200).json(resultado);
     } catch (err) {
       next(err);
@@ -30,7 +34,7 @@ class PasskeyControlador {
         return res.status(400).json(respuestaError('Correo y respuesta requeridos', 400));
       }
 
-      const resultado = await passkeyServicio.verificarRegistro(correo, respuesta);
+      const resultado = await passkeyServicio.verificarRegistro(correo, respuesta, this._getOrigin(req));
       res.status(200).json(resultado);
     } catch (err) {
       next(err);
@@ -45,7 +49,7 @@ class PasskeyControlador {
         return res.status(400).json(respuestaError('Correo requerido', 400));
       }
 
-      const resultado = await passkeyServicio.generarOpcionesLogin(correo);
+      const resultado = await passkeyServicio.generarOpcionesLogin(correo, this._getOrigin(req));
       res.status(200).json(resultado);
     } catch (err) {
       next(err);
@@ -60,7 +64,7 @@ class PasskeyControlador {
         return res.status(400).json(respuestaError('Correo y respuesta requeridos', 400));
       }
 
-      const resultado = await passkeyServicio.verificarLogin(correo, respuesta);
+      const resultado = await passkeyServicio.verificarLogin(correo, respuesta, this._getOrigin(req));
       res.status(200).json(resultado);
     } catch (err) {
       next(err);
@@ -77,12 +81,9 @@ class PasskeyControlador {
 
       const { token, expiraEn } = await passkeyServicio.generarMagicLink(correo);
       
-      // TODO: Enviar email con Resend
-      // Por ahora, devolver token para pruebas (en producción enviar por email)
       res.status(200).json({
         exito: true,
         mensaje: 'Si el correo existe, recibiras un link de recuperacion',
-        // token_debug: token // Solo para desarrollo, quitar en producción
       });
     } catch (err) {
       next(err);

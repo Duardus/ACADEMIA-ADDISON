@@ -1,5 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ACADEMIA-ADDISON — Servicio de Autenticacion Passkeys (WebAuthn)
+// ACADEMIA-ADDISON — Servicio de Autenticacion Passkeys (WebAuthn) v2
+// RP_ID y ORIGIN dinamicos segun el request
 // ═══════════════════════════════════════════════════════════════════════════
 
 const { 
@@ -13,12 +14,31 @@ const { generarToken } = require('../utilidades/jwt');
 const crypto = require('crypto');
 
 const RP_NAME = 'Academia Addison';
-const RP_ID = 'academia-addison.pages.dev';
-const ORIGIN = 'https://academia-addison.pages.dev';
+// RP_ID por defecto, pero se sobreescribe dinamicamente
+const RP_ID_DEFAULT = 'academia-addison.pages.dev';
+const ORIGIN_DEFAULT = 'https://academia-addison.pages.dev';
 
 class PasskeyServicio {
 
-  async generarOpcionesRegistro(correo, nombre) {
+  _getRPConfig(reqOrigen) {
+    // Detectar origin del request para soporte multi-dominio
+    let rpID = RP_ID_DEFAULT;
+    let origin = ORIGIN_DEFAULT;
+    
+    if (reqOrigen) {
+      try {
+        const url = new URL(reqOrigen);
+        rpID = url.hostname;
+        origin = url.origin;
+      } catch(e) {
+        // fallback a defaults
+      }
+    }
+    return { rpID, origin };
+  }
+
+  async generarOpcionesRegistro(correo, nombre, reqOrigen) {
+    const { rpID, origin } = this._getRPConfig(reqOrigen);
     let usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
     if (!usuario) {
       usuario = await passkeyRepositorio.crearUsuario(correo, nombre);
@@ -26,19 +46,17 @@ class PasskeyServicio {
 
     const options = await generateRegistrationOptions({
       rpName: RP_NAME,
-      rpID: RP_ID,
+      rpID: rpID,
       userID: Buffer.from(usuario.usuario_id),
       userName: correo,
       userDisplayName: nombre || correo,
       attestationType: 'none',
       authenticatorSelection: {
-        residentKey: 'required',           // ← Requerir resident key (Windows Hello)
-        userVerification: 'required',      // ← REQUERIR PIN/huella (no optional)
-        authenticatorAttachment: 'platform'  // ← FORZAR dispositivo local (Windows Hello)
+        residentKey: 'preferred',
+        userVerification: 'preferred',
+        authenticatorAttachment: 'platform'
       },
-      extensions: {
-        credProps: true
-      }
+      extensions: { credProps: true }
     });
 
     await passkeyRepositorio.guardarChallenge(correo, options.challenge, 'registro');
@@ -51,7 +69,9 @@ class PasskeyServicio {
     };
   }
 
-  async verificarRegistro(correo, respuesta) {
+  async verificarRegistro(correo, respuesta, reqOrigen) {
+    const { rpID, origin } = this._getRPConfig(reqOrigen);
+    
     let expectedChallenge;
     try {
       const clientDataJSON = Buffer.from(respuesta.response.clientDataJSON, 'base64url').toString('utf8');
@@ -71,15 +91,13 @@ class PasskeyServicio {
       verification = await verifyRegistrationResponse({
         response: respuesta,
         expectedChallenge,
-        expectedOrigin: ORIGIN,
-        expectedRPID: RP_ID
+        expectedOrigin: origin,
+        expectedRPID: rpID
       });
     } catch (err) {
       console.error('[PASSKEY] Error en verifyRegistrationResponse:', err.message);
       throw new Error('Verificacion de passkey fallida: ' + err.message);
     }
-
-    console.log('[PASSKEY] Verificacion:', verification.verified, 'Credential:', !!verification.registrationInfo);
 
     if (!verification.verified) {
       throw new Error('Verificacion de passkey no exitosa');
@@ -96,7 +114,7 @@ class PasskeyServicio {
       usuario.usuario_id,
       Buffer.from(credential.id),
       Buffer.from(credential.publicKey),
-      'Windows Hello (PIN/Huella)',
+      'Dispositivo Local',
       'platform'
     );
 
@@ -109,7 +127,7 @@ class PasskeyServicio {
     await passkeyRepositorio.guardarSesion(
       usuario.usuario_id,
       crypto.createHash('sha256').update(refreshToken).digest('hex'),
-      'Windows Hello',
+      'Dispositivo Local',
       'Navegador',
       null,
       new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -129,7 +147,8 @@ class PasskeyServicio {
     };
   }
 
-  async generarOpcionesLogin(correo) {
+  async generarOpcionesLogin(correo, reqOrigen) {
+    const { rpID, origin } = this._getRPConfig(reqOrigen);
     const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
     if (!usuario) throw new Error('Usuario no encontrado');
     if (!usuario.passkey_registrado) throw new Error('Usuario sin passkey registrado');
@@ -137,18 +156,15 @@ class PasskeyServicio {
     const passkeys = await passkeyRepositorio.listarPasskeysPorUsuario(usuario.usuario_id);
     if (passkeys.length === 0) throw new Error('No hay passkeys activos');
 
-    // Convertir credential_id de Buffer a base64url string
     const allowCredentials = passkeys.map(pk => ({
       id: Buffer.from(pk.credential_id).toString('base64url'),
       type: 'public-key'
     }));
 
-    console.log('[PASSKEY] allowCredentials:', allowCredentials.map(c => ({ id: c.id.substring(0, 20) + '...', type: c.type })));
-
     const options = await generateAuthenticationOptions({
-      rpID: RP_ID,
+      rpID: rpID,
       allowCredentials,
-      userVerification: 'required'  // ← REQUERIR PIN/huella en login también
+      userVerification: 'preferred'
     });
 
     await passkeyRepositorio.guardarChallenge(correo, options.challenge, 'login');
@@ -156,7 +172,9 @@ class PasskeyServicio {
     return { exito: true, options };
   }
 
-  async verificarLogin(correo, respuesta) {
+  async verificarLogin(correo, respuesta, reqOrigen) {
+    const { rpID, origin } = this._getRPConfig(reqOrigen);
+    
     let expectedChallenge;
     try {
       const clientDataJSON = Buffer.from(respuesta.response.clientDataJSON, 'base64url').toString('utf8');
@@ -171,7 +189,6 @@ class PasskeyServicio {
 
     const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
     
-    // Buscar passkey por credential_id (convertir de base64url a Buffer)
     const credentialIdBuffer = Buffer.from(respuesta.id, 'base64url');
     const passkey = await passkeyRepositorio.buscarPasskeyPorCredentialId(credentialIdBuffer);
 
@@ -184,8 +201,8 @@ class PasskeyServicio {
       verification = await verifyAuthenticationResponse({
         response: respuesta,
         expectedChallenge,
-        expectedOrigin: ORIGIN,
-        expectedRPID: RP_ID,
+        expectedOrigin: origin,
+        expectedRPID: rpID,
         authenticator: {
           credentialID: passkey.credential_id,
           credentialPublicKey: passkey.public_key,
@@ -209,7 +226,7 @@ class PasskeyServicio {
     await passkeyRepositorio.guardarSesion(
       usuario.usuario_id,
       crypto.createHash('sha256').update(refreshToken).digest('hex'),
-      passkey.nombre_dispositivo || 'Windows Hello',
+      passkey.nombre_dispositivo || 'Dispositivo Local',
       'Navegador',
       null,
       new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
