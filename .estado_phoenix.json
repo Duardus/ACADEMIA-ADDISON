@@ -87,5 +87,17 @@
     }
   },
   "backup_pre_limpieza": "2d038b2b15839495e2c5b06e79d0dc9b662dcc6c",
-  "nota": "Carpetas originales eliminadas. Solo quedan /frontend y /backend."
+  "nota": "Carpetas originales eliminadas. Solo quedan /frontend y /backend.",
+  "limpieza_raiz": {
+    "fecha": "2026-07-14T22:51:54+00:00",
+    "carpetas_borradas": [
+      "css/ (8 archivos)",
+      "js/ (37 archivos)",
+      "functions/ (1 archivos)",
+      "tools/ (1 archivos)",
+      "node_modules/ (2824 archivos)"
+    ],
+    "backup_commit": "2be67cf4aec9b660c5d09a37aa6c2ba6a7eb9cf1",
+    "nota": "Carpetas legacy de raíz eliminadas. /frontend/ usa css/js internos de cada módulo."
+  }
 }
