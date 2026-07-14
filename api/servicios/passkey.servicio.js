@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ACADEMIA-ADDISON — Servicio de Autenticacion Passkeys v3
-// Compatible con usuarios.usuario_id = VARCHAR
+// ACADEMIA-ADDISON — Servicio de Autenticacion Passkeys v4
+// Fix: usar challenge guardado directamente en verifyRegistrationResponse
 // ═══════════════════════════════════════════════════════════════════════════
 
 const { 
@@ -67,15 +67,7 @@ class PasskeyServicio {
   async verificarRegistro(correo, respuesta, reqOrigen) {
     const { rpID, origin } = this._getRPConfig(reqOrigen);
     
-    let expectedChallenge;
-    try {
-      const clientDataJSON = Buffer.from(respuesta.response.clientDataJSON, 'base64url').toString('utf8');
-      const clientData = JSON.parse(clientDataJSON);
-      expectedChallenge = clientData.challenge;
-    } catch (e) {
-      throw new Error('No se pudo extraer challenge de la respuesta del navegador');
-    }
-
+    // Obtener challenge guardado directamente de la BD
     const challengeGuardado = await passkeyRepositorio.buscarChallenge(correo, 'registro');
     if (!challengeGuardado) {
       throw new Error('Challenge expirado o invalido. Intenta de nuevo.');
@@ -85,7 +77,7 @@ class PasskeyServicio {
     try {
       verification = await verifyRegistrationResponse({
         response: respuesta,
-        expectedChallenge,
+        expectedChallenge: challengeGuardado,
         expectedOrigin: origin,
         expectedRPID: rpID
       });
@@ -170,15 +162,6 @@ class PasskeyServicio {
   async verificarLogin(correo, respuesta, reqOrigen) {
     const { rpID, origin } = this._getRPConfig(reqOrigen);
     
-    let expectedChallenge;
-    try {
-      const clientDataJSON = Buffer.from(respuesta.response.clientDataJSON, 'base64url').toString('utf8');
-      const clientData = JSON.parse(clientDataJSON);
-      expectedChallenge = clientData.challenge;
-    } catch (e) {
-      throw new Error('No se pudo extraer challenge de la respuesta');
-    }
-
     const challengeGuardado = await passkeyRepositorio.buscarChallenge(correo, 'login');
     if (!challengeGuardado) throw new Error('Challenge expirado');
 
@@ -195,7 +178,7 @@ class PasskeyServicio {
     try {
       verification = await verifyAuthenticationResponse({
         response: respuesta,
-        expectedChallenge,
+        expectedChallenge: challengeGuardado,
         expectedOrigin: origin,
         expectedRPID: rpID,
         authenticator: {
