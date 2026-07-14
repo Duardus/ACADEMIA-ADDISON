@@ -67,8 +67,14 @@
       };
 
       const verificacion = await apiPasskeyRegistroVerificar(correo, respuestaCliente);
+        console.log("[PHOENIX DEBUG] verificacion:", JSON.stringify(verificacion));
       
       if (verificacion && verificacion.exito) {
+          console.log("[PHOENIX DEBUG] exito=true, token:", verificacion.token_sesion ? "SI" : "NO");
+        } else {
+          console.log("[PHOENIX DEBUG] exito=false o undefined, verificacion:", verificacion);
+        }
+        if (verificacion && verificacion.exito) {
         if (typeof guardarSesion === 'function') guardarSesion(verificacion.token_sesion, verificacion.usuario);
         
         notificar('exito', '✅ ¡Passkey creado exitosamente! Bienvenido.');
@@ -160,6 +166,11 @@
       const verificacion = await apiPasskeyLoginVerificar(correo, respuestaCliente);
       
       if (verificacion && verificacion.exito) {
+          console.log("[PHOENIX DEBUG] exito=true, token:", verificacion.token_sesion ? "SI" : "NO");
+        } else {
+          console.log("[PHOENIX DEBUG] exito=false o undefined, verificacion:", verificacion);
+        }
+        if (verificacion && verificacion.exito) {
         if (typeof guardarSesion === 'function') guardarSesion(verificacion.token_sesion, verificacion.usuario);
         
         notificar('exito', '✅ ¡Bienvenido de vuelta!');
