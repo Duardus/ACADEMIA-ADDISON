@@ -79,7 +79,7 @@
         
         notificar('exito', '✅ ¡Passkey creado exitosamente! Bienvenido.');
         setTimeout(function() {
-          // window.location.href = '/'; // DEBUG: redireccion desactivada
+          // // DEBUG: sin redireccion // DEBUG: redireccion desactivada
         }, 1500);
       } else {
         notificar('error', (verificacion && verificacion.mensaje) || 'Error al verificar el passkey');
@@ -175,7 +175,7 @@
         
         notificar('exito', '✅ ¡Bienvenido de vuelta!');
         setTimeout(function() {
-          // window.location.href = '/'; // DEBUG: redireccion desactivada
+          // // DEBUG: sin redireccion // DEBUG: redireccion desactivada
         }, 1000);
       } else {
         notificar('error', (verificacion && verificacion.mensaje) || 'Error al verificar autenticación');
