@@ -12,7 +12,6 @@ const passkeyRepositorio = require('../repositorios/passkey.repositorio');
 const { generarToken } = require('../utilidades/jwt');
 const crypto = require('crypto');
 
-// Configuración WebAuthn (RP ID = dominio del frontend)
 const RP_NAME = 'Academia Addison';
 const RP_ID = 'academia-addison.pages.dev';
 const ORIGIN = 'https://academia-addison.pages.dev';
@@ -39,8 +38,8 @@ class PasskeyServicio {
       }
     });
 
-    global.challenges = global.challenges || {};
-    global.challenges[correo] = options.challenge;
+    // Guardar challenge en PostgreSQL (persistente)
+    await passkeyRepositorio.guardarChallenge(correo, options.challenge, 'registro');
 
     return {
       exito: true,
@@ -51,9 +50,10 @@ class PasskeyServicio {
   }
 
   async verificarRegistro(correo, respuesta) {
-    const expectedChallenge = global.challenges?.[correo];
+    // Recuperar challenge de PostgreSQL
+    const expectedChallenge = await passkeyRepositorio.buscarChallenge(correo, 'registro');
     if (!expectedChallenge) {
-      throw new Error('Challenge expirado o invalido');
+      throw new Error('Challenge expirado o invalido. Intenta de nuevo.');
     }
 
     const verification = await verifyRegistrationResponse({
@@ -79,7 +79,9 @@ class PasskeyServicio {
     );
 
     await passkeyRepositorio.actualizarPasskeyRegistrado(usuario.usuario_id);
-    delete global.challenges[correo];
+    
+    // Limpiar challenge usado
+    await passkeyRepositorio.eliminarChallenge(correo);
 
     const tokenSesion = this._generarTokenSesion(usuario);
     const refreshToken = crypto.randomBytes(32).toString('hex');
@@ -124,14 +126,14 @@ class PasskeyServicio {
       userVerification: 'preferred'
     });
 
-    global.challenges = global.challenges || {};
-    global.challenges[correo] = options.challenge;
+    // Guardar challenge en PostgreSQL
+    await passkeyRepositorio.guardarChallenge(correo, options.challenge, 'login');
 
     return { exito: true, options };
   }
 
   async verificarLogin(correo, respuesta) {
-    const expectedChallenge = global.challenges?.[correo];
+    const expectedChallenge = await passkeyRepositorio.buscarChallenge(correo, 'login');
     if (!expectedChallenge) throw new Error('Challenge expirado');
 
     const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
@@ -158,7 +160,7 @@ class PasskeyServicio {
     if (!verification.verified) throw new Error('Autenticacion fallida');
 
     await passkeyRepositorio.actualizarSignCount(passkey.credential_id, verification.authenticationInfo.newCounter);
-    delete global.challenges[correo];
+    await passkeyRepositorio.eliminarChallenge(correo);
 
     const tokenSesion = this._generarTokenSesion(usuario);
     const refreshToken = crypto.randomBytes(32).toString('hex');

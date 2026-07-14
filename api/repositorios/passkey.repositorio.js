@@ -31,6 +31,36 @@ class PasskeyRepositorio {
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════
+  // CHALLENGES (persistencia en PostgreSQL)
+  // ═════════════════════════════════════════════════════════════════
+  async guardarChallenge(correo, challenge, tipo) {
+    const expiraEn = new Date(Date.now() + 5 * 60 * 1000); // 5 minutos
+    await consulta(
+      `INSERT INTO passkey_challenges (correo, challenge, tipo, expira_en)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (correo) DO UPDATE SET challenge = $2, tipo = $3, expira_en = $4, creado_en = NOW()`,
+      [correo, challenge, tipo, expiraEn]
+    );
+  }
+
+  async buscarChallenge(correo, tipo) {
+    const result = await consulta(
+      `SELECT challenge FROM passkey_challenges 
+       WHERE correo = $1 AND tipo = $2 AND expira_en > NOW()
+       LIMIT 1`,
+      [correo, tipo]
+    );
+    return result.rows[0]?.challenge || null;
+  }
+
+  async eliminarChallenge(correo) {
+    await consulta(`DELETE FROM passkey_challenges WHERE correo = $1`, [correo]);
+  }
+
+  // ═════════════════════════════════════════════════════════════════
+  // PASSKEYS
+  // ═════════════════════════════════════════════════════════════════
   async guardarPasskey(usuarioId, credentialId, publicKey, nombreDispositivo, tipoDispositivo) {
     const result = await consulta(
       `INSERT INTO passkeys (usuario_id, credential_id, public_key, nombre_dispositivo, tipo_dispositivo, creado_en)
@@ -43,7 +73,8 @@ class PasskeyRepositorio {
 
   async buscarPasskeyPorCredentialId(credentialId) {
     const result = await consulta(
-      `SELECT p.*, u.* FROM passkeys p
+      `SELECT p.*, u.correo_electronico, u.nombre_completo, u.estado_usuario, u.etiquetas
+       FROM passkeys p
        JOIN usuarios u ON p.usuario_id = u.usuario_id
        WHERE p.credential_id = $1 AND p.revocado = false
        LIMIT 1`,
@@ -61,8 +92,8 @@ class PasskeyRepositorio {
 
   async listarPasskeysPorUsuario(usuarioId) {
     const result = await consulta(
-      `SELECT id, nombre_dispositivo, tipo_dispositivo, creado_en, ultimo_uso, revocado
-       FROM passkeys WHERE usuario_id = $1 ORDER BY creado_en DESC`,
+      `SELECT id, credential_id, nombre_dispositivo, tipo_dispositivo, creado_en, ultimo_uso, revocado
+       FROM passkeys WHERE usuario_id = $1 AND revocado = false ORDER BY creado_en DESC`,
       [usuarioId]
     );
     return result.rows;
@@ -75,6 +106,9 @@ class PasskeyRepositorio {
     );
   }
 
+  // ═════════════════════════════════════════════════════════════════
+  // MAGIC LINKS
+  // ═════════════════════════════════════════════════════════════════
   async guardarMagicLink(usuarioId, tokenHash, expiraEn) {
     const result = await consulta(
       `INSERT INTO magic_links (usuario_id, token_hash, expira_en) VALUES ($1, $2, $3) RETURNING *`,
@@ -85,7 +119,8 @@ class PasskeyRepositorio {
 
   async buscarMagicLink(tokenHash) {
     const result = await consulta(
-      `SELECT m.*, u.* FROM magic_links m
+      `SELECT m.*, u.correo_electronico, u.nombre_completo, u.estado_usuario
+       FROM magic_links m
        JOIN usuarios u ON m.usuario_id = u.usuario_id
        WHERE m.token_hash = $1 AND m.usado = false AND m.expira_en > NOW()
        LIMIT 1`,
@@ -98,6 +133,9 @@ class PasskeyRepositorio {
     await consulta(`UPDATE magic_links SET usado = true WHERE id = $1`, [id]);
   }
 
+  // ═════════════════════════════════════════════════════════════════
+  // SESIONES
+  // ═════════════════════════════════════════════════════════════════
   async guardarSesion(usuarioId, refreshTokenHash, dispositivo, navegador, ipAddress, expiraEn) {
     const result = await consulta(
       `INSERT INTO sesiones_passkey (usuario_id, refresh_token_hash, dispositivo, navegador, ip_address, expira_en)
@@ -109,7 +147,8 @@ class PasskeyRepositorio {
 
   async buscarSesionPorRefreshToken(refreshTokenHash) {
     const result = await consulta(
-      `SELECT s.*, u.* FROM sesiones_passkey s
+      `SELECT s.*, u.correo_electronico, u.nombre_completo, u.estado_usuario, u.etiquetas
+       FROM sesiones_passkey s
        JOIN usuarios u ON s.usuario_id = u.usuario_id
        WHERE s.refresh_token_hash = $1 AND s.activa = true AND s.expira_en > NOW()
        LIMIT 1`,
