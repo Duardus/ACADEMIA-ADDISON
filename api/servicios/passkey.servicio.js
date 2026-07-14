@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ACADEMIA-ADDISON — Servicio de Autenticacion Passkeys v7
-// Fix: mensaje claro para login sin passkeys, debug challenge
+// ACADEMIA-ADDISON — Servicio de Autenticacion Passkeys v8
+// Fix: usar ErrorApp para que manejadorErrores respete status/code
 // ═══════════════════════════════════════════════════════════════════════════
 
 const { 
@@ -11,6 +11,7 @@ const {
 } = require('@simplewebauthn/server');
 const passkeyRepositorio = require('../repositorios/passkey.repositorio');
 const { generarToken } = require('../utilidades/jwt');
+const { ErrorApp } = require('../utilidades/errores');
 const crypto = require('crypto');
 
 const RP_NAME = 'Academia Addison';
@@ -74,7 +75,7 @@ class PasskeyServicio {
     
     const challengeGuardado = await passkeyRepositorio.buscarChallenge(correo, 'registro');
     if (!challengeGuardado) {
-      throw new Error('Challenge expirado o invalido. Intenta de nuevo.');
+      throw new ErrorApp('Challenge expirado o invalido. Intenta de nuevo.', 400, 'CHALLENGE_EXPIRADO');
     }
 
     let verification;
@@ -88,19 +89,16 @@ class PasskeyServicio {
     } catch (err) {
       console.error('[PASSKEY] Error verifyRegistrationResponse:', err.message);
       console.error('[PASSKEY] Challenge guardado:', challengeGuardado);
-      console.error('[PASSKEY] Challenge length:', challengeGuardado.length);
-      console.error('[PASSKEY] Respuesta ID:', respuesta.id);
-      console.error('[PASSKEY] Respuesta clientDataJSON:', respuesta.response?.clientDataJSON?.substring(0, 100));
-      throw new Error('Verificacion de passkey fallida: ' + err.message);
+      throw new ErrorApp('Verificacion de passkey fallida: ' + err.message, 400, 'VERIFICACION_FALLIDA');
     }
 
     if (!verification.verified) {
-      throw new Error('Verificacion de passkey no exitosa');
+      throw new ErrorApp('Verificacion de passkey no exitosa', 400, 'VERIFICACION_FALLIDA');
     }
 
     const credential = verification.registrationInfo?.credential;
     if (!credential) {
-      throw new Error('No se pudo obtener credential del passkey');
+      throw new ErrorApp('No se pudo obtener credential del passkey', 500, 'CREDENTIAL_NO_OBTENIDO');
     }
 
     const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
@@ -146,24 +144,16 @@ class PasskeyServicio {
     const { rpID, origin } = this._getRPConfig(reqOrigen);
     const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
     if (!usuario) {
-      const error = new Error('Usuario no encontrado');
-      error.status = 404;
-      throw error;
+      throw new ErrorApp('Usuario no encontrado', 404, 'USUARIO_NO_ENCONTRADO');
     }
     
     if (!usuario.passkey_registrado) {
-      const error = new Error('Usuario sin passkey registrado. Por favor registra un passkey primero.');
-      error.status = 400;
-      error.code = 'SIN_PASSKEY';
-      throw error;
+      throw new ErrorApp('Usuario sin passkey registrado. Por favor registra un passkey primero.', 400, 'SIN_PASSKEY');
     }
 
     const passkeys = await passkeyRepositorio.listarPasskeysPorUsuario(String(usuario.usuario_id));
     if (passkeys.length === 0) {
-      const error = new Error('No hay passkeys activos para este usuario. Registra uno nuevo.');
-      error.status = 400;
-      error.code = 'SIN_PASSKEY';
-      throw error;
+      throw new ErrorApp('No hay passkeys activos para este usuario. Registra uno nuevo.', 400, 'SIN_PASSKEY');
     }
 
     const allowCredentials = passkeys.map(pk => ({
@@ -187,7 +177,7 @@ class PasskeyServicio {
     const { rpID, origin } = this._getRPConfig(reqOrigen);
     
     const challengeGuardado = await passkeyRepositorio.buscarChallenge(correo, 'login');
-    if (!challengeGuardado) throw new Error('Challenge expirado');
+    if (!challengeGuardado) throw new ErrorApp('Challenge expirado', 400, 'CHALLENGE_EXPIRADO');
 
     const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
     
@@ -195,7 +185,7 @@ class PasskeyServicio {
     const passkey = await passkeyRepositorio.buscarPasskeyPorCredentialId(credentialIdBuffer);
 
     if (!passkey || String(passkey.usuario_id) !== String(usuario.usuario_id)) {
-      throw new Error('Passkey no encontrado');
+      throw new ErrorApp('Passkey no encontrado', 404, 'PASSKEY_NO_ENCONTRADO');
     }
 
     let verification;
@@ -212,11 +202,11 @@ class PasskeyServicio {
         }
       });
     } catch (err) {
-      throw new Error('Autenticacion fallida: ' + err.message);
+      throw new ErrorApp('Autenticacion fallida: ' + err.message, 400, 'AUTENTICACION_FALLIDA');
     }
 
     if (!verification.verified) {
-      throw new Error('Autenticacion no exitosa');
+      throw new ErrorApp('Autenticacion no exitosa', 400, 'AUTENTICACION_FALLIDA');
     }
 
     await passkeyRepositorio.actualizarSignCount(passkey.credential_id, verification.authenticationInfo.newCounter);
@@ -252,7 +242,7 @@ class PasskeyServicio {
 
   async generarMagicLink(correo) {
     const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
-    if (!usuario) throw new Error('Usuario no encontrado');
+    if (!usuario) throw new ErrorApp('Usuario no encontrado', 404, 'USUARIO_NO_ENCONTRADO');
 
     const token = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
@@ -265,7 +255,7 @@ class PasskeyServicio {
   async verificarMagicLink(token) {
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const magicLink = await passkeyRepositorio.buscarMagicLink(tokenHash);
-    if (!magicLink) throw new Error('Link invalido o expirado');
+    if (!magicLink) throw new ErrorApp('Link invalido o expirado', 400, 'MAGIC_LINK_INVALIDO');
 
     await passkeyRepositorio.marcarMagicLinkUsado(magicLink.id);
     return { usuario_id: magicLink.usuario_id, correo: magicLink.correo_electronico };
