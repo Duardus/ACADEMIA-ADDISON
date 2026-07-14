@@ -10,5 +10,76 @@
     "CERO redundancia",
     "Frontend y Backend aislados",
     "Migración via copia (Patrón Strangler)"
-  ]
+  ],
+  "migraciones": {
+    "teoria": {
+      "estado": "COMPLETADA",
+      "fecha": "2026-07-14T22:19:46+00:00",
+      "origen": "/teoria",
+      "destino": "/frontend/teoria",
+      "archivos": 9,
+      "html": 6,
+      "rutas": "preservadas (css/, js/ relativas)",
+      "nota": "No requiere reescritura, estructura copiada 1:1"
+    },
+    "examen": {
+      "estado": "COMPLETADA",
+      "fecha": "2026-07-14T22:24:00+00:00",
+      "origen": "/examen",
+      "destino": "/frontend/examen",
+      "archivos": 9,
+      "html": 1,
+      "css": "css/examen.css",
+      "js": "js/examen-engine.js",
+      "rutas": "preservadas (css/, js/ relativas)",
+      "nota": "No requiere reescritura, estructura copiada 1:1"
+    },
+    "live": {
+      "estado": "COMPLETADA",
+      "fecha": "2026-07-14T22:26:34+00:00",
+      "origen": "/live",
+      "destino": "/frontend/live",
+      "archivos": 3,
+      "html": 1,
+      "css": "css/live.css",
+      "js": "js/live-room.js",
+      "dependencias": "Firebase CDN",
+      "rutas": "preservadas (css/, js/ relativas)",
+      "nota": "No requiere reescritura, estructura copiada 1:1"
+    },
+    "api": {
+      "estado": "COMPLETADA",
+      "fecha": "2026-07-14T22:35:00+00:00",
+      "origen": "/api",
+      "destino": "/backend/api",
+      "archivos": 102,
+      "js": 87,
+      "json": 2,
+      "entrypoint": "servidor.js",
+      "puerto": 3000,
+      "pm2_process": "api-addison",
+      "fix_aplicado": ".env copiado a /backend/.env",
+      "nota": "Backend migrado. node_modules NO copiado (reinstalar con npm install si es necesario). PM2 actualizado y online."
+    }
+  },
+  "ultima_actualizacion": "2026-07-14T22:35:00+00:00",
+  "infraestructura": {
+    "pm2": {
+      "proceso": "api-addison",
+      "estado": "online",
+      "pid": 433898,
+      "memoria": "18.1MB",
+      "uptime": "estable"
+    },
+    "base_de_datos": {
+      "motor": "PostgreSQL",
+      "container": "postgres-academia",
+      "database": "academia_addison",
+      "estado": "conectada"
+    },
+    "cors": {
+      "origin": "*",
+      "metodos": ["GET", "POST", "OPTIONS"]
+    }
+  }
 }
