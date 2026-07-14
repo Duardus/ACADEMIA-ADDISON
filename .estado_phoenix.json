@@ -1,6 +1,6 @@
 {
   "proyecto": "ACADEMIA-ADDISON",
-  "estado": "MIGRACION_PATRON_STRANGLER",
+  "estado": "MIGRACION_COMPLETADA_LIMPIA",
   "arquitectura": "DDD-Modular",
   "mapa_carpetas": {
     "cliente": "/frontend",
@@ -62,7 +62,7 @@
       "nota": "Backend migrado. node_modules NO copiado (reinstalar con npm install si es necesario). PM2 actualizado y online."
     }
   },
-  "ultima_actualizacion": "2026-07-14T22:35:00+00:00",
+  "ultima_actualizacion": "2026-07-14T22:47:29+00:00",
   "infraestructura": {
     "pm2": {
       "proceso": "api-addison",
@@ -79,7 +79,13 @@
     },
     "cors": {
       "origin": "*",
-      "metodos": ["GET", "POST", "OPTIONS"]
+      "metodos": [
+        "GET",
+        "POST",
+        "OPTIONS"
+      ]
     }
-  }
+  },
+  "backup_pre_limpieza": "2d038b2b15839495e2c5b06e79d0dc9b662dcc6c",
+  "nota": "Carpetas originales eliminadas. Solo quedan /frontend y /backend."
 }
