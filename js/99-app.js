@@ -8,7 +8,6 @@ class App {
   }
 
   async iniciar() {
-    // Verificar si WebAuthn está disponible
     if (!window.PublicKeyCredential) {
       this.mostrarErrorFatal('Tu navegador no soporta acceso seguro (WebAuthn). Usa Chrome, Edge o Safari actualizado.');
       return;
@@ -16,7 +15,6 @@ class App {
 
     this.passkeyListo = true;
 
-    // Verificar si hay sesión activa
     if (haySesionActiva()) {
       await this.procesarSesionExistente();
     } else {
@@ -109,7 +107,7 @@ class App {
       auditoria:'Auditoría'
     };
     if (pendientes[vista]) {
-      this.mostrarToast(`🚧 ${pendientes[vista]} - En construcción`, 'advertencia');
+      this.mostrarToast('🚧 ' + pendientes[vista] + ' - En construcción', 'advertencia');
     }
   }
 
@@ -123,12 +121,12 @@ class App {
     this.mostrarToast('🚧 Clases en vivo - En construcción', 'advertencia');
   }
 
-  mostrarToast(mensaje, tipo = 'info') {
+  mostrarToast(mensaje, tipo) {
     const toast = document.createElement('div');
-    toast.className = `toast toast-${tipo} fade-in`;
+    toast.className = 'toast toast-' + tipo + ' fade-in';
     toast.textContent = mensaje;
     document.body.appendChild(toast);
-    setTimeout(() => { toast.classList.add('saliendo'); setTimeout(() => toast.remove(), 300); }, 4000);
+    setTimeout(function() { toast.classList.add('saliendo'); setTimeout(function() { toast.remove(); }, 300); }, 4000);
   }
 
   mostrarErrorFatal(mensaje) {
@@ -140,6 +138,23 @@ class App {
     `;
   }
 }
+
+// Exponer mostrarToast globalmente para que passkey.eventos.js lo use
+window.mostrarToast = function(mensaje, tipo) {
+  if (app && typeof app.mostrarToast === 'function') {
+    app.mostrarToast(mensaje, tipo);
+  } else {
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:8px;color:white;z-index:9999;max-width:300px;word-break:break-word;';
+    if (tipo === 'error') toast.style.background = '#e74c3c';
+    else if (tipo === 'warning') toast.style.background = '#f39c12';
+    else if (tipo === 'exito') toast.style.background = '#27ae60';
+    else toast.style.background = '#3498db';
+    toast.textContent = mensaje;
+    document.body.appendChild(toast);
+    setTimeout(function() { toast.remove(); }, 4000);
+  }
+};
 
 let app;
 document.addEventListener('DOMContentLoaded', function() {

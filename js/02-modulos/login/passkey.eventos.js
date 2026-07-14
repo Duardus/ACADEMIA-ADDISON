@@ -1,10 +1,21 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ACADEMIA-ADDISON — Eventos Passkeys v15
-// Fix: funciones globales puras, onclick inline en HTML, sin DOMContentLoaded
+// ACADEMIA-ADDISON — Eventos Passkeys v16
+// Fix: usar mostrarToast (de app.js) o alert fallback. Fix DNS con IP directa.
 // ═══════════════════════════════════════════════════════════════════════════
 
 (function() {
   'use strict';
+
+  // Fallback si mostrarToast no existe globalmente
+  function notificar(tipo, mensaje) {
+    if (typeof mostrarToast === 'function') {
+      mostrarToast(mensaje, tipo);
+    } else if (typeof alert === 'function') {
+      alert('[' + tipo.toUpperCase() + '] ' + mensaje);
+    } else {
+      console.log('[' + tipo + ']', mensaje);
+    }
+  }
 
   window.registroEnProceso = false;
   window.loginEnProceso = false;
@@ -13,20 +24,20 @@
 
   window.iniciarRegistroPasskey = async function(correo, nombre) {
     if (window.registroEnProceso) {
-      mostrarNotificacion('warning', '⏳ Registro en proceso, espera...');
+      notificar('warning', '⏳ Registro en proceso, espera...');
       return;
     }
     window.registroEnProceso = true;
 
     try {
       if (!window.PublicKeyCredential) {
-        mostrarNotificacion('error', '❌ Tu navegador no soporta passkeys. Usa Chrome, Edge, Safari o Firefox.');
+        notificar('error', '❌ Tu navegador no soporta passkeys. Usa Chrome, Edge, Safari o Firefox.');
         return;
       }
 
       const respuestaOpciones = await apiPasskeyRegistroOpciones(correo, nombre);
       if (!respuestaOpciones || !respuestaOpciones.exito) {
-        mostrarNotificacion('error', (respuestaOpciones && respuestaOpciones.mensaje) || 'Error al obtener opciones de registro');
+        notificar('error', (respuestaOpciones && respuestaOpciones.mensaje) || 'Error al obtener opciones de registro');
         return;
       }
 
@@ -41,7 +52,7 @@
       const credential = await navigator.credentials.create({ publicKey: options });
       
       if (!credential) {
-        mostrarNotificacion('error', '❌ No se pudo crear el passkey. Intenta de nuevo.');
+        notificar('error', '❌ No se pudo crear el passkey. Intenta de nuevo.');
         return;
       }
 
@@ -60,24 +71,25 @@
       if (verificacion && verificacion.exito) {
         if (typeof guardarToken === 'function') guardarToken(verificacion.token_sesion);
         if (typeof guardarUsuario === 'function') guardarUsuario(verificacion.usuario);
-        if (typeof guardarCorreoRecordado === 'function') guardarCorreoRecordado(correo);
         
-        mostrarNotificacion('exito', '✅ ¡Passkey creado exitosamente! Bienvenido.');
+        notificar('exito', '✅ ¡Passkey creado exitosamente! Bienvenido.');
         setTimeout(function() {
           window.location.href = '/dashboard.html';
         }, 1500);
       } else {
-        mostrarNotificacion('error', (verificacion && verificacion.mensaje) || 'Error al verificar el passkey');
+        notificar('error', (verificacion && verificacion.mensaje) || 'Error al verificar el passkey');
       }
 
     } catch (error) {
       console.error('[PASSKEY REGISTRO] Error:', error);
       if (error.name === 'NotAllowedError') {
-        mostrarNotificacion('warning', '⚠️ Registro cancelado. Elige tu dispositivo en la lista.');
+        notificar('warning', '⚠️ Registro cancelado. Elige tu dispositivo en la lista.');
       } else if (error.name === 'AbortError') {
-        mostrarNotificacion('info', 'ℹ️ Registro cancelado.');
+        notificar('info', 'ℹ️ Registro cancelado.');
+      } else if (error.message && error.message.includes('Failed to fetch')) {
+        notificar('error', '❌ No se pudo conectar con el servidor. Verifica tu conexión a internet.');
       } else {
-        mostrarNotificacion('error', '❌ Error: ' + (error.message || 'Error desconocido'));
+        notificar('error', '❌ Error: ' + (error.message || 'Error desconocido'));
       }
     } finally {
       window.registroEnProceso = false;
@@ -88,21 +100,21 @@
 
   window.iniciarLoginPasskey = async function(correo) {
     if (window.loginEnProceso) {
-      mostrarNotificacion('warning', '⏳ Login en proceso, espera...');
+      notificar('warning', '⏳ Login en proceso, espera...');
       return;
     }
     window.loginEnProceso = true;
 
     try {
       if (!window.PublicKeyCredential) {
-        mostrarNotificacion('error', '❌ Tu navegador no soporta passkeys.');
+        notificar('error', '❌ Tu navegador no soporta passkeys.');
         return;
       }
 
       const respuestaOpciones = await apiPasskeyLoginOpciones(correo);
       
       if (respuestaOpciones && respuestaOpciones.requiere_registro) {
-        mostrarNotificacion('info', '💡 No tienes passkeys. Creando uno...');
+        notificar('info', '💡 No tienes passkeys. Creando uno...');
         await new Promise(r => setTimeout(r, 1500));
         const nombre = respuestaOpciones.nombre || correo.split('@')[0];
         await window.iniciarRegistroPasskey(correo, nombre);
@@ -110,7 +122,7 @@
       }
       
       if (!respuestaOpciones || !respuestaOpciones.exito) {
-        mostrarNotificacion('error', (respuestaOpciones && respuestaOpciones.mensaje) || 'Error al obtener opciones de login');
+        notificar('error', (respuestaOpciones && respuestaOpciones.mensaje) || 'Error al obtener opciones de login');
         return;
       }
 
@@ -130,7 +142,7 @@
       const assertion = await navigator.credentials.get({ publicKey: options });
       
       if (!assertion) {
-        mostrarNotificacion('error', '❌ No se pudo autenticar. Intenta de nuevo.');
+        notificar('error', '❌ No se pudo autenticar. Intenta de nuevo.');
         return;
       }
 
@@ -151,24 +163,25 @@
       if (verificacion && verificacion.exito) {
         if (typeof guardarToken === 'function') guardarToken(verificacion.token_sesion);
         if (typeof guardarUsuario === 'function') guardarUsuario(verificacion.usuario);
-        if (typeof guardarCorreoRecordado === 'function') guardarCorreoRecordado(correo);
         
-        mostrarNotificacion('exito', '✅ ¡Bienvenido de vuelta!');
+        notificar('exito', '✅ ¡Bienvenido de vuelta!');
         setTimeout(function() {
           window.location.href = '/dashboard.html';
         }, 1000);
       } else {
-        mostrarNotificacion('error', (verificacion && verificacion.mensaje) || 'Error al verificar autenticación');
+        notificar('error', (verificacion && verificacion.mensaje) || 'Error al verificar autenticación');
       }
 
     } catch (error) {
       console.error('[PASSKEY LOGIN] Error:', error);
       if (error.name === 'NotAllowedError') {
-        mostrarNotificacion('warning', '⚠️ Autenticación cancelada. Elige tu dispositivo en la lista.');
+        notificar('warning', '⚠️ Autenticación cancelada. Elige tu dispositivo en la lista.');
       } else if (error.name === 'AbortError') {
-        mostrarNotificacion('info', 'ℹ️ Login cancelado.');
+        notificar('info', 'ℹ️ Login cancelado.');
+      } else if (error.message && error.message.includes('Failed to fetch')) {
+        notificar('error', '❌ No se pudo conectar con el servidor. Verifica tu conexión a internet.');
       } else {
-        mostrarNotificacion('error', '❌ Error: ' + (error.message || 'Error desconocido'));
+        notificar('error', '❌ Error: ' + (error.message || 'Error desconocido'));
       }
     } finally {
       window.loginEnProceso = false;
@@ -186,11 +199,11 @@
     nombre = nombre ? nombre.value.trim() : '';
 
     if (!correo || !nombre) {
-      mostrarNotificacion('warning', '⚠️ Completa todos los campos');
+      notificar('warning', '⚠️ Completa todos los campos');
       return;
     }
     if (correo.indexOf('@') === -1) {
-      mostrarNotificacion('warning', '⚠️ Ingresa un correo válido');
+      notificar('warning', '⚠️ Ingresa un correo válido');
       return;
     }
 
@@ -203,11 +216,11 @@
     correo = correo ? correo.value.trim() : '';
 
     if (!correo) {
-      mostrarNotificacion('warning', '⚠️ Ingresa tu correo');
+      notificar('warning', '⚠️ Ingresa tu correo');
       return;
     }
     if (correo.indexOf('@') === -1) {
-      mostrarNotificacion('warning', '⚠️ Ingresa un correo válido');
+      notificar('warning', '⚠️ Ingresa un correo válido');
       return;
     }
 
