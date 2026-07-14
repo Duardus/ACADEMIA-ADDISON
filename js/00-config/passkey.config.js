@@ -3,8 +3,8 @@
    ============================================ */
 
 var PASSKEY_CONFIG = {
-  // WebAuthn RP ID (debe coincidir con backend)
-  RP_ID: 'academia-addison.duckdns.org',
+  // WebAuthn RP ID (debe coincidir con el dominio del frontend)
+  RP_ID: 'academia-addison.pages.dev',
   RP_NAME: 'Academia Addison',
   ORIGIN: 'https://academia-addison.pages.dev',
   

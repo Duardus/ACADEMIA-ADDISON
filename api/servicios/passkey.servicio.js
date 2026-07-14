@@ -12,20 +12,15 @@ const passkeyRepositorio = require('../repositorios/passkey.repositorio');
 const { generarToken } = require('../utilidades/jwt');
 const crypto = require('crypto');
 
-// Configuración WebAuthn
+// Configuración WebAuthn (RP ID = dominio del frontend)
 const RP_NAME = 'Academia Addison';
-const RP_ID = 'academia-addison.duckdns.org';
+const RP_ID = 'academia-addison.pages.dev';
 const ORIGIN = 'https://academia-addison.pages.dev';
 
 class PasskeyServicio {
 
-  // ═════════════════════════════════════════════════════════════════
-  // REGISTRO: Generar opciones para crear passkey
-  // ═════════════════════════════════════════════════════════════════
   async generarOpcionesRegistro(correo, nombre) {
     let usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
-
-    // Si no existe, crear usuario temporal
     if (!usuario) {
       usuario = await passkeyRepositorio.crearUsuario(correo, nombre);
     }
@@ -44,7 +39,6 @@ class PasskeyServicio {
       }
     });
 
-    // Guardar challenge temporal (en producción usar Redis, aquí memoria simple)
     global.challenges = global.challenges || {};
     global.challenges[correo] = options.challenge;
 
@@ -56,9 +50,6 @@ class PasskeyServicio {
     };
   }
 
-  // ═════════════════════════════════════════════════════════════════
-  // REGISTRO: Verificar respuesta del navegador
-  // ═════════════════════════════════════════════════════════════════
   async verificarRegistro(correo, respuesta) {
     const expectedChallenge = global.challenges?.[correo];
     if (!expectedChallenge) {
@@ -79,7 +70,6 @@ class PasskeyServicio {
     const { credential } = verification;
     const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
 
-    // Guardar passkey en BD
     await passkeyRepositorio.guardarPasskey(
       usuario.usuario_id,
       Buffer.from(credential.id),
@@ -88,13 +78,9 @@ class PasskeyServicio {
       'mobile'
     );
 
-    // Marcar como registrado
     await passkeyRepositorio.actualizarPasskeyRegistrado(usuario.usuario_id);
-
-    // Limpiar challenge
     delete global.challenges[correo];
 
-    // Generar tokens
     const tokenSesion = this._generarTokenSesion(usuario);
     const refreshToken = crypto.randomBytes(32).toString('hex');
 
@@ -121,26 +107,13 @@ class PasskeyServicio {
     };
   }
 
-  // ═════════════════════════════════════════════════════════════════
-  // LOGIN: Generar opciones de autenticacion
-  // ═════════════════════════════════════════════════════════════════
   async generarOpcionesLogin(correo) {
     const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
-    
-    if (!usuario) {
-      throw new Error('Usuario no encontrado');
-    }
+    if (!usuario) throw new Error('Usuario no encontrado');
+    if (!usuario.passkey_registrado) throw new Error('Usuario sin passkey registrado');
 
-    if (!usuario.passkey_registrado) {
-      throw new Error('Usuario sin passkey registrado');
-    }
-
-    // Buscar passkeys del usuario
     const passkeys = await passkeyRepositorio.listarPasskeysPorUsuario(usuario.usuario_id);
-    
-    if (passkeys.length === 0) {
-      throw new Error('No hay passkeys activos');
-    }
+    if (passkeys.length === 0) throw new Error('No hay passkeys activos');
 
     const options = await generateAuthenticationOptions({
       rpID: RP_ID,
@@ -154,20 +127,12 @@ class PasskeyServicio {
     global.challenges = global.challenges || {};
     global.challenges[correo] = options.challenge;
 
-    return {
-      exito: true,
-      options
-    };
+    return { exito: true, options };
   }
 
-  // ═════════════════════════════════════════════════════════════════
-  // LOGIN: Verificar autenticacion
-  // ═════════════════════════════════════════════════════════════════
   async verificarLogin(correo, respuesta) {
     const expectedChallenge = global.challenges?.[correo];
-    if (!expectedChallenge) {
-      throw new Error('Challenge expirado');
-    }
+    if (!expectedChallenge) throw new Error('Challenge expirado');
 
     const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
     const passkey = await passkeyRepositorio.buscarPasskeyPorCredentialId(
@@ -175,7 +140,7 @@ class PasskeyServicio {
     );
 
     if (!passkey || passkey.usuario_id !== usuario.usuario_id) {
-      throw new Error('Passkey no encontrado o no pertenece al usuario');
+      throw new Error('Passkey no encontrado');
     }
 
     const verification = await verifyAuthenticationResponse({
@@ -190,17 +155,11 @@ class PasskeyServicio {
       }
     });
 
-    if (!verification.verified) {
-      throw new Error('Autenticacion fallida');
-    }
+    if (!verification.verified) throw new Error('Autenticacion fallida');
 
-    // Actualizar contador
     await passkeyRepositorio.actualizarSignCount(passkey.credential_id, verification.authenticationInfo.newCounter);
-
-    // Limpiar challenge
     delete global.challenges[correo];
 
-    // Generar tokens
     const tokenSesion = this._generarTokenSesion(usuario);
     const refreshToken = crypto.randomBytes(32).toString('hex');
 
@@ -229,50 +188,27 @@ class PasskeyServicio {
     };
   }
 
-  // ═════════════════════════════════════════════════════════════════
-  // RECUPERACION: Generar magic link
-  // ═════════════════════════════════════════════════════════════════
   async generarMagicLink(correo) {
     const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
-    if (!usuario) {
-      throw new Error('Usuario no encontrado');
-    }
+    if (!usuario) throw new Error('Usuario no encontrado');
 
     const token = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    const expiraEn = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
+    const expiraEn = new Date(Date.now() + 15 * 60 * 1000);
 
     await passkeyRepositorio.guardarMagicLink(usuario.usuario_id, tokenHash, expiraEn);
-
-    return {
-      token,
-      tokenHash,
-      expiraEn
-    };
+    return { token, tokenHash, expiraEn };
   }
 
-  // ═════════════════════════════════════════════════════════════════
-  // RECUPERACION: Verificar magic link
-  // ═════════════════════════════════════════════════════════════════
   async verificarMagicLink(token) {
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const magicLink = await passkeyRepositorio.buscarMagicLink(tokenHash);
-
-    if (!magicLink) {
-      throw new Error('Link invalido o expirado');
-    }
+    if (!magicLink) throw new Error('Link invalido o expirado');
 
     await passkeyRepositorio.marcarMagicLinkUsado(magicLink.id);
-
-    return {
-      usuario_id: magicLink.usuario_id,
-      correo: magicLink.correo_electronico
-    };
+    return { usuario_id: magicLink.usuario_id, correo: magicLink.correo_electronico };
   }
 
-  // ═════════════════════════════════════════════════════════════════
-  // UTILIDAD: Generar token JWT
-  // ═════════════════════════════════════════════════════════════════
   _generarTokenSesion(usuario) {
     return generarToken({
       usuario_id: usuario.usuario_id,
