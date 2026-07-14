@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ACADEMIA-ADDISON — Servicio de Autenticacion Passkeys v6
-// Fix: challenge encoding compatible con @simplewebauthn/server
+// ACADEMIA-ADDISON — Servicio de Autenticacion Passkeys v7
+// Fix: mensaje claro para login sin passkeys, debug challenge
 // ═══════════════════════════════════════════════════════════════════════════
 
 const { 
@@ -17,7 +17,6 @@ const RP_NAME = 'Academia Addison';
 const RP_ID_DEFAULT = 'academia-addison.pages.dev';
 const ORIGIN_DEFAULT = 'https://academia-addison.pages.dev';
 
-// Helper: convertir Uint8Array a base64url string sin padding
 function toBase64url(buffer) {
   return Buffer.from(buffer).toString('base64url').replace(/=+$/, '');
 }
@@ -59,7 +58,6 @@ class PasskeyServicio {
       extensions: { credProps: true }
     });
 
-    // Guardar challenge como base64url string limpio
     const challengeBase64url = toBase64url(options.challenge);
     await passkeyRepositorio.guardarChallenge(correo, challengeBase64url, 'registro');
 
@@ -88,10 +86,11 @@ class PasskeyServicio {
         expectedRPID: rpID
       });
     } catch (err) {
-      console.error('[PASSKEY] Error en verifyRegistrationResponse:', err.message);
-      // Log detallado para debug
+      console.error('[PASSKEY] Error verifyRegistrationResponse:', err.message);
       console.error('[PASSKEY] Challenge guardado:', challengeGuardado);
+      console.error('[PASSKEY] Challenge length:', challengeGuardado.length);
       console.error('[PASSKEY] Respuesta ID:', respuesta.id);
+      console.error('[PASSKEY] Respuesta clientDataJSON:', respuesta.response?.clientDataJSON?.substring(0, 100));
       throw new Error('Verificacion de passkey fallida: ' + err.message);
     }
 
@@ -146,11 +145,26 @@ class PasskeyServicio {
   async generarOpcionesLogin(correo, reqOrigen) {
     const { rpID, origin } = this._getRPConfig(reqOrigen);
     const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
-    if (!usuario) throw new Error('Usuario no encontrado');
-    if (!usuario.passkey_registrado) throw new Error('Usuario sin passkey registrado');
+    if (!usuario) {
+      const error = new Error('Usuario no encontrado');
+      error.status = 404;
+      throw error;
+    }
+    
+    if (!usuario.passkey_registrado) {
+      const error = new Error('Usuario sin passkey registrado. Por favor registra un passkey primero.');
+      error.status = 400;
+      error.code = 'SIN_PASSKEY';
+      throw error;
+    }
 
     const passkeys = await passkeyRepositorio.listarPasskeysPorUsuario(String(usuario.usuario_id));
-    if (passkeys.length === 0) throw new Error('No hay passkeys activos');
+    if (passkeys.length === 0) {
+      const error = new Error('No hay passkeys activos para este usuario. Registra uno nuevo.');
+      error.status = 400;
+      error.code = 'SIN_PASSKEY';
+      throw error;
+    }
 
     const allowCredentials = passkeys.map(pk => ({
       id: Buffer.from(pk.credential_id).toString('base64url'),
@@ -163,7 +177,6 @@ class PasskeyServicio {
       userVerification: 'preferred'
     });
 
-    // Guardar challenge como base64url string limpio
     const challengeBase64url = toBase64url(options.challenge);
     await passkeyRepositorio.guardarChallenge(correo, challengeBase64url, 'login');
 
@@ -199,7 +212,6 @@ class PasskeyServicio {
         }
       });
     } catch (err) {
-      console.error('[PASSKEY] Error en verifyAuthenticationResponse:', err.message);
       throw new Error('Autenticacion fallida: ' + err.message);
     }
 
