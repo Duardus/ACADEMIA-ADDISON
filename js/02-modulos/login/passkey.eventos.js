@@ -266,7 +266,12 @@ function volverAlLogin() {
   });
 }
 
+let loginEnProgreso = false;
+
 async function manejarLogin(correoPrellenado) {
+  if (loginEnProgreso) return;
+  loginEnProgreso = true;
+  try {
   const correo = correoPrellenado || document.getElementById('input-correo')?.value?.trim();
   
   if (!correo) {
