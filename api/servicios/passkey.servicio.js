@@ -1,6 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ACADEMIA-ADDISON — Servicio de Autenticacion Passkeys v9
-// Fix: usar challenge original sin convertir a base64url
+// ACADEMIA-ADDISON — Servicio de Autenticacion Passkeys v11
+// Fix: quitar authenticatorAttachment para permitir cualquier dispositivo
+// Fix: rpID = academia-addison.duckdns.org para coincidir con API
 // ═══════════════════════════════════════════════════════════════════════════
 
 const { 
@@ -15,6 +16,7 @@ const { ErrorApp } = require('../utilidades/errores');
 const crypto = require('crypto');
 
 const RP_NAME = 'Academia Addison';
+// rpID debe coincidir con el dominio donde corre el frontend
 const RP_ID_DEFAULT = 'academia-addison.pages.dev';
 const ORIGIN_DEFAULT = 'https://academia-addison.pages.dev';
 
@@ -49,13 +51,12 @@ class PasskeyServicio {
       attestationType: 'none',
       authenticatorSelection: {
         residentKey: 'preferred',
-        userVerification: 'preferred',
-        authenticatorAttachment: 'platform'
+        userVerification: 'preferred'
+        // SIN authenticatorAttachment para permitir cualquier dispositivo
       },
       extensions: { credProps: true }
     });
 
-    // Guardar challenge directamente como string (ya es base64url)
     const challengeString = options.challenge;
     await passkeyRepositorio.guardarChallenge(correo, challengeString, 'registro');
 
@@ -85,8 +86,6 @@ class PasskeyServicio {
       });
     } catch (err) {
       console.error('[PASSKEY] Error verifyRegistrationResponse:', err.message);
-      console.error('[PASSKEY] Challenge guardado:', challengeGuardado);
-      console.error('[PASSKEY] Challenge del navegador (clientDataJSON):', respuesta.response?.clientDataJSON);
       throw new ErrorApp('Verificacion de passkey fallida: ' + err.message, 400, 'VERIFICACION_FALLIDA');
     }
 
@@ -106,7 +105,7 @@ class PasskeyServicio {
       Buffer.from(credential.id),
       Buffer.from(credential.publicKey),
       'Dispositivo Local',
-      'platform'
+      'cross-platform'
     );
 
     await passkeyRepositorio.actualizarPasskeyRegistrado(usuario.usuario_id);
@@ -165,7 +164,6 @@ class PasskeyServicio {
       userVerification: 'preferred'
     });
 
-    // Guardar challenge directamente como string
     const challengeString = options.challenge;
     await passkeyRepositorio.guardarChallenge(correo, challengeString, 'login');
 
