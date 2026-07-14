@@ -19,7 +19,7 @@ async function iniciarLogin({ onLoginExitoso, onError }) {
 
 async function manejarClickLogin({ onLoginExitoso, onError }) {
   try {
-    const resultado = await auth.signInWithPopup(googleProvider);
+    const resultado = await auth.signInWithRedirect(googleProvider);
 
     if (!resultado.user) {
       throw new Error('No se obtuvo usuario de Firebase');

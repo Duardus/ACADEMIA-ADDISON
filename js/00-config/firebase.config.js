@@ -1,5 +1,5 @@
 /* ============================================
-   🔥 CONFIGURACIÓN FIREBASE - Solo Auth
+   🔥 CONFIGURACIÓN FIREBASE - Academia Addison Live
    ============================================ */
 
 var FIREBASE_CONFIG = {
@@ -8,8 +8,8 @@ var FIREBASE_CONFIG = {
   projectId: "academia-adison",
   storageBucket: "academia-adison.firebasestorage.app",
   messagingSenderId: "92334581820",
-  appId: "1:92334581820:web:5e456f7c475119db95fb39",
-  measurementId: "G-YR4YL6B5WY"
+  appId: "1:92334581820:web:36269f9072ea98e795fb39",
+  measurementId: "G-PSCHY884CH"
 };
 
 // Inicializar Firebase

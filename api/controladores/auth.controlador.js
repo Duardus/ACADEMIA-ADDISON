@@ -7,7 +7,7 @@ const { exito, respuestaError } = require('../utilidades/respuesta');
 
 async function login(req, res, next) {
   try {
-    const { token } = req.body;
+    const token = req.body.token || req.body.token_firebase;
     if (!token) {
       return res.status(400).json(respuestaError('Token de Firebase requerido', 400));
     }
