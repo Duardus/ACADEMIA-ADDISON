@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ACADEMIA-ADDISON — Servicio de Autenticacion Passkeys v5
-// Challenge guardado como string base64url, no BYTEA
+// ACADEMIA-ADDISON — Servicio de Autenticacion Passkeys v6
+// Fix: challenge encoding compatible con @simplewebauthn/server
 // ═══════════════════════════════════════════════════════════════════════════
 
 const { 
@@ -16,6 +16,11 @@ const crypto = require('crypto');
 const RP_NAME = 'Academia Addison';
 const RP_ID_DEFAULT = 'academia-addison.pages.dev';
 const ORIGIN_DEFAULT = 'https://academia-addison.pages.dev';
+
+// Helper: convertir Uint8Array a base64url string sin padding
+function toBase64url(buffer) {
+  return Buffer.from(buffer).toString('base64url').replace(/=+$/, '');
+}
 
 class PasskeyServicio {
 
@@ -54,8 +59,8 @@ class PasskeyServicio {
       extensions: { credProps: true }
     });
 
-    // Guardar challenge como base64url string
-    const challengeBase64url = Buffer.from(options.challenge).toString('base64url');
+    // Guardar challenge como base64url string limpio
+    const challengeBase64url = toBase64url(options.challenge);
     await passkeyRepositorio.guardarChallenge(correo, challengeBase64url, 'registro');
 
     return {
@@ -84,6 +89,9 @@ class PasskeyServicio {
       });
     } catch (err) {
       console.error('[PASSKEY] Error en verifyRegistrationResponse:', err.message);
+      // Log detallado para debug
+      console.error('[PASSKEY] Challenge guardado:', challengeGuardado);
+      console.error('[PASSKEY] Respuesta ID:', respuesta.id);
       throw new Error('Verificacion de passkey fallida: ' + err.message);
     }
 
@@ -155,8 +163,8 @@ class PasskeyServicio {
       userVerification: 'preferred'
     });
 
-    // Guardar challenge como base64url string
-    const challengeBase64url = Buffer.from(options.challenge).toString('base64url');
+    // Guardar challenge como base64url string limpio
+    const challengeBase64url = toBase64url(options.challenge);
     await passkeyRepositorio.guardarChallenge(correo, challengeBase64url, 'login');
 
     return { exito: true, options };
@@ -191,6 +199,7 @@ class PasskeyServicio {
         }
       });
     } catch (err) {
+      console.error('[PASSKEY] Error en verifyAuthenticationResponse:', err.message);
       throw new Error('Autenticacion fallida: ' + err.message);
     }
 
