@@ -49,7 +49,7 @@ function renderizarPantallaPasskey({ onLogin, onError }) {
           <div id="seccion-login" style="margin-bottom:20px;">
             <input type="email" id="correo-login" placeholder="Tu correo electrónico" 
               style="width:100%;padding:10px;margin-bottom:10px;border-radius:6px;border:1px solid var(--borde);background:var(--superficie-2);color:var(--texto-principal);">
-            <button class="btn" id="btn-login-passkey" style="width:100%;">
+            <button class="btn" id="btn-login-passkey" style="width:100%;" onclick="manejarLoginPasskey(event)">
               <span style="margin-right:8px;">🔐</span> Acceder con Passkey
             </button>
           </div>
@@ -65,7 +65,7 @@ function renderizarPantallaPasskey({ onLogin, onError }) {
               style="width:100%;padding:10px;margin-bottom:8px;border-radius:6px;border:1px solid var(--borde);background:var(--superficie-2);color:var(--texto-principal);">
             <input type="text" id="nombre-registro" placeholder="Tu nombre completo" 
               style="width:100%;padding:10px;margin-bottom:10px;border-radius:6px;border:1px solid var(--borde);background:var(--superficie-2);color:var(--texto-principal);">
-            <button class="btn btn-secundario" id="btn-registro-passkey" style="width:100%;">
+            <button class="btn btn-secundario" id="btn-registro-passkey" style="width:100%;" onclick="manejarRegistroPasskey(event)">
               <span style="margin-right:8px;">✨</span> Crear cuenta con Passkey
             </button>
           </div>
@@ -77,15 +77,6 @@ function renderizarPantallaPasskey({ onLogin, onError }) {
       </div>
     </div>
   `;
-  
-  // Los event listeners se agregan en passkey.eventos.js (DOMContentLoaded)
-  // Pero por si acaso, verificar que los botones existen
-  const btnLogin = document.getElementById('btn-login-passkey');
-  const btnRegistro = document.getElementById('btn-registro-passkey');
-  
-  if (!btnLogin || !btnRegistro) {
-    console.error('[LOGIN.UI] Botones no encontrados después de renderizar');
-  }
 }
 
 function renderizarSelectorInstituciones({ membresias, onSelect }) {

@@ -1,22 +1,22 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ACADEMIA-ADDISON — Eventos Passkeys v14
-// Unificacion: login detecta si necesita registro, ofrece crear passkey
+// ACADEMIA-ADDISON — Eventos Passkeys v15
+// Fix: funciones globales puras, onclick inline en HTML, sin DOMContentLoaded
 // ═══════════════════════════════════════════════════════════════════════════
 
 (function() {
   'use strict';
 
-  let registroEnProceso = false;
-  let loginEnProceso = false;
+  window.registroEnProceso = false;
+  window.loginEnProceso = false;
 
   // ─── REGISTRO ─────────────────────────────────────────────────────────
 
-  async function iniciarRegistroPasskey(correo, nombre) {
-    if (registroEnProceso) {
+  window.iniciarRegistroPasskey = async function(correo, nombre) {
+    if (window.registroEnProceso) {
       mostrarNotificacion('warning', '⏳ Registro en proceso, espera...');
       return;
     }
-    registroEnProceso = true;
+    window.registroEnProceso = true;
 
     try {
       if (!window.PublicKeyCredential) {
@@ -24,14 +24,12 @@
         return;
       }
 
-      // 1. Obtener opciones del servidor
       const respuestaOpciones = await apiPasskeyRegistroOpciones(correo, nombre);
       if (!respuestaOpciones || !respuestaOpciones.exito) {
         mostrarNotificacion('error', (respuestaOpciones && respuestaOpciones.mensaje) || 'Error al obtener opciones de registro');
         return;
       }
 
-      // 2. Convertir challenge y user.id de base64url a ArrayBuffer
       const options = JSON.parse(JSON.stringify(respuestaOpciones.options));
       if (typeof options.challenge === 'string') {
         options.challenge = PASSKEY_CONFIG.base64URLToBuffer(options.challenge);
@@ -40,7 +38,6 @@
         options.user.id = PASSKEY_CONFIG.base64URLToBuffer(options.user.id);
       }
 
-      // 3. Crear credencial con WebAuthn
       const credential = await navigator.credentials.create({ publicKey: options });
       
       if (!credential) {
@@ -48,7 +45,6 @@
         return;
       }
 
-      // 4. Preparar respuesta para el servidor
       const respuestaCliente = {
         id: PASSKEY_CONFIG.bufferToBase64URL(credential.rawId),
         rawId: PASSKEY_CONFIG.bufferToBase64URL(credential.rawId),
@@ -59,11 +55,9 @@
         type: credential.type
       };
 
-      // 5. Verificar con el servidor
       const verificacion = await apiPasskeyRegistroVerificar(correo, respuestaCliente);
       
       if (verificacion && verificacion.exito) {
-        // ÉXITO — guardar sesión y redirigir
         if (typeof guardarToken === 'function') guardarToken(verificacion.token_sesion);
         if (typeof guardarUsuario === 'function') guardarUsuario(verificacion.usuario);
         if (typeof guardarCorreoRecordado === 'function') guardarCorreoRecordado(correo);
@@ -78,29 +72,26 @@
 
     } catch (error) {
       console.error('[PASSKEY REGISTRO] Error:', error);
-      
       if (error.name === 'NotAllowedError') {
-        mostrarNotificacion('warning', '⚠️ Registro cancelado. Si no ves opción de PIN/huella, elige tu dispositivo en la lista.');
+        mostrarNotificacion('warning', '⚠️ Registro cancelado. Elige tu dispositivo en la lista.');
       } else if (error.name === 'AbortError') {
-        mostrarNotificacion('info', 'ℹ️ Registro cancelado por el usuario.');
-      } else if (error.message && error.message.includes('SESION_EXPIRADA')) {
-        mostrarNotificacion('error', '❌ Sesión expirada. Por favor recarga la página.');
+        mostrarNotificacion('info', 'ℹ️ Registro cancelado.');
       } else {
-        mostrarNotificacion('error', '❌ Error: ' + (error.message || 'Error desconocido en registro'));
+        mostrarNotificacion('error', '❌ Error: ' + (error.message || 'Error desconocido'));
       }
     } finally {
-      registroEnProceso = false;
+      window.registroEnProceso = false;
     }
-  }
+  };
 
   // ─── LOGIN ──────────────────────────────────────────────────────────────
 
-  async function iniciarLoginPasskey(correo) {
-    if (loginEnProceso) {
+  window.iniciarLoginPasskey = async function(correo) {
+    if (window.loginEnProceso) {
       mostrarNotificacion('warning', '⏳ Login en proceso, espera...');
       return;
     }
-    loginEnProceso = true;
+    window.loginEnProceso = true;
 
     try {
       if (!window.PublicKeyCredential) {
@@ -108,19 +99,13 @@
         return;
       }
 
-      // 1. Obtener opciones de login
       const respuestaOpciones = await apiPasskeyLoginOpciones(correo);
       
-      // Si el servidor dice que necesita registro primero
       if (respuestaOpciones && respuestaOpciones.requiere_registro) {
-        mostrarNotificacion('info', '💡 No tienes passkeys. Vamos a crear uno para ti.');
-        
-        // Pequeña pausa para que el usuario lea el mensaje
+        mostrarNotificacion('info', '💡 No tienes passkeys. Creando uno...');
         await new Promise(r => setTimeout(r, 1500));
-        
-        // Obtener nombre del usuario o pedirlo
         const nombre = respuestaOpciones.nombre || correo.split('@')[0];
-        await iniciarRegistroPasskey(correo, nombre);
+        await window.iniciarRegistroPasskey(correo, nombre);
         return;
       }
       
@@ -129,7 +114,6 @@
         return;
       }
 
-      // 2. Convertir challenge y allowCredentials
       const options = JSON.parse(JSON.stringify(respuestaOpciones.options));
       if (typeof options.challenge === 'string') {
         options.challenge = PASSKEY_CONFIG.base64URLToBuffer(options.challenge);
@@ -143,7 +127,6 @@
         });
       }
 
-      // 3. Solicitar autenticación
       const assertion = await navigator.credentials.get({ publicKey: options });
       
       if (!assertion) {
@@ -151,7 +134,6 @@
         return;
       }
 
-      // 4. Preparar respuesta
       const respuestaCliente = {
         id: PASSKEY_CONFIG.bufferToBase64URL(assertion.rawId),
         rawId: PASSKEY_CONFIG.bufferToBase64URL(assertion.rawId),
@@ -164,7 +146,6 @@
         type: assertion.type
       };
 
-      // 5. Verificar con servidor
       const verificacion = await apiPasskeyLoginVerificar(correo, respuestaCliente);
       
       if (verificacion && verificacion.exito) {
@@ -182,22 +163,21 @@
 
     } catch (error) {
       console.error('[PASSKEY LOGIN] Error:', error);
-      
       if (error.name === 'NotAllowedError') {
-        mostrarNotificacion('warning', '⚠️ Autenticación cancelada. Elige tu dispositivo en la lista y sigue las instrucciones.');
+        mostrarNotificacion('warning', '⚠️ Autenticación cancelada. Elige tu dispositivo en la lista.');
       } else if (error.name === 'AbortError') {
-        mostrarNotificacion('info', 'ℹ️ Login cancelado por el usuario.');
+        mostrarNotificacion('info', 'ℹ️ Login cancelado.');
       } else {
-        mostrarNotificacion('error', '❌ Error: ' + (error.message || 'Error desconocido en login'));
+        mostrarNotificacion('error', '❌ Error: ' + (error.message || 'Error desconocido'));
       }
     } finally {
-      loginEnProceso = false;
+      window.loginEnProceso = false;
     }
-  }
+  };
 
-  // ─── MANEJADORES DE BOTONES ────────────────────────────────────────────
+  // ─── MANEJADORES DE BOTONES (onclick inline) ───────────────────────────
 
-  function manejarRegistro(evento) {
+  window.manejarRegistroPasskey = function(evento) {
     if (evento) evento.preventDefault();
     var correo = document.getElementById('correo-registro');
     var nombre = document.getElementById('nombre-registro');
@@ -214,10 +194,10 @@
       return;
     }
 
-    iniciarRegistroPasskey(correo, nombre);
-  }
+    window.iniciarRegistroPasskey(correo, nombre);
+  };
 
-  function manejarLogin(evento) {
+  window.manejarLoginPasskey = function(evento) {
     if (evento) evento.preventDefault();
     var correo = document.getElementById('correo-login');
     correo = correo ? correo.value.trim() : '';
@@ -231,28 +211,7 @@
       return;
     }
 
-    iniciarLoginPasskey(correo);
-  }
-
-  // ─── EXPONER FUNCIONES GLOBALMENTE ─────────────────────────────────────
-
-  window.iniciarRegistroPasskey = iniciarRegistroPasskey;
-  window.iniciarLoginPasskey = iniciarLoginPasskey;
-  window.manejarRegistroPasskey = manejarRegistro;
-  window.manejarLoginPasskey = manejarLogin;
-
-  // ─── INICIALIZACIÓN AUTOMÁTICA ─────────────────────────────────────────
-
-  document.addEventListener('DOMContentLoaded', function() {
-    var btnRegistro = document.getElementById('btn-registro-passkey');
-    var btnLogin = document.getElementById('btn-login-passkey');
-
-    if (btnRegistro) {
-      btnRegistro.addEventListener('click', manejarRegistro);
-    }
-    if (btnLogin) {
-      btnLogin.addEventListener('click', manejarLogin);
-    }
-  });
+    window.iniciarLoginPasskey(correo);
+  };
 
 })();
