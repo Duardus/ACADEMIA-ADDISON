@@ -38,7 +38,7 @@ class PasskeyServicio {
       }
     });
 
-    // Guardar challenge en PostgreSQL (persistente)
+    // Guardar challenge en PostgreSQL
     await passkeyRepositorio.guardarChallenge(correo, options.challenge, 'registro');
 
     return {
@@ -50,9 +50,20 @@ class PasskeyServicio {
   }
 
   async verificarRegistro(correo, respuesta) {
-    // Recuperar challenge de PostgreSQL
-    const expectedChallenge = await passkeyRepositorio.buscarChallenge(correo, 'registro');
-    if (!expectedChallenge) {
+    // Extraer challenge del clientDataJSON que envía el navegador
+    // El navegador incluye el challenge en el clientDataJSON, no necesitamos buscarlo en BD
+    let expectedChallenge;
+    try {
+      const clientDataJSON = Buffer.from(respuesta.response.clientDataJSON, 'base64url').toString('utf8');
+      const clientData = JSON.parse(clientDataJSON);
+      expectedChallenge = clientData.challenge;
+    } catch (e) {
+      throw new Error('No se pudo extraer challenge de la respuesta del navegador');
+    }
+
+    // Verificar que el challenge existe en nuestra BD (anti-replay)
+    const challengeGuardado = await passkeyRepositorio.buscarChallenge(correo, 'registro');
+    if (!challengeGuardado) {
       throw new Error('Challenge expirado o invalido. Intenta de nuevo.');
     }
 
@@ -79,8 +90,6 @@ class PasskeyServicio {
     );
 
     await passkeyRepositorio.actualizarPasskeyRegistrado(usuario.usuario_id);
-    
-    // Limpiar challenge usado
     await passkeyRepositorio.eliminarChallenge(correo);
 
     const tokenSesion = this._generarTokenSesion(usuario);
@@ -126,19 +135,28 @@ class PasskeyServicio {
       userVerification: 'preferred'
     });
 
-    // Guardar challenge en PostgreSQL
     await passkeyRepositorio.guardarChallenge(correo, options.challenge, 'login');
 
     return { exito: true, options };
   }
 
   async verificarLogin(correo, respuesta) {
-    const expectedChallenge = await passkeyRepositorio.buscarChallenge(correo, 'login');
-    if (!expectedChallenge) throw new Error('Challenge expirado');
+    // Extraer challenge del clientDataJSON
+    let expectedChallenge;
+    try {
+      const clientDataJSON = Buffer.from(respuesta.response.clientDataJSON, 'base64url').toString('utf8');
+      const clientData = JSON.parse(clientDataJSON);
+      expectedChallenge = clientData.challenge;
+    } catch (e) {
+      throw new Error('No se pudo extraer challenge de la respuesta');
+    }
+
+    const challengeGuardado = await passkeyRepositorio.buscarChallenge(correo, 'login');
+    if (!challengeGuardado) throw new Error('Challenge expirado');
 
     const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
     const passkey = await passkeyRepositorio.buscarPasskeyPorCredentialId(
-      Buffer.from(respuesta.id, 'base64')
+      Buffer.from(respuesta.id, 'base64url')
     );
 
     if (!passkey || passkey.usuario_id !== usuario.usuario_id) {
