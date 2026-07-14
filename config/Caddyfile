@@ -1,0 +1,16 @@
+academia-addison.duckdns.org {
+    handle /api/* {
+        reverse_proxy localhost:3000 {
+            header_up Host {host}
+            header_up X-Real-IP {remote}
+            header_up X-Forwarded-For {remote}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+    handle /livekit/* {
+        reverse_proxy localhost:7880
+    }
+    handle {
+        respond "Academia Addison API v3.0" 200
+    }
+}
