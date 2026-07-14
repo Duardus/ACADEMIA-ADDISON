@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ACADEMIA-ADDISON — Servicio de Autenticacion Passkeys v14
-// Unificacion: usuarios Google pueden registrar passkey. Login con allowCredentials.
+// ACADEMIA-ADDISON — Servicio de Autenticacion Passkeys v15
+// Fix: rpID forzado a academia-addison.pages.dev (dominio del frontend)
 // ═══════════════════════════════════════════════════════════════════════════
 
 const { 
@@ -15,33 +15,14 @@ const { ErrorApp } = require('../utilidades/errores');
 const crypto = require('crypto');
 
 const RP_NAME = 'Academia Addison';
-const RP_ID_DEFAULT = 'academia-addison.pages.dev';
-const ORIGIN_DEFAULT = 'https://academia-addison.pages.dev';
+// FORZADO: rpID debe ser el dominio donde corre el frontend
+const RP_ID = 'academia-addison.pages.dev';
+const ORIGIN = 'https://academia-addison.pages.dev';
 
 class PasskeyServicio {
 
-  _getRPConfig(reqOrigen) {
-    let rpID = RP_ID_DEFAULT;
-    let origin = ORIGIN_DEFAULT;
-    if (reqOrigen) {
-      try {
-        const url = new URL(reqOrigen);
-        rpID = url.hostname;
-        origin = url.origin;
-      } catch(e) {}
-    }
-    return { rpID, origin };
-  }
-
-  // ─── REGISTRO ─────────────────────────────────────────────────────────
-
   async generarOpcionesRegistro(correo, nombre, reqOrigen) {
-    const { rpID, origin } = this._getRPConfig(reqOrigen);
-    
-    // Buscar usuario existente (Google o passkey)
     let usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
-    
-    // Si no existe, crear nuevo
     if (!usuario) {
       if (!nombre || nombre.trim() === '') {
         throw new ErrorApp('Nombre requerido para crear cuenta', 400, 'NOMBRE_REQUERIDO');
@@ -51,7 +32,7 @@ class PasskeyServicio {
 
     const options = await generateRegistrationOptions({
       rpName: RP_NAME,
-      rpID: rpID,
+      rpID: RP_ID,
       userID: Buffer.from(String(usuario.usuario_id)),
       userName: correo,
       userDisplayName: usuario.nombre_completo || nombre || correo,
@@ -63,7 +44,6 @@ class PasskeyServicio {
       extensions: { credProps: true }
     });
 
-    // Si ya tiene passkeys, excluirlos para no duplicar
     const passkeysExistentes = await passkeyRepositorio.listarPasskeysPorUsuario(String(usuario.usuario_id));
     if (passkeysExistentes.length > 0) {
       options.excludeCredentials = passkeysExistentes.map(pk => ({
@@ -85,8 +65,6 @@ class PasskeyServicio {
   }
 
   async verificarRegistro(correo, respuesta, reqOrigen) {
-    const { rpID, origin } = this._getRPConfig(reqOrigen);
-    
     const challengeGuardado = await passkeyRepositorio.buscarChallenge(correo, 'registro');
     if (!challengeGuardado) {
       throw new ErrorApp('Challenge expirado o invalido. Intenta de nuevo.', 400, 'CHALLENGE_EXPIRADO');
@@ -97,8 +75,8 @@ class PasskeyServicio {
       verification = await verifyRegistrationResponse({
         response: respuesta,
         expectedChallenge: challengeGuardado,
-        expectedOrigin: origin,
-        expectedRPID: rpID
+        expectedOrigin: ORIGIN,
+        expectedRPID: RP_ID
       });
     } catch (err) {
       console.error('[PASSKEY] Error verifyRegistrationResponse:', err.message);
@@ -153,10 +131,7 @@ class PasskeyServicio {
     };
   }
 
-  // ─── LOGIN ──────────────────────────────────────────────────────────────
-
   async generarOpcionesLogin(correo, reqOrigen) {
-    const { rpID, origin } = this._getRPConfig(reqOrigen);
     const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
     
     if (!usuario) {
@@ -165,7 +140,6 @@ class PasskeyServicio {
 
     const passkeys = await passkeyRepositorio.listarPasskeysPorUsuario(String(usuario.usuario_id));
     
-    // Si no tiene passkeys, permitirle registrar uno (flujo hibrido Google→Passkey)
     if (passkeys.length === 0) {
       return {
         exito: true,
@@ -183,7 +157,7 @@ class PasskeyServicio {
     }));
 
     const options = await generateAuthenticationOptions({
-      rpID: rpID,
+      rpID: RP_ID,
       allowCredentials,
       userVerification: 'preferred'
     });
@@ -199,8 +173,6 @@ class PasskeyServicio {
   }
 
   async verificarLogin(correo, respuesta, reqOrigen) {
-    const { rpID, origin } = this._getRPConfig(reqOrigen);
-    
     const challengeGuardado = await passkeyRepositorio.buscarChallenge(correo, 'login');
     if (!challengeGuardado) throw new ErrorApp('Challenge expirado', 400, 'CHALLENGE_EXPIRADO');
 
@@ -218,8 +190,8 @@ class PasskeyServicio {
       verification = await verifyAuthenticationResponse({
         response: respuesta,
         expectedChallenge: challengeGuardado,
-        expectedOrigin: origin,
-        expectedRPID: rpID,
+        expectedOrigin: ORIGIN,
+        expectedRPID: RP_ID,
         authenticator: {
           credentialID: passkey.credential_id,
           credentialPublicKey: passkey.public_key,
@@ -264,8 +236,6 @@ class PasskeyServicio {
       }
     };
   }
-
-  // ─── MAGIC LINK (recuperacion) ─────────────────────────────────────────
 
   async generarMagicLink(correo) {
     const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
