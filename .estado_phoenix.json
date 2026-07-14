@@ -1,20 +1,14 @@
 {
   "proyecto": "ACADEMIA-ADDISON",
-  "protocolo": "PHOENIX-GIST-NINJA",
-  "fase_actual": 6,
-  "fases": {
-    "1_cimientos": {"estado": "completada", "inicio": "2026-07-13", "fin": "2026-07-14"},
-    "2_utilidades": {"estado": "completada", "inicio": "2026-07-14", "fin": "2026-07-14"},
-    "3_repositorios": {"estado": "completada", "inicio": "2026-07-14", "fin": "2026-07-14"},
-    "4_servicios": {"estado": "completada", "inicio": "2026-07-14", "fin": "2026-07-14"},
-    "5_controladores": {"estado": "completada", "inicio": "2026-07-14", "fin": "2026-07-14"},
-    "6_entrypoint": {"estado": "completada", "inicio": "2026-07-14", "fin": "2026-07-14"}
+  "estado": "MIGRACION_PATRON_STRANGLER",
+  "arquitectura": "DDD-Modular",
+  "mapa_carpetas": {
+    "cliente": "/frontend",
+    "servidor": "/backend"
   },
-  "stack": {
-    "auth": "passkeys_pure_v2",
-    "db": "postgresql",
-    "backend": "nodejs",
-    "frontend": "cloudflare_pages"
-  },
-  "notas": "Tablas passkey creadas. RP_ID/ORIGIN dinamicos. Fix NotAllowedError."
+  "reglas_inquebrantables": [
+    "CERO redundancia",
+    "Frontend y Backend aislados",
+    "Migración via copia (Patrón Strangler)"
+  ]
 }
