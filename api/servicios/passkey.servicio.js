@@ -1,7 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ACADEMIA-ADDISON — Servicio de Autenticacion Passkeys v11
-// Fix: quitar authenticatorAttachment para permitir cualquier dispositivo
-// Fix: rpID = academia-addison.duckdns.org para coincidir con API
+// ACADEMIA-ADDISON — Servicio de Autenticacion Passkeys v14
+// Unificacion: usuarios Google pueden registrar passkey. Login con allowCredentials.
 // ═══════════════════════════════════════════════════════════════════════════
 
 const { 
@@ -16,7 +15,6 @@ const { ErrorApp } = require('../utilidades/errores');
 const crypto = require('crypto');
 
 const RP_NAME = 'Academia Addison';
-// rpID debe coincidir con el dominio donde corre el frontend
 const RP_ID_DEFAULT = 'academia-addison.pages.dev';
 const ORIGIN_DEFAULT = 'https://academia-addison.pages.dev';
 
@@ -35,10 +33,19 @@ class PasskeyServicio {
     return { rpID, origin };
   }
 
+  // ─── REGISTRO ─────────────────────────────────────────────────────────
+
   async generarOpcionesRegistro(correo, nombre, reqOrigen) {
     const { rpID, origin } = this._getRPConfig(reqOrigen);
+    
+    // Buscar usuario existente (Google o passkey)
     let usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
+    
+    // Si no existe, crear nuevo
     if (!usuario) {
+      if (!nombre || nombre.trim() === '') {
+        throw new ErrorApp('Nombre requerido para crear cuenta', 400, 'NOMBRE_REQUERIDO');
+      }
       usuario = await passkeyRepositorio.crearUsuario(correo, nombre);
     }
 
@@ -47,15 +54,23 @@ class PasskeyServicio {
       rpID: rpID,
       userID: Buffer.from(String(usuario.usuario_id)),
       userName: correo,
-      userDisplayName: nombre || correo,
+      userDisplayName: usuario.nombre_completo || nombre || correo,
       attestationType: 'none',
       authenticatorSelection: {
         residentKey: 'preferred',
         userVerification: 'preferred'
-        // SIN authenticatorAttachment para permitir cualquier dispositivo
       },
       extensions: { credProps: true }
     });
+
+    // Si ya tiene passkeys, excluirlos para no duplicar
+    const passkeysExistentes = await passkeyRepositorio.listarPasskeysPorUsuario(String(usuario.usuario_id));
+    if (passkeysExistentes.length > 0) {
+      options.excludeCredentials = passkeysExistentes.map(pk => ({
+        id: Buffer.from(pk.credential_id).toString('base64url'),
+        type: 'public-key'
+      }));
+    }
 
     const challengeString = options.challenge;
     await passkeyRepositorio.guardarChallenge(correo, challengeString, 'registro');
@@ -64,7 +79,8 @@ class PasskeyServicio {
       exito: true,
       options,
       usuario_id: usuario.usuario_id,
-      es_nuevo: !usuario.passkey_registrado
+      es_nuevo: !usuario.passkey_registrado,
+      tiene_passkeys: passkeysExistentes.length
     };
   }
 
@@ -137,20 +153,28 @@ class PasskeyServicio {
     };
   }
 
+  // ─── LOGIN ──────────────────────────────────────────────────────────────
+
   async generarOpcionesLogin(correo, reqOrigen) {
     const { rpID, origin } = this._getRPConfig(reqOrigen);
     const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
-    if (!usuario) {
-      throw new ErrorApp('Usuario no encontrado', 404, 'USUARIO_NO_ENCONTRADO');
-    }
     
-    if (!usuario.passkey_registrado) {
-      throw new ErrorApp('Usuario sin passkey registrado. Por favor registra un passkey primero.', 400, 'SIN_PASSKEY');
+    if (!usuario) {
+      throw new ErrorApp('Usuario no encontrado. Crea una cuenta primero.', 404, 'USUARIO_NO_ENCONTRADO');
     }
 
     const passkeys = await passkeyRepositorio.listarPasskeysPorUsuario(String(usuario.usuario_id));
+    
+    // Si no tiene passkeys, permitirle registrar uno (flujo hibrido Google→Passkey)
     if (passkeys.length === 0) {
-      throw new ErrorApp('No hay passkeys activos para este usuario. Registra uno nuevo.', 400, 'SIN_PASSKEY');
+      return {
+        exito: true,
+        requiere_registro: true,
+        mensaje: 'No tienes passkeys registrados. Registra uno ahora.',
+        usuario_id: usuario.usuario_id,
+        correo: usuario.correo_electronico,
+        nombre: usuario.nombre_completo
+      };
     }
 
     const allowCredentials = passkeys.map(pk => ({
@@ -167,7 +191,11 @@ class PasskeyServicio {
     const challengeString = options.challenge;
     await passkeyRepositorio.guardarChallenge(correo, challengeString, 'login');
 
-    return { exito: true, options };
+    return { 
+      exito: true, 
+      requiere_registro: false,
+      options 
+    };
   }
 
   async verificarLogin(correo, respuesta, reqOrigen) {
@@ -236,6 +264,8 @@ class PasskeyServicio {
       }
     };
   }
+
+  // ─── MAGIC LINK (recuperacion) ─────────────────────────────────────────
 
   async generarMagicLink(correo) {
     const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);

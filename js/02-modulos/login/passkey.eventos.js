@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ACADEMIA-ADDISON — Eventos Passkeys v13
-// Fix: script normal (NO ES modules), compatible con <script src="">
+// ACADEMIA-ADDISON — Eventos Passkeys v14
+// Unificacion: login detecta si necesita registro, ofrece crear passkey
 // ═══════════════════════════════════════════════════════════════════════════
 
 (function() {
@@ -68,12 +68,11 @@
         if (typeof guardarUsuario === 'function') guardarUsuario(verificacion.usuario);
         if (typeof guardarCorreoRecordado === 'function') guardarCorreoRecordado(correo);
         
-        mostrarNotificacion('exito', '✅ ¡Cuenta creada exitosamente! Bienvenido.');
+        mostrarNotificacion('exito', '✅ ¡Passkey creado exitosamente! Bienvenido.');
         setTimeout(function() {
           window.location.href = '/dashboard.html';
         }, 1500);
       } else {
-        // ERROR del servidor
         mostrarNotificacion('error', (verificacion && verificacion.mensaje) || 'Error al verificar el passkey');
       }
 
@@ -111,6 +110,20 @@
 
       // 1. Obtener opciones de login
       const respuestaOpciones = await apiPasskeyLoginOpciones(correo);
+      
+      // Si el servidor dice que necesita registro primero
+      if (respuestaOpciones && respuestaOpciones.requiere_registro) {
+        mostrarNotificacion('info', '💡 No tienes passkeys. Vamos a crear uno para ti.');
+        
+        // Pequeña pausa para que el usuario lea el mensaje
+        await new Promise(r => setTimeout(r, 1500));
+        
+        // Obtener nombre del usuario o pedirlo
+        const nombre = respuestaOpciones.nombre || correo.split('@')[0];
+        await iniciarRegistroPasskey(correo, nombre);
+        return;
+      }
+      
       if (!respuestaOpciones || !respuestaOpciones.exito) {
         mostrarNotificacion('error', (respuestaOpciones && respuestaOpciones.mensaje) || 'Error al obtener opciones de login');
         return;

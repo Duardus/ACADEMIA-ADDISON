@@ -1,5 +1,5 @@
 /* ============================================
-   📱 APP.JS - Orquestador Passkeys
+   📱 APP.JS - Orquestador Passkeys Puro
    ============================================ */
 
 class App {
@@ -142,7 +142,7 @@ class App {
 }
 
 let app;
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function() {
   app = new App();
   app.iniciar();
 });
