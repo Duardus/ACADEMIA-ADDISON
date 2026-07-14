@@ -7,14 +7,14 @@ async function peticion(url, opciones) {
   var controller = new AbortController();
   var timer = setTimeout(function() { controller.abort(); }, API_CONFIG.TIMEOUT);
 
-  // Intentar con URL principal
-  var urlPrincipal = url;
-  if (url.indexOf('http') !== 0) {
-    urlPrincipal = API_CONFIG.BASE_URL + url;
+  // URL relativa: /api/v1/... → Cloudflare Pages proxy al backend
+  var urlCompleta = url;
+  if (url.indexOf('http') !== 0 && url.indexOf('/api/') !== 0) {
+    urlCompleta = API_CONFIG.BASE_URL + url;
   }
 
   try {
-    var respuesta = await fetch(urlPrincipal, {
+    var respuesta = await fetch(urlCompleta, {
       signal: controller.signal,
       headers: Object.assign({}, API_CONFIG.getHeaders(), opciones.headers || {}),
       method: opciones.method || 'GET',
@@ -47,51 +47,6 @@ async function peticion(url, opciones) {
 
   } catch (error) {
     clearTimeout(timer);
-    
-    // Si falló por DNS o conexión, intentar con fallback (IP directa)
-    if ((error.message && error.message.includes('Failed to fetch')) || 
-        (error.name === 'TypeError')) {
-      
-      var urlFallback = urlPrincipal.replace('academia-addison.duckdns.org', '163.176.235.27');
-      
-      // Solo intentar fallback si la URL cambió
-      if (urlFallback !== urlPrincipal) {
-        console.log('[PETICIONES] Fallback a IP directa:', urlFallback);
-        try {
-          var respuestaFallback = await fetch(urlFallback, {
-            headers: Object.assign({}, API_CONFIG.getHeaders(), opciones.headers || {}),
-            method: opciones.method || 'GET',
-            body: opciones.body
-          });
-          
-          if (respuestaFallback.status === 401) {
-            limpiarSesion();
-            throw new Error('SESION_EXPIRADA');
-          }
-
-          var jsonFallback = await respuestaFallback.json();
-
-          if (jsonFallback.exito === false && jsonFallback.error) {
-            var errFallback = new Error(jsonFallback.error.mensaje || jsonFallback.error || 'Error desconocido');
-            errFallback.codigo = jsonFallback.error.codigo || 'ERROR_DESCONOCIDO';
-            errFallback.status = respuestaFallback.status;
-            throw errFallback;
-          }
-
-          if (!respuestaFallback.ok) {
-            var errFallback2 = new Error(jsonFallback.error && jsonFallback.error.mensaje ? jsonFallback.error.mensaje : (jsonFallback.mensaje || 'HTTP ' + respuestaFallback.status));
-            errFallback2.status = respuestaFallback.status;
-            throw errFallback2;
-          }
-
-          return jsonFallback.datos !== undefined ? jsonFallback.datos : jsonFallback;
-          
-        } catch (fallbackError) {
-          console.error('[PETICIONES] Fallback también falló:', fallbackError.message);
-          throw new Error('No se pudo conectar con el servidor. Verifica tu conexión a internet.');
-        }
-      }
-    }
     
     if (error.name === 'AbortError') {
       throw new Error('TIMEOUT: El servidor no respondió a tiempo');

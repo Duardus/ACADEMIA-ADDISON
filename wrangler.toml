@@ -1,9 +1,0 @@
-name = "academia-addison"
-compatibility_date = "2026-07-14"
-
-[build]
-command = ""
-
-[[env.production.routes]]
-pattern = "academia-addison.pages.dev/*"
-custom_domain = false

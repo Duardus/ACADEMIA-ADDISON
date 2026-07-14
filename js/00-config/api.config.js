@@ -3,7 +3,7 @@
    ============================================ */
 
 var API_CONFIG = {
-  // URL relativa - el Worker proxy redirige al backend
+  // URL relativa - Cloudflare Pages Functions hace proxy al backend
   BASE_URL: '/api/v1',
   
   TIMEOUT: 15000,
