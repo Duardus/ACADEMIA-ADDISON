@@ -49,7 +49,6 @@ class PasskeyServicio {
   }
 
   async verificarRegistro(correo, respuesta) {
-    // Extraer challenge del clientDataJSON que envía el navegador
     let expectedChallenge;
     try {
       const clientDataJSON = Buffer.from(respuesta.response.clientDataJSON, 'base64url').toString('utf8');
@@ -59,7 +58,6 @@ class PasskeyServicio {
       throw new Error('No se pudo extraer challenge de la respuesta del navegador');
     }
 
-    // Verificar que el challenge existe en nuestra BD (anti-replay)
     const challengeGuardado = await passkeyRepositorio.buscarChallenge(correo, 'registro');
     if (!challengeGuardado) {
       throw new Error('Challenge expirado o invalido. Intenta de nuevo.');
@@ -84,7 +82,6 @@ class PasskeyServicio {
       throw new Error('Verificacion de passkey no exitosa');
     }
 
-    // En @simplewebauthn/server v9+, el credential está en registrationInfo
     const credential = verification.registrationInfo?.credential;
     if (!credential) {
       throw new Error('No se pudo obtener credential del passkey');
@@ -137,12 +134,17 @@ class PasskeyServicio {
     const passkeys = await passkeyRepositorio.listarPasskeysPorUsuario(usuario.usuario_id);
     if (passkeys.length === 0) throw new Error('No hay passkeys activos');
 
+    // Convertir credential_id de Buffer a base64url string
+    const allowCredentials = passkeys.map(pk => ({
+      id: Buffer.from(pk.credential_id).toString('base64url'),
+      type: 'public-key'
+    }));
+
+    console.log('[PASSKEY] allowCredentials:', allowCredentials.map(c => ({ id: c.id.substring(0, 20) + '...', type: c.type })));
+
     const options = await generateAuthenticationOptions({
       rpID: RP_ID,
-      allowCredentials: passkeys.map(pk => ({
-        id: pk.credential_id,
-        type: 'public-key'
-      })),
+      allowCredentials,
       userVerification: 'preferred'
     });
 
@@ -165,9 +167,10 @@ class PasskeyServicio {
     if (!challengeGuardado) throw new Error('Challenge expirado');
 
     const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
-    const passkey = await passkeyRepositorio.buscarPasskeyPorCredentialId(
-      Buffer.from(respuesta.id, 'base64url')
-    );
+    
+    // Buscar passkey por credential_id (convertir de base64url a Buffer)
+    const credentialIdBuffer = Buffer.from(respuesta.id, 'base64url');
+    const passkey = await passkeyRepositorio.buscarPasskeyPorCredentialId(credentialIdBuffer);
 
     if (!passkey || passkey.usuario_id !== usuario.usuario_id) {
       throw new Error('Passkey no encontrado');
