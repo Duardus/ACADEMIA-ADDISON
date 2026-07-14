@@ -1,39 +1,25 @@
 /* ============================================
-   ARCHIVO: 99-app.js
-   CAPA: Orquestador
+   📱 APP.JS - Orquestador Passkeys
    ============================================ */
 
 class App {
   constructor() {
-    this.firebaseListo = false;
+    this.passkeyListo = false;
   }
 
   async iniciar() {
-    if (typeof firebase === 'undefined' || !auth || !googleProvider) {
-      this.mostrarErrorFatal('Firebase no cargado');
+    // Verificar si WebAuthn está disponible
+    if (!window.PublicKeyCredential) {
+      this.mostrarErrorFatal('Tu navegador no soporta acceso seguro (WebAuthn). Usa Chrome, Edge o Safari actualizado.');
       return;
     }
-    this.firebaseListo = true;
 
-    auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        await this.procesarUsuarioFirebase(user);
-      } else if (haySesionActiva()) {
-        await this.procesarSesionExistente();
-      } else {
-        this.mostrarLogin();
-      }
-    });
-  }
+    this.passkeyListo = true;
 
-  async procesarUsuarioFirebase(userFirebase) {
-    try {
-      const token = await userFirebase.getIdToken(true);
-      const datos = await apiLogin(token);
-      this.manejarRespuestaLogin(datos);
-    } catch (error) {
-      this.mostrarToast(error.message, 'error');
-      await auth.signOut().catch(() => {});
+    // Verificar si hay sesión activa
+    if (haySesionActiva()) {
+      await this.procesarSesionExistente();
+    } else {
       this.mostrarLogin();
     }
   }
@@ -41,7 +27,7 @@ class App {
   async procesarSesionExistente() {
     try {
       const datos = await apiVerificarSesion();
-      this.manejarRespuestaLogin({ tipo: 'login_directo', ...datos });
+      this.manejarRespuestaLogin({ ...datos, tipo: 'login_directo' });
     } catch {
       limpiarSesion();
       this.mostrarLogin();
@@ -49,16 +35,10 @@ class App {
   }
 
   manejarRespuestaLogin(datos) {
-    if (datos.tipo === 'login_directo') {
-      guardarToken(datos.token_sesion);
-      guardarInstitucion(datos.institucion);
-      guardarUsuario(datos.usuario);
+    if (datos.exito || datos.tipo === 'login_directo') {
+      guardarToken(datos.token_sesion || datos.token);
+      if (datos.usuario) guardarUsuario(datos.usuario);
       this.mostrarDashboard();
-    } else if (datos.tipo === 'selector_requerido') {
-      iniciarLogin({
-        onLoginExitoso: (d) => this.manejarRespuestaLogin(d),
-        onError: (msg) => this.mostrarToast(msg, 'error')
-      });
     } else {
       this.mostrarToast(datos.mensaje || 'Error de autenticación', 'error');
       limpiarSesion();
@@ -67,8 +47,8 @@ class App {
   }
 
   mostrarLogin() {
-    iniciarLogin({
-      onLoginExitoso: (datos) => this.manejarRespuestaLogin(datos),
+    renderizarPantallaPasskey({
+      onLogin: (datos) => this.manejarRespuestaLogin(datos),
       onError: (msg) => this.mostrarToast(msg, 'error')
     });
   }
@@ -113,6 +93,15 @@ class App {
       });
       return;
     }
+    if (vista === 'salones') {
+      detenerHeartbeat();
+      iniciarSalones({
+        onVolver: () => this.mostrarDashboard(),
+        onError: (msg) => this.mostrarToast(msg, 'error'),
+        onToast: (msg, tipo) => this.mostrarToast(msg, tipo)
+      });
+      return;
+    }
     const pendientes = {
       examenes:'Exámenes', teorias:'Teorías', notas:'Notas',
       finanzas:'Finanzas', calendario:'Calendario',
@@ -127,7 +116,6 @@ class App {
   async cerrarSesion() {
     detenerHeartbeat();
     limpiarSesion();
-    try { await auth.signOut(); } catch(e) {}
     window.location.reload();
   }
 
@@ -145,12 +133,11 @@ class App {
 
   mostrarErrorFatal(mensaje) {
     document.getElementById('app').innerHTML = `
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;padding:20px;text-align:center;">
-        <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
-        <h2 style="color:var(--error);">Error Crítico</h2>
-        <p style="color:var(--texto-secundario);">${mensaje}</p>
-        <button class="btn" style="margin-top:20px;" onclick="location.reload()">Recargar</button>
-      </div>`;
+      <div class="error-fatal">
+        <h1>⚠️ Error Crítico</h1>
+        <p>${mensaje}</p>
+      </div>
+    `;
   }
 }
 
