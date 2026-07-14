@@ -3,8 +3,13 @@
    ============================================ */
 
 function guardarSesion(token, usuario) {
-  localStorage.setItem('token_sesion', token);
-  localStorage.setItem('usuario', JSON.stringify(usuario || {}));
+  try {
+    localStorage.setItem('token_sesion', token);
+    localStorage.setItem('usuario', JSON.stringify(usuario || {}));
+    console.log('[SESION] Guardado exitoso');
+  } catch (e) {
+    console.error('[SESION] Error guardando:', e.message);
+  }
 }
 
 function obtenerToken() {
