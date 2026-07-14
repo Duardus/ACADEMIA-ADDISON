@@ -9,7 +9,7 @@ const {
   generateAuthenticationOptions,
   verifyAuthenticationResponse 
 } = require('@simplewebauthn/server');
-const passkeyRepositorio = require('../repositorios/passkey.repositorio');
+const usuariosRepositorio = require('../repositorios/usuarios.repositorio')
 const { generarToken } = require('../utilidades/jwt');
 const { ErrorApp } = require('../utilidades/errores');
 const crypto = require('crypto');
@@ -22,12 +22,12 @@ const ORIGIN = 'https://academia-addison.pages.dev';
 class PasskeyServicio {
 
   async generarOpcionesRegistro(correo, nombre, reqOrigen) {
-    let usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
+    let usuario = await usuariosRepositorio.buscarUsuarioPorCorreo(correo);
     if (!usuario) {
       if (!nombre || nombre.trim() === '') {
         throw new ErrorApp('Nombre requerido para crear cuenta', 400, 'NOMBRE_REQUERIDO');
       }
-      usuario = await passkeyRepositorio.crearUsuario(correo, nombre);
+      usuario = await usuariosRepositorio.crearUsuario(correo, nombre);
     }
 
     const options = await generateRegistrationOptions({
@@ -44,7 +44,7 @@ class PasskeyServicio {
       extensions: { credProps: true }
     });
 
-    const passkeysExistentes = await passkeyRepositorio.listarPasskeysPorUsuario(String(usuario.usuario_id));
+    const passkeysExistentes = await usuariosRepositorio.listarPasskeysPorUsuario(String(usuario.usuario_id));
     if (passkeysExistentes.length > 0) {
       options.excludeCredentials = passkeysExistentes.map(pk => ({
         id: Buffer.from(pk.credential_id).toString('base64url'),
@@ -53,7 +53,7 @@ class PasskeyServicio {
     }
 
     const challengeString = options.challenge;
-    await passkeyRepositorio.guardarChallenge(correo, challengeString, 'registro');
+    await usuariosRepositorio.guardarChallenge(correo, challengeString, 'registro');
 
     return {
       exito: true,
@@ -65,7 +65,7 @@ class PasskeyServicio {
   }
 
   async verificarRegistro(correo, respuesta, reqOrigen) {
-    const challengeGuardado = await passkeyRepositorio.buscarChallenge(correo, 'registro');
+    const challengeGuardado = await usuariosRepositorio.buscarChallenge(correo, 'registro');
     if (!challengeGuardado) {
       throw new ErrorApp('Challenge expirado o invalido. Intenta de nuevo.', 400, 'CHALLENGE_EXPIRADO');
     }
@@ -92,9 +92,9 @@ class PasskeyServicio {
       throw new ErrorApp('No se pudo obtener credential del passkey', 500, 'CREDENTIAL_NO_OBTENIDO');
     }
 
-    const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
+    const usuario = await usuariosRepositorio.buscarUsuarioPorCorreo(correo);
 
-    await passkeyRepositorio.guardarPasskey(
+    await usuariosRepositorio.guardarPasskey(
       String(usuario.usuario_id),
       Buffer.from(credential.id),
       Buffer.from(credential.publicKey),
@@ -102,13 +102,13 @@ class PasskeyServicio {
       'cross-platform'
     );
 
-    await passkeyRepositorio.actualizarPasskeyRegistrado(usuario.usuario_id);
-    await passkeyRepositorio.eliminarChallenge(correo);
+    await usuariosRepositorio.actualizarPasskeyRegistrado(usuario.usuario_id);
+    await usuariosRepositorio.eliminarChallenge(correo);
 
     const tokenSesion = this._generarTokenSesion(usuario);
     const refreshToken = crypto.randomBytes(32).toString('hex');
 
-    await passkeyRepositorio.guardarSesion(
+    await usuariosRepositorio.guardarSesion(
       String(usuario.usuario_id),
       crypto.createHash('sha256').update(refreshToken).digest('hex'),
       'Dispositivo Local',
@@ -132,13 +132,13 @@ class PasskeyServicio {
   }
 
   async generarOpcionesLogin(correo, reqOrigen) {
-    const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
+    const usuario = await usuariosRepositorio.buscarUsuarioPorCorreo(correo);
     
     if (!usuario) {
       throw new ErrorApp('Usuario no encontrado. Crea una cuenta primero.', 404, 'USUARIO_NO_ENCONTRADO');
     }
 
-    const passkeys = await passkeyRepositorio.listarPasskeysPorUsuario(String(usuario.usuario_id));
+    const passkeys = await usuariosRepositorio.listarPasskeysPorUsuario(String(usuario.usuario_id));
     
     if (passkeys.length === 0) {
       return {
@@ -163,7 +163,7 @@ class PasskeyServicio {
     });
 
     const challengeString = options.challenge;
-    await passkeyRepositorio.guardarChallenge(correo, challengeString, 'login');
+    await usuariosRepositorio.guardarChallenge(correo, challengeString, 'login');
 
     return { 
       exito: true, 
@@ -173,13 +173,13 @@ class PasskeyServicio {
   }
 
   async verificarLogin(correo, respuesta, reqOrigen) {
-    const challengeGuardado = await passkeyRepositorio.buscarChallenge(correo, 'login');
+    const challengeGuardado = await usuariosRepositorio.buscarChallenge(correo, 'login');
     if (!challengeGuardado) throw new ErrorApp('Challenge expirado', 400, 'CHALLENGE_EXPIRADO');
 
-    const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
+    const usuario = await usuariosRepositorio.buscarUsuarioPorCorreo(correo);
     
     const credentialIdBuffer = Buffer.from(respuesta.id, 'base64url');
-    const passkey = await passkeyRepositorio.buscarPasskeyPorCredentialId(credentialIdBuffer);
+    const passkey = await usuariosRepositorio.buscarPasskeyPorCredentialId(credentialIdBuffer);
 
     if (!passkey || String(passkey.usuario_id) !== String(usuario.usuario_id)) {
       throw new ErrorApp('Passkey no encontrado', 404, 'PASSKEY_NO_ENCONTRADO');
@@ -206,13 +206,13 @@ class PasskeyServicio {
       throw new ErrorApp('Autenticacion no exitosa', 400, 'AUTENTICACION_FALLIDA');
     }
 
-    await passkeyRepositorio.actualizarSignCount(passkey.credential_id, verification.authenticationInfo.newCounter);
-    await passkeyRepositorio.eliminarChallenge(correo);
+    await usuariosRepositorio.actualizarSignCount(passkey.credential_id, verification.authenticationInfo.newCounter);
+    await usuariosRepositorio.eliminarChallenge(correo);
 
     const tokenSesion = this._generarTokenSesion(usuario);
     const refreshToken = crypto.randomBytes(32).toString('hex');
 
-    await passkeyRepositorio.guardarSesion(
+    await usuariosRepositorio.guardarSesion(
       String(usuario.usuario_id),
       crypto.createHash('sha256').update(refreshToken).digest('hex'),
       passkey.nombre_dispositivo || 'Dispositivo Local',
@@ -221,7 +221,7 @@ class PasskeyServicio {
       new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
     );
 
-    await passkeyRepositorio.actualizarUltimoLogin(correo);
+    await usuariosRepositorio.actualizarUltimoLogin(correo);
 
     return {
       exito: true,
@@ -238,23 +238,23 @@ class PasskeyServicio {
   }
 
   async generarMagicLink(correo) {
-    const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
+    const usuario = await usuariosRepositorio.buscarUsuarioPorCorreo(correo);
     if (!usuario) throw new ErrorApp('Usuario no encontrado', 404, 'USUARIO_NO_ENCONTRADO');
 
     const token = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     const expiraEn = new Date(Date.now() + 15 * 60 * 1000);
 
-    await passkeyRepositorio.guardarMagicLink(String(usuario.usuario_id), tokenHash, expiraEn);
+    await usuariosRepositorio.guardarMagicLink(String(usuario.usuario_id), tokenHash, expiraEn);
     return { token, tokenHash, expiraEn };
   }
 
   async verificarMagicLink(token) {
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    const magicLink = await passkeyRepositorio.buscarMagicLink(tokenHash);
+    const magicLink = await usuariosRepositorio.buscarMagicLink(tokenHash);
     if (!magicLink) throw new ErrorApp('Link invalido o expirado', 400, 'MAGIC_LINK_INVALIDO');
 
-    await passkeyRepositorio.marcarMagicLinkUsado(magicLink.id);
+    await usuariosRepositorio.marcarMagicLinkUsado(magicLink.id);
     return { usuario_id: magicLink.usuario_id, correo: magicLink.correo_electronico };
   }
 
