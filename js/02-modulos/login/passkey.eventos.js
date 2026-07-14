@@ -3,6 +3,8 @@
    ============================================ */
 
 let correoRecordado = '';
+let loginEnProgreso = false;
+let registroEnProgreso = false;
 
 function obtenerCorreoRecordado() {
   try {
@@ -29,21 +31,17 @@ function limpiarCorreoRecordado() {
 // ═════════════════════════════════════════════════════════════════
 async function iniciarRegistroPasskey({ correo, nombre, onExito, onError }) {
   try {
-    // 1. Solicitar opciones al backend
     const respuesta = await apiPasskeyRegistroOpciones(correo, nombre);
     if (!respuesta.exito) {
       throw new Error(respuesta.mensaje || 'Error al iniciar registro');
     }
 
-    // 2. Convertir challenge de base64url a ArrayBuffer
     const options = respuesta.options;
     options.challenge = PASSKEY_CONFIG.base64URLToBuffer(options.challenge);
     options.user.id = PASSKEY_CONFIG.base64URLToBuffer(options.user.id);
 
-    // 3. Llamar a WebAuthn API del navegador
     const credential = await navigator.credentials.create({ publicKey: options });
     
-    // 4. Preparar respuesta para backend - CONVERSIÓN CORRECTA
     const respuestaCliente = {
       id: PASSKEY_CONFIG.bufferToBase64URL(credential.rawId),
       rawId: PASSKEY_CONFIG.bufferToBase64URL(credential.rawId),
@@ -54,14 +52,12 @@ async function iniciarRegistroPasskey({ correo, nombre, onExito, onError }) {
       type: credential.type
     };
 
-    // 5. Verificar con backend
     const verificacion = await apiPasskeyRegistroVerificar(correo, respuestaCliente);
     
     if (!verificacion.exito) {
       throw new Error(verificacion.mensaje || 'Verificación fallida');
     }
 
-    // 6. Guardar sesión
     guardarToken(verificacion.token_sesion);
     guardarUsuario(verificacion.usuario);
     guardarCorreoRecordado(correo);
@@ -78,13 +74,11 @@ async function iniciarRegistroPasskey({ correo, nombre, onExito, onError }) {
 // ═════════════════════════════════════════════════════════════════
 async function iniciarLoginPasskey({ correo, onExito, onError }) {
   try {
-    // 1. Solicitar opciones de autenticación
     const respuesta = await apiPasskeyLoginOpciones(correo);
     if (!respuesta.exito) {
       throw new Error(respuesta.mensaje || 'Error al iniciar login');
     }
 
-    // 2. Convertir challenge
     const options = respuesta.options;
     options.challenge = PASSKEY_CONFIG.base64URLToBuffer(options.challenge);
     
@@ -95,10 +89,8 @@ async function iniciarLoginPasskey({ correo, onExito, onError }) {
       }));
     }
 
-    // 3. Llamar a WebAuthn API
     const assertion = await navigator.credentials.get({ publicKey: options });
     
-    // 4. Preparar respuesta - CONVERSIÓN CORRECTA
     const respuestaCliente = {
       id: PASSKEY_CONFIG.bufferToBase64URL(assertion.rawId),
       rawId: PASSKEY_CONFIG.bufferToBase64URL(assertion.rawId),
@@ -111,14 +103,12 @@ async function iniciarLoginPasskey({ correo, onExito, onError }) {
       type: assertion.type
     };
 
-    // 5. Verificar con backend
     const verificacion = await apiPasskeyLoginVerificar(correo, respuestaCliente);
     
     if (!verificacion.exito) {
       throw new Error(verificacion.mensaje || 'Autenticación fallida');
     }
 
-    // 6. Guardar sesión
     guardarToken(verificacion.token_sesion);
     guardarUsuario(verificacion.usuario);
     guardarCorreoRecordado(correo);
@@ -266,44 +256,53 @@ function volverAlLogin() {
   });
 }
 
-let loginEnProgreso = false;
-
 async function manejarLogin(correoPrellenado) {
   if (loginEnProgreso) return;
   loginEnProgreso = true;
+  
   try {
-  const correo = correoPrellenado || document.getElementById('input-correo')?.value?.trim();
-  
-  if (!correo) {
-    app.mostrarToast('Ingresa tu correo electrónico', 'error');
-    return;
+    const correo = correoPrellenado || document.getElementById('input-correo')?.value?.trim();
+    
+    if (!correo) {
+      app.mostrarToast('Ingresa tu correo electrónico', 'error');
+      return;
+    }
+    
+    await iniciarLoginPasskey({
+      correo,
+      onExito: (datos) => app.manejarRespuestaLogin(datos),
+      onError: (msg) => app.mostrarToast(msg, 'error')
+    });
+  } finally {
+    loginEnProgreso = false;
   }
-  
-  await iniciarLoginPasskey({
-    correo,
-    onExito: (datos) => app.manejarRespuestaLogin(datos),
-    onError: (msg) => app.mostrarToast(msg, 'error')
-  });
 }
 
 async function manejarRegistro() {
-  const correo = document.getElementById('reg-correo')?.value?.trim();
-  const nombre = document.getElementById('reg-nombre')?.value?.trim();
+  if (registroEnProgreso) return;
+  registroEnProgreso = true;
   
-  if (!correo || !nombre) {
-    app.mostrarToast('Correo y nombre son obligatorios', 'error');
-    return;
+  try {
+    const correo = document.getElementById('reg-correo')?.value?.trim();
+    const nombre = document.getElementById('reg-nombre')?.value?.trim();
+    
+    if (!correo || !nombre) {
+      app.mostrarToast('Correo y nombre son obligatorios', 'error');
+      return;
+    }
+    
+    await iniciarRegistroPasskey({
+      correo,
+      nombre,
+      onExito: (datos) => {
+        app.mostrarToast('✅ Cuenta creada exitosamente', 'exito');
+        app.manejarRespuestaLogin(datos);
+      },
+      onError: (msg) => app.mostrarToast(msg, 'error')
+    });
+  } finally {
+    registroEnProgreso = false;
   }
-  
-  await iniciarRegistroPasskey({
-    correo,
-    nombre,
-    onExito: (datos) => {
-      app.mostrarToast('✅ Cuenta creada exitosamente', 'exito');
-      app.manejarRespuestaLogin(datos);
-    },
-    onError: (msg) => app.mostrarToast(msg, 'error')
-  });
 }
 
 async function manejarRecuperacion() {
