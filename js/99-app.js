@@ -15,7 +15,7 @@ class App {
 
     this.passkeyListo = true;
 
-    if (haySesionActiva()) {
+    if (estaAutenticado()) {
       await this.procesarSesionExistente();
     } else {
       this.mostrarLogin();
