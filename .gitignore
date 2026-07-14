@@ -1,18 +1,51 @@
-# Node
-node_modules/
+# ═══════════════════════════════════════════════════════════════
+# PROTOCOLO PHOENIX V4 — ARCHIVOS IGNORADOS
+# ═══════════════════════════════════════════════════════════════
+
+# === CONFIGURACIÓN LOCAL (NUNCA subir a Git) ===
 .env
-.env.local
-npm-debug.log
-
-# Sistema
-.DS_Store
-*.log
-
-# Backups locales
-backup-*
-*.tar.gz
-config/serviceAccountKey.json
+.env.*
+!.env.example
 config/serviceAccountKey.json
 **/serviceAccountKey.json
-api/configuracion/serviceAccountKey.json
-config/serviceAccountKey.json
+
+# === LOGS Y TEMPORALES ===
+*.log
+.log_*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# === BACKUPS Y BASURA DE DESARROLLO ===
+*.bak
+*.bak.*
+backups_*/
+backup_*.sql
+*.tmp
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# === DEPENDENCIAS ===
+node_modules/
+
+# === TESTS Y DEBUG LOCALES ===
+test-frontend.js
+test-frontend.html
+diagnostico.sh
+coverage/
+.nyc_output/
+
+# === IDEs ===
+.vscode/
+.idea/
+*.sublime-*
+
+# === DOCUMENTACIÓN DUPLICADA/LEGACY ===
+documentacion_total.txt
+
+# === ARCHIVOS DE BUILD/DIST ===
+dist/
+build/
+.cache/
