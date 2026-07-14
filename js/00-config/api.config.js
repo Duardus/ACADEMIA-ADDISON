@@ -1,6 +1,5 @@
 /* ============================================
    🔌 CONFIGURACIÓN API - ACADEMIA ADDISON
-   Si cambias de servidor, solo edita aquí.
    ============================================ */
 
 var API_CONFIG = {
