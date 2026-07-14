@@ -38,7 +38,6 @@ class PasskeyServicio {
       }
     });
 
-    // Guardar challenge en PostgreSQL
     await passkeyRepositorio.guardarChallenge(correo, options.challenge, 'registro');
 
     return {
@@ -51,7 +50,6 @@ class PasskeyServicio {
 
   async verificarRegistro(correo, respuesta) {
     // Extraer challenge del clientDataJSON que envía el navegador
-    // El navegador incluye el challenge en el clientDataJSON, no necesitamos buscarlo en BD
     let expectedChallenge;
     try {
       const clientDataJSON = Buffer.from(respuesta.response.clientDataJSON, 'base64url').toString('utf8');
@@ -67,18 +65,31 @@ class PasskeyServicio {
       throw new Error('Challenge expirado o invalido. Intenta de nuevo.');
     }
 
-    const verification = await verifyRegistrationResponse({
-      response: respuesta,
-      expectedChallenge,
-      expectedOrigin: ORIGIN,
-      expectedRPID: RP_ID
-    });
-
-    if (!verification.verified) {
-      throw new Error('Verificacion de passkey fallida');
+    let verification;
+    try {
+      verification = await verifyRegistrationResponse({
+        response: respuesta,
+        expectedChallenge,
+        expectedOrigin: ORIGIN,
+        expectedRPID: RP_ID
+      });
+    } catch (err) {
+      console.error('[PASSKEY] Error en verifyRegistrationResponse:', err.message);
+      throw new Error('Verificacion de passkey fallida: ' + err.message);
     }
 
-    const { credential } = verification;
+    console.log('[PASSKEY] Verificacion:', verification.verified, 'Credential:', !!verification.registrationInfo);
+
+    if (!verification.verified) {
+      throw new Error('Verificacion de passkey no exitosa');
+    }
+
+    // En @simplewebauthn/server v9+, el credential está en registrationInfo
+    const credential = verification.registrationInfo?.credential;
+    if (!credential) {
+      throw new Error('No se pudo obtener credential del passkey');
+    }
+
     const usuario = await passkeyRepositorio.buscarUsuarioPorCorreo(correo);
 
     await passkeyRepositorio.guardarPasskey(
@@ -141,7 +152,6 @@ class PasskeyServicio {
   }
 
   async verificarLogin(correo, respuesta) {
-    // Extraer challenge del clientDataJSON
     let expectedChallenge;
     try {
       const clientDataJSON = Buffer.from(respuesta.response.clientDataJSON, 'base64url').toString('utf8');
@@ -163,19 +173,26 @@ class PasskeyServicio {
       throw new Error('Passkey no encontrado');
     }
 
-    const verification = await verifyAuthenticationResponse({
-      response: respuesta,
-      expectedChallenge,
-      expectedOrigin: ORIGIN,
-      expectedRPID: RP_ID,
-      authenticator: {
-        credentialID: passkey.credential_id,
-        credentialPublicKey: passkey.public_key,
-        counter: passkey.sign_count
-      }
-    });
+    let verification;
+    try {
+      verification = await verifyAuthenticationResponse({
+        response: respuesta,
+        expectedChallenge,
+        expectedOrigin: ORIGIN,
+        expectedRPID: RP_ID,
+        authenticator: {
+          credentialID: passkey.credential_id,
+          credentialPublicKey: passkey.public_key,
+          counter: passkey.sign_count
+        }
+      });
+    } catch (err) {
+      throw new Error('Autenticacion fallida: ' + err.message);
+    }
 
-    if (!verification.verified) throw new Error('Autenticacion fallida');
+    if (!verification.verified) {
+      throw new Error('Autenticacion no exitosa');
+    }
 
     await passkeyRepositorio.actualizarSignCount(passkey.credential_id, verification.authenticationInfo.newCounter);
     await passkeyRepositorio.eliminarChallenge(correo);
