@@ -32,10 +32,10 @@ class PasskeyRepositorio {
   }
 
   // ═════════════════════════════════════════════════════════════════
-  // CHALLENGES (persistencia en PostgreSQL)
+  // CHALLENGES
   // ═════════════════════════════════════════════════════════════════
   async guardarChallenge(correo, challenge, tipo) {
-    const expiraEn = new Date(Date.now() + 5 * 60 * 1000); // 5 minutos
+    const expiraEn = new Date(Date.now() + 5 * 60 * 1000);
     await consulta(
       `INSERT INTO passkey_challenges (correo, challenge, tipo, expira_en)
        VALUES ($1, $2, $3, $4)
@@ -59,9 +59,28 @@ class PasskeyRepositorio {
   }
 
   // ═════════════════════════════════════════════════════════════════
-  // PASSKEYS
+  // PASSKEYS (UPSERT - actualizar si existe, insertar si no)
   // ═════════════════════════════════════════════════════════════════
   async guardarPasskey(usuarioId, credentialId, publicKey, nombreDispositivo, tipoDispositivo) {
+    // Primero verificar si existe
+    const existe = await consulta(
+      `SELECT id FROM passkeys WHERE credential_id = $1 LIMIT 1`,
+      [credentialId]
+    );
+    
+    if (existe.rows.length > 0) {
+      // Actualizar passkey existente
+      const result = await consulta(
+        `UPDATE passkeys 
+         SET public_key = $1, nombre_dispositivo = $2, tipo_dispositivo = $3, revocado = false, ultimo_uso = NOW()
+         WHERE credential_id = $4
+         RETURNING *`,
+        [publicKey, nombreDispositivo, tipoDispositivo, credentialId]
+      );
+      return result.rows[0];
+    }
+    
+    // Insertar nuevo
     const result = await consulta(
       `INSERT INTO passkeys (usuario_id, credential_id, public_key, nombre_dispositivo, tipo_dispositivo, creado_en)
        VALUES ($1, $2, $3, $4, $5, NOW())
