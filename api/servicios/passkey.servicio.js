@@ -32,9 +32,12 @@ class PasskeyServicio {
       userDisplayName: nombre || correo,
       attestationType: 'none',
       authenticatorSelection: {
-        residentKey: 'preferred',
-        userVerification: 'preferred',
-        authenticatorAttachment: 'platform'
+        residentKey: 'required',           // ← Requerir resident key (Windows Hello)
+        userVerification: 'required',      // ← REQUERIR PIN/huella (no optional)
+        authenticatorAttachment: 'platform'  // ← FORZAR dispositivo local (Windows Hello)
+      },
+      extensions: {
+        credProps: true
       }
     });
 
@@ -93,8 +96,8 @@ class PasskeyServicio {
       usuario.usuario_id,
       Buffer.from(credential.id),
       Buffer.from(credential.publicKey),
-      'Dispositivo Principal',
-      'mobile'
+      'Windows Hello (PIN/Huella)',
+      'platform'
     );
 
     await passkeyRepositorio.actualizarPasskeyRegistrado(usuario.usuario_id);
@@ -106,7 +109,7 @@ class PasskeyServicio {
     await passkeyRepositorio.guardarSesion(
       usuario.usuario_id,
       crypto.createHash('sha256').update(refreshToken).digest('hex'),
-      'Dispositivo Principal',
+      'Windows Hello',
       'Navegador',
       null,
       new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -145,7 +148,7 @@ class PasskeyServicio {
     const options = await generateAuthenticationOptions({
       rpID: RP_ID,
       allowCredentials,
-      userVerification: 'preferred'
+      userVerification: 'required'  // ← REQUERIR PIN/huella en login también
     });
 
     await passkeyRepositorio.guardarChallenge(correo, options.challenge, 'login');
@@ -206,7 +209,7 @@ class PasskeyServicio {
     await passkeyRepositorio.guardarSesion(
       usuario.usuario_id,
       crypto.createHash('sha256').update(refreshToken).digest('hex'),
-      passkey.nombre_dispositivo || 'Dispositivo',
+      passkey.nombre_dispositivo || 'Windows Hello',
       'Navegador',
       null,
       new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
