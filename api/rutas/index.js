@@ -4,6 +4,7 @@
 
 function configurarRutas(app) {
   app.use('/api/v1/auth', require('./auth.rutas'));        // Legacy Firebase (temporal)
+  app.use('/api/v1/sesion', require('./sesion.rutas'));
   app.use('/api/v1/passkey', require('./passkey.rutas'));  // Nuevo Passkeys
   app.use('/api/v1/arbol', require('./arbol.rutas'));
   app.use('/api/v1/usuarios', require('./usuario.rutas'));
