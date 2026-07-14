@@ -45,7 +45,7 @@ async function iniciarRegistroPasskey({ correo, nombre, onExito, onError }) {
     
     // 4. Preparar respuesta para backend - CONVERSIÓN CORRECTA
     const respuestaCliente = {
-      id: credential.id,
+      id: PASSKEY_CONFIG.bufferToBase64URL(credential.rawId),
       rawId: PASSKEY_CONFIG.bufferToBase64URL(credential.rawId),
       response: {
         clientDataJSON: PASSKEY_CONFIG.bufferToBase64URL(credential.response.clientDataJSON),
@@ -100,7 +100,7 @@ async function iniciarLoginPasskey({ correo, onExito, onError }) {
     
     // 4. Preparar respuesta - CONVERSIÓN CORRECTA
     const respuestaCliente = {
-      id: assertion.id,
+      id: PASSKEY_CONFIG.bufferToBase64URL(assertion.rawId),
       rawId: PASSKEY_CONFIG.bufferToBase64URL(assertion.rawId),
       response: {
         authenticatorData: PASSKEY_CONFIG.bufferToBase64URL(assertion.response.authenticatorData),
