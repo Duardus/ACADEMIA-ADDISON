@@ -3,19 +3,18 @@
   "protocolo": "PHOENIX-GIST-NINJA",
   "fase_actual": 2,
   "fases": {
-    "1_cimientos": {"estado": "completada", "inicio": "2026-07-13", "fin": "2026-07-13"},
-    "2_utilidades": {"estado": "en_progreso", "inicio": "2026-07-13"},
-    "3_repositorios": {"estado": "pendiente"},
-    "4_servicios": {"estado": "pendiente"},
-    "5_controladores": {"estado": "pendiente"},
-    "6_entrypoint": {"estado": "pendiente"}
+    "1_cimientos": {"estado": "completada", "inicio": "2026-07-13", "fin": "2026-07-14"},
+    "2_utilidades": {"estado": "completada", "inicio": "2026-07-14", "fin": "2026-07-14"},
+    "3_repositorios": {"estado": "completada", "inicio": "2026-07-14", "fin": "2026-07-14"},
+    "4_servicios": {"estado": "completada", "inicio": "2026-07-14", "fin": "2026-07-14"},
+    "5_controladores": {"estado": "completada", "inicio": "2026-07-14", "fin": "2026-07-14"},
+    "6_entrypoint": {"estado": "en_progreso", "inicio": "2026-07-14"}
   },
   "stack": {
-    "auth": "passkeys + resend_smtp",
+    "auth": "passkeys_pure",
     "db": "postgresql",
     "backend": "nodejs",
     "frontend": "cloudflare_pages"
   },
-  "tablas_creadas": ["passkeys", "magic_links", "sesiones_passkey"],
-  "notas": "Schema adaptado a usuario_id varchar(36). Resend SMTP configurado."
+  "notas": "Fase 1-5 completadas. Backend passkeys listo. Falta frontend y middleware JWT."
 }
