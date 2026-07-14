@@ -1,324 +1,229 @@
-/* ============================================
-   🔐 EVENTOS PASSKEYS - Academia Addison
-   ============================================ */
+// ═══════════════════════════════════════════════════════════════════════════
+// ACADEMIA-ADDISON — Eventos Passkeys v12
+// Fix: evitar doble mensaje éxito/error, mejorar UX para "choose passkey"
+// ═══════════════════════════════════════════════════════════════════════════
 
-let correoRecordado = '';
-let loginEnProgreso = false;
-let registroEnProgreso = false;
+import { apiPasskeyRegistroOpciones, apiPasskeyRegistroVerificar, apiPasskeyLoginOpciones, apiPasskeyLoginVerificar } from './passkey.api.js';
+import { guardarSesion, obtenerSesion, limpiarSesion } from '../../01-nucleo/sesion.js';
+import { mostrarNotificacion } from '../../01-nucleo/notificaciones.js';
 
-function obtenerCorreoRecordado() {
+let registroEnProceso = false;
+let loginEnProceso = false;
+
+// Verificar soporte de WebAuthn
+function webAuthnSoportado() {
+  return window.PublicKeyCredential !== undefined;
+}
+
+// Verificar si hay platform authenticator disponible
+async function platformAuthenticatorDisponible() {
+  if (!webAuthnSoportado()) return false;
   try {
-    return localStorage.getItem('passkey_email_recordado') || '';
-  } catch {
-    return '';
+    return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  } catch (e) {
+    return false;
   }
 }
 
-function guardarCorreoRecordado(correo) {
-  try {
-    localStorage.setItem('passkey_email_recordado', correo);
-  } catch(e) {}
+// Mostrar mensaje informativo sobre passkeys
+function mostrarInfoPasskeys() {
+  const esDisponible = platformAuthenticatorDisponible();
+  if (!esDisponible) {
+    mostrarNotificacion('info', '💡 Si no ves opción de PIN o huella, elige tu dispositivo (teléfono, tablet) para continuar.');
+  }
 }
 
-function limpiarCorreoRecordado() {
-  try {
-    localStorage.removeItem('passkey_email_recordado');
-  } catch(e) {}
-}
+// ─── REGISTRO ─────────────────────────────────────────────────────────────
 
-// ═════════════════════════════════════════════════════════════════
-// REGISTRO
-// ═════════════════════════════════════════════════════════════════
-async function iniciarRegistroPasskey({ correo, nombre, onExito, onError }) {
+export async function iniciarRegistroPasskey(correo, nombre) {
+  if (registroEnProceso) {
+    mostrarNotificacion('warning', '⏳ Registro en proceso, espera...');
+    return;
+  }
+  registroEnProceso = true;
+
   try {
-    const respuesta = await apiPasskeyRegistroOpciones(correo, nombre);
-    if (!respuesta.exito) {
-      throw new Error(respuesta.mensaje || 'Error al iniciar registro');
+    if (!webAuthnSoportado()) {
+      mostrarNotificacion('error', '❌ Tu navegador no soporta passkeys. Usa Chrome, Edge, Safari o Firefox.');
+      return;
     }
 
-    const options = respuesta.options;
-    options.challenge = PASSKEY_CONFIG.base64URLToBuffer(options.challenge);
-    options.user.id = PASSKEY_CONFIG.base64URLToBuffer(options.user.id);
-
-    const credential = await navigator.credentials.create({ publicKey: options });
-    
-    const respuestaCliente = {
-      id: PASSKEY_CONFIG.bufferToBase64URL(credential.rawId),
-      rawId: PASSKEY_CONFIG.bufferToBase64URL(credential.rawId),
-      response: {
-        clientDataJSON: PASSKEY_CONFIG.bufferToBase64URL(credential.response.clientDataJSON),
-        attestationObject: PASSKEY_CONFIG.bufferToBase64URL(credential.response.attestationObject)
-      },
-      type: credential.type
-    };
-
-    const verificacion = await apiPasskeyRegistroVerificar(correo, respuestaCliente);
-    
-    if (!verificacion.exito) {
-      throw new Error(verificacion.mensaje || 'Verificación fallida');
+    // 1. Obtener opciones del servidor
+    const respuestaOpciones = await apiPasskeyRegistroOpciones(correo, nombre);
+    if (!respuestaOpciones.exito) {
+      mostrarNotificacion('error', respuestaOpciones.error?.mensaje || 'Error al obtener opciones de registro');
+      return;
     }
 
-    guardarToken(verificacion.token_sesion);
-    guardarUsuario(verificacion.usuario);
-    guardarCorreoRecordado(correo);
+    // 2. Crear credencial con WebAuthn
+    const credential = await navigator.credentials.create({
+      publicKey: respuestaOpciones.options
+    });
+
+    if (!credential) {
+      mostrarNotificacion('error', '❌ No se pudo crear el passkey. Intenta de nuevo.');
+      return;
+    }
+
+    // 3. Enviar verificación al servidor
+    const respuestaVerificar = await apiPasskeyRegistroVerificar(correo, credential);
     
-    onExito(verificacion);
+    if (respuestaVerificar.exito) {
+      // ÉXITO — guardar sesión y redirigir
+      guardarSesion({
+        token: respuestaVerificar.token_sesion,
+        refreshToken: respuestaVerificar.refresh_token,
+        usuario: respuestaVerificar.usuario
+      });
+      mostrarNotificacion('exito', '✅ ¡Cuenta creada exitosamente! Bienvenido.');
+      setTimeout(() => {
+        window.location.href = '/dashboard.html';
+      }, 1500);
+    } else {
+      // ERROR del servidor
+      mostrarNotificacion('error', respuestaVerificar.error?.mensaje || 'Error al verificar el passkey');
+    }
+
   } catch (error) {
     console.error('[PASSKEY REGISTRO] Error:', error);
-    onError(error.message || 'Error al registrar passkey');
+    
+    if (error.name === 'NotAllowedError') {
+      mostrarNotificacion('warning', '⚠️ Registro cancelado. Si no ves opción de PIN/huella, elige tu dispositivo en la lista.');
+    } else if (error.name === 'AbortError') {
+      mostrarNotificacion('info', 'ℹ️ Registro cancelado por el usuario.');
+    } else if (error.name === 'SecurityError') {
+      mostrarNotificacion('error', '❌ Error de seguridad: el dominio no coincide. Contacta soporte.');
+    } else {
+      mostrarNotificacion('error', '❌ Error: ' + (error.message || 'Error desconocido en registro'));
+    }
+  } finally {
+    registroEnProceso = false;
   }
 }
 
-// ═════════════════════════════════════════════════════════════════
-// LOGIN
-// ═════════════════════════════════════════════════════════════════
-async function iniciarLoginPasskey({ correo, onExito, onError }) {
+// ─── LOGIN ─────────────────────────────────────────────────────────────────
+
+export async function iniciarLoginPasskey(correo) {
+  if (loginEnProceso) {
+    mostrarNotificacion('warning', '⏳ Login en proceso, espera...');
+    return;
+  }
+  loginEnProceso = true;
+
   try {
-    const respuesta = await apiPasskeyLoginOpciones(correo);
-    if (!respuesta.exito) {
-      throw new Error(respuesta.mensaje || 'Error al iniciar login');
+    if (!webAuthnSoportado()) {
+      mostrarNotificacion('error', '❌ Tu navegador no soporta passkeys.');
+      return;
     }
 
-    const options = respuesta.options;
-    options.challenge = PASSKEY_CONFIG.base64URLToBuffer(options.challenge);
-    
-    if (options.allowCredentials) {
-      options.allowCredentials = options.allowCredentials.map(cred => ({
-        ...cred,
-        id: PASSKEY_CONFIG.base64URLToBuffer(cred.id)
-      }));
+    // 1. Obtener opciones de login
+    const respuestaOpciones = await apiPasskeyLoginOpciones(correo);
+    if (!respuestaOpciones.exito) {
+      mostrarNotificacion('error', respuestaOpciones.error?.mensaje || 'Error al obtener opciones de login');
+      return;
     }
 
-    const assertion = await navigator.credentials.get({ publicKey: options });
-    
-    const respuestaCliente = {
-      id: PASSKEY_CONFIG.bufferToBase64URL(assertion.rawId),
-      rawId: PASSKEY_CONFIG.bufferToBase64URL(assertion.rawId),
-      response: {
-        authenticatorData: PASSKEY_CONFIG.bufferToBase64URL(assertion.response.authenticatorData),
-        clientDataJSON: PASSKEY_CONFIG.bufferToBase64URL(assertion.response.clientDataJSON),
-        signature: PASSKEY_CONFIG.bufferToBase64URL(assertion.response.signature),
-        userHandle: assertion.response.userHandle ? PASSKEY_CONFIG.bufferToBase64URL(assertion.response.userHandle) : null
-      },
-      type: assertion.type
-    };
+    // 2. Mostrar info si no hay platform authenticator
+    mostrarInfoPasskeys();
 
-    const verificacion = await apiPasskeyLoginVerificar(correo, respuestaCliente);
-    
-    if (!verificacion.exito) {
-      throw new Error(verificacion.mensaje || 'Autenticación fallida');
+    // 3. Solicitar autenticación
+    const assertion = await navigator.credentials.get({
+      publicKey: respuestaOpciones.options
+    });
+
+    if (!assertion) {
+      mostrarNotificacion('error', '❌ No se pudo autenticar. Intenta de nuevo.');
+      return;
     }
 
-    guardarToken(verificacion.token_sesion);
-    guardarUsuario(verificacion.usuario);
-    guardarCorreoRecordado(correo);
+    // 4. Verificar con servidor
+    const respuestaVerificar = await apiPasskeyLoginVerificar(correo, assertion);
     
-    onExito(verificacion);
+    if (respuestaVerificar.exito) {
+      guardarSesion({
+        token: respuestaVerificar.token_sesion,
+        refreshToken: respuestaVerificar.refresh_token,
+        usuario: respuestaVerificar.usuario
+      });
+      mostrarNotificacion('exito', '✅ ¡Bienvenido de vuelta!');
+      setTimeout(() => {
+        window.location.href = '/dashboard.html';
+      }, 1000);
+    } else {
+      mostrarNotificacion('error', respuestaVerificar.error?.mensaje || 'Error al verificar autenticación');
+    }
+
   } catch (error) {
     console.error('[PASSKEY LOGIN] Error:', error);
     
     if (error.name === 'NotAllowedError') {
-      onError('Autenticación cancelada o no permitida');
+      mostrarNotificacion('warning', '⚠️ Autenticación cancelada. Elige tu dispositivo en la lista y sigue las instrucciones.');
+    } else if (error.name === 'AbortError') {
+      mostrarNotificacion('info', 'ℹ️ Login cancelado por el usuario.');
     } else if (error.name === 'SecurityError') {
-      onError('Error de seguridad. Asegúrate de usar HTTPS');
+      mostrarNotificacion('error', '❌ Error de seguridad: dominio no coincide.');
     } else {
-      onError(error.message || 'Error al iniciar sesión');
+      mostrarNotificacion('error', '❌ Error: ' + (error.message || 'Error desconocido en login'));
     }
-  }
-}
-
-// ═════════════════════════════════════════════════════════════════
-// RECUPERACIÓN
-// ═════════════════════════════════════════════════════════════════
-async function iniciarRecuperacionPasskey({ correo, onExito, onError }) {
-  try {
-    const respuesta = await apiPasskeyRecuperacion(correo);
-    onExito(respuesta.mensaje || 'Si el correo existe, recibirás un link de recuperación');
-  } catch (error) {
-    onError(error.message || 'Error al solicitar recuperación');
-  }
-}
-
-// ═════════════════════════════════════════════════════════════════
-// UI RENDER
-// ═════════════════════════════════════════════════════════════════
-function renderizarPantallaPasskey({ onLogin, onRegistro, onRecuperacion }) {
-  const correoGuardado = obtenerCorreoRecordado();
-  
-  const html = `
-    <div class="login-container">
-      <div class="login-card">
-        <h1>🎓 Academia Addison</h1>
-        <p class="login-subtitle">Acceso seguro sin contraseñas</p>
-        
-        ${correoGuardado ? `
-          <div class="correo-recordado">
-            <span>👤 ${correoGuardado}</span>
-            <button onclick="usarOtroCorreo()" class="btn-link">Cambiar</button>
-          </div>
-          <button onclick="manejarLogin('${correoGuardado}')" class="btn-principal">
-            🔐 Entrar con acceso seguro
-          </button>
-        ` : `
-          <div class="input-group">
-            <input type="email" id="input-correo" placeholder="Tu correo electrónico" autocomplete="email">
-          </div>
-          <button onclick="manejarLogin()" class="btn-principal">
-            🔐 Entrar con acceso seguro
-          </button>
-        `}
-        
-        <div class="login-separador">o</div>
-        
-        <button onclick="mostrarRegistro()" class="btn-secundario">
-          🆕 Crear cuenta nueva
-        </button>
-        
-        <div class="login-ayuda">
-          <a onclick="mostrarRecuperacion()">¿Olvidaste tu acceso?</a>
-        </div>
-      </div>
-    </div>
-  `;
-  
-  document.getElementById('app').innerHTML = html;
-}
-
-function mostrarRegistro() {
-  const html = `
-    <div class="login-container">
-      <div class="login-card">
-        <h1>🎓 Crear cuenta</h1>
-        
-        <div class="input-group">
-          <input type="email" id="reg-correo" placeholder="Correo electrónico" autocomplete="email">
-        </div>
-        <div class="input-group">
-          <input type="text" id="reg-nombre" placeholder="Nombre completo" autocomplete="name">
-        </div>
-        
-        <div class="info-box">
-          <p>📱 <strong>Importante:</strong> Usa tu celular para crear tu acceso seguro.</p>
-          <p>Tu huella digital o PIN será tu "contraseña".</p>
-        </div>
-        
-        <button onclick="manejarRegistro()" class="btn-principal">
-          ✅ Crear acceso seguro
-        </button>
-        
-        <button onclick="volverAlLogin()" class="btn-link">← Volver</button>
-      </div>
-    </div>
-  `;
-  
-  document.getElementById('app').innerHTML = html;
-}
-
-function mostrarRecuperacion() {
-  const html = `
-    <div class="login-container">
-      <div class="login-card">
-        <h1>🔄 Recuperar acceso</h1>
-        
-        <div class="input-group">
-          <input type="email" id="rec-correo" placeholder="Tu correo electrónico">
-        </div>
-        
-        <div class="info-box warning">
-          <p>🔑 <strong>Si guardaste tu código de recuperación:</strong></p>
-          <p>Usa las 12 palabras que te mostramos al registrarte.</p>
-        </div>
-        
-        <button onclick="manejarRecuperacion()" class="btn-principal">
-          📧 Enviar link de recuperación
-        </button>
-        
-        <button onclick="volverAlLogin()" class="btn-link">← Volver</button>
-      </div>
-    </div>
-  `;
-  
-  document.getElementById('app').innerHTML = html;
-}
-
-function usarOtroCorreo() {
-  limpiarCorreoRecordado();
-  renderizarPantallaPasskey({
-    onLogin: (d) => app.manejarRespuestaLogin(d),
-    onError: (msg) => app.mostrarToast(msg, 'error')
-  });
-}
-
-function volverAlLogin() {
-  renderizarPantallaPasskey({
-    onLogin: (d) => app.manejarRespuestaLogin(d),
-    onError: (msg) => app.mostrarToast(msg, 'error')
-  });
-}
-
-async function manejarLogin(correoPrellenado) {
-  if (loginEnProgreso) return;
-  loginEnProgreso = true;
-  
-  try {
-    const correo = correoPrellenado || document.getElementById('input-correo')?.value?.trim();
-    
-    if (!correo) {
-      app.mostrarToast('Ingresa tu correo electrónico', 'error');
-      return;
-    }
-    
-    await iniciarLoginPasskey({
-      correo,
-      onExito: (datos) => app.manejarRespuestaLogin(datos),
-      onError: (msg) => app.mostrarToast(msg, 'error')
-    });
   } finally {
-    loginEnProgreso = false;
+    loginEnProceso = false;
   }
 }
 
-async function manejarRegistro() {
-  if (registroEnProgreso) return;
-  registroEnProgreso = true;
-  
-  try {
-    const correo = document.getElementById('reg-correo')?.value?.trim();
-    const nombre = document.getElementById('reg-nombre')?.value?.trim();
-    
-    if (!correo || !nombre) {
-      app.mostrarToast('Correo y nombre son obligatorios', 'error');
-      return;
-    }
-    
-    await iniciarRegistroPasskey({
-      correo,
-      nombre,
-      onExito: (datos) => {
-        app.mostrarToast('✅ Cuenta creada exitosamente', 'exito');
-        app.manejarRespuestaLogin(datos);
-      },
-      onError: (msg) => app.mostrarToast(msg, 'error')
-    });
-  } finally {
-    registroEnProgreso = false;
-  }
-}
+// ─── MANEJADORES DE BOTONES ────────────────────────────────────────────────
 
-async function manejarRecuperacion() {
-  const correo = document.getElementById('rec-correo')?.value?.trim();
-  
-  if (!correo) {
-    app.mostrarToast('Ingresa tu correo', 'error');
+export function manejarRegistro(evento) {
+  evento.preventDefault();
+  const correo = document.getElementById('correo-registro')?.value?.trim();
+  const nombre = document.getElementById('nombre-registro')?.value?.trim();
+
+  if (!correo || !nombre) {
+    mostrarNotificacion('warning', '⚠️ Completa todos los campos');
     return;
   }
-  
-  await iniciarRecuperacionPasskey({
-    correo,
-    onExito: (msg) => {
-      app.mostrarToast(msg, 'info');
-      volverAlLogin();
-    },
-    onError: (msg) => app.mostrarToast(msg, 'error')
-  });
+  if (!correo.includes('@')) {
+    mostrarNotificacion('warning', '⚠️ Ingresa un correo válido');
+    return;
+  }
+
+  iniciarRegistroPasskey(correo, nombre);
+}
+
+export function manejarLogin(evento) {
+  evento.preventDefault();
+  const correo = document.getElementById('correo-login')?.value?.trim();
+
+  if (!correo) {
+    mostrarNotificacion('warning', '⚠️ Ingresa tu correo');
+    return;
+  }
+  if (!correo.includes('@')) {
+    mostrarNotificacion('warning', '⚠️ Ingresa un correo válido');
+    return;
+  }
+
+  iniciarLoginPasskey(correo);
+}
+
+// ─── INICIALIZACIÓN ──────────────────────────────────────────────────────
+
+export function inicializarPasskey() {
+  const btnRegistro = document.getElementById('btn-registro-passkey');
+  const btnLogin = document.getElementById('btn-login-passkey');
+
+  if (btnRegistro) {
+    btnRegistro.addEventListener('click', manejarRegistro);
+  }
+  if (btnLogin) {
+    btnLogin.addEventListener('click', manejarLogin);
+  }
+
+  // Verificar si ya hay sesión
+  const sesion = obtenerSesion();
+  if (sesion && sesion.token) {
+    const path = window.location.pathname;
+    if (path.includes('login') || path.includes('registro') || path === '/' || path === '/index.html') {
+      window.location.href = '/dashboard.html';
+    }
+  }
 }
