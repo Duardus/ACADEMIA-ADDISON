@@ -39,7 +39,7 @@ class PasskeyRepositorio {
     await consulta(
       `INSERT INTO passkey_challenges (correo, challenge, tipo, expira_en)
        VALUES ($1, $2, $3, $4)
-       ON CONFLICT (correo) DO UPDATE SET challenge = $2, tipo = $3, expira_en = $4, creado_en = NOW()`,
+       ON CONFLICT (correo, tipo) DO UPDATE SET challenge = EXCLUDED.challenge, expira_en = EXCLUDED.expira_en, creado_en = NOW()`,
       [correo, challenge, tipo, expiraEn]
     );
   }
