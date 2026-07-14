@@ -1,11 +1,10 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ACADEMIA-ADDISON — Middleware de autenticacion Firebase
-// Regla Oro 5: Asignacion directa sin invitaciones. 404 para no autorizado.
-// Modo fantasma: recv-only (no crear usuarios, solo verificar)
+// ACADEMIA-ADDISON — Middleware de autenticacion (JWT propio + Firebase legacy)
 // ═══════════════════════════════════════════════════════════════════════════
 
+const { verificarToken } = require('../utilidades/jwt');
 const { verificarTokenFirebase } = require('../config/firebase');
-const { exito, error } = require('../utilidades/respuesta');
+const { error } = require('../utilidades/respuesta');
 const { ErrorAutenticacion, ErrorPermiso } = require('../utilidades/errores');
 
 async function verificarAuth(req, res, next) {
@@ -17,21 +16,38 @@ async function verificarAuth(req, res, next) {
     }
 
     const token = authHeader.split(' ')[1];
-    const resultado = await verificarTokenFirebase(token);
 
-    if (!resultado.valido) {
-      return res.status(401).json(error('Token invalido o expirado', 401));
+    // Intentar verificar como JWT propio primero (Passkeys)
+    try {
+      const decoded = verificarToken(token);
+      req.usuario = {
+        usuario_id: decoded.usuario_id,
+        email: decoded.correo,
+        estado: decoded.estado,
+        rol: decoded.rol || 'estudiante'
+      };
+      return next();
+    } catch (jwtError) {
+      // No es JWT propio, intentar Firebase (legacy)
     }
 
-    // Adjuntar datos del usuario autenticado al request
-    req.usuario = {
-      uid: resultado.uid,
-      email: resultado.email,
-      nombre: resultado.nombre,
-      foto: resultado.foto,
-    };
+    // Fallback: verificar como Firebase (para compatibilidad temporal)
+    try {
+      const resultado = await verificarTokenFirebase(token);
+      if (resultado.valido) {
+        req.usuario = {
+          uid: resultado.uid,
+          email: resultado.email,
+          nombre: resultado.nombre,
+          foto: resultado.foto,
+        };
+        return next();
+      }
+    } catch (firebaseError) {
+      // Firebase tampoco funcionó
+    }
 
-    next();
+    return res.status(401).json(error('Token invalido o expirado', 401));
   } catch (err) {
     next(new ErrorAutenticacion('Fallo en verificacion de autenticacion'));
   }
@@ -56,14 +72,31 @@ async function authOpcional(req, res, next) {
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];
-      const resultado = await verificarTokenFirebase(token);
-      if (resultado.valido) {
+      
+      // Intentar JWT propio
+      try {
+        const decoded = verificarToken(token);
         req.usuario = {
-          uid: resultado.uid,
-          email: resultado.email,
-          nombre: resultado.nombre,
-          foto: resultado.foto,
+          usuario_id: decoded.usuario_id,
+          email: decoded.correo,
+          estado: decoded.estado,
+          rol: decoded.rol || 'estudiante'
         };
+      } catch (e) {
+        // Intentar Firebase
+        try {
+          const resultado = await verificarTokenFirebase(token);
+          if (resultado.valido) {
+            req.usuario = {
+              uid: resultado.uid,
+              email: resultado.email,
+              nombre: resultado.nombre,
+              foto: resultado.foto,
+            };
+          }
+        } catch (e2) {
+          // Ignorar, es opcional
+        }
       }
     }
     next();
