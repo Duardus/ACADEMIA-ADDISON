@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// ACADEMIA-ADDISON — Servicio de Autenticacion Passkeys v4
-// Fix: usar challenge guardado directamente en verifyRegistrationResponse
+// ACADEMIA-ADDISON — Servicio de Autenticacion Passkeys v5
+// Challenge guardado como string base64url, no BYTEA
 // ═══════════════════════════════════════════════════════════════════════════
 
 const { 
@@ -54,7 +54,9 @@ class PasskeyServicio {
       extensions: { credProps: true }
     });
 
-    await passkeyRepositorio.guardarChallenge(correo, options.challenge, 'registro');
+    // Guardar challenge como base64url string
+    const challengeBase64url = Buffer.from(options.challenge).toString('base64url');
+    await passkeyRepositorio.guardarChallenge(correo, challengeBase64url, 'registro');
 
     return {
       exito: true,
@@ -67,7 +69,6 @@ class PasskeyServicio {
   async verificarRegistro(correo, respuesta, reqOrigen) {
     const { rpID, origin } = this._getRPConfig(reqOrigen);
     
-    // Obtener challenge guardado directamente de la BD
     const challengeGuardado = await passkeyRepositorio.buscarChallenge(correo, 'registro');
     if (!challengeGuardado) {
       throw new Error('Challenge expirado o invalido. Intenta de nuevo.');
@@ -154,7 +155,9 @@ class PasskeyServicio {
       userVerification: 'preferred'
     });
 
-    await passkeyRepositorio.guardarChallenge(correo, options.challenge, 'login');
+    // Guardar challenge como base64url string
+    const challengeBase64url = Buffer.from(options.challenge).toString('base64url');
+    await passkeyRepositorio.guardarChallenge(correo, challengeBase64url, 'login');
 
     return { exito: true, options };
   }
